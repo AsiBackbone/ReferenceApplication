@@ -1,0 +1,40 @@
+@model ReferenceApplication.Web.Models.AccountLoginViewModel
+
+@{
+    ViewData["Title"] = "Sign In";
+}
+
+<h1>Sign In</h1>
+
+@if (Model.ExternalProviders.Count == 0)
+{
+    <p>
+        No sign-in provider is configured. Cookie authentication stores authenticated sessions, but it does not create
+        user accounts or verify credentials. Enable and configure an external provider or add a host-owned identity flow
+        before requiring users to sign in.
+    </p>
+}
+else
+{
+    <p>
+        Select an external authentication provider to continue.
+    </p>
+
+    <ul>
+        @foreach (ReferenceApplication.Web.Models.ExternalAuthenticationProviderViewModel provider in Model.ExternalProviders)
+        {
+            <li>
+                <a href="@Url.Action(
+                    "Challenge",
+                    "External",
+                    new
+                    {
+                        provider = provider.Scheme,
+                        returnUrl = Model.ReturnUrl
+                    })">
+                    Sign in with @provider.DisplayName
+                </a>
+            </li>
+        }
+    </ul>
+}

@@ -1,0 +1,42 @@
+services:
+  referenceapplication.web:
+    image: referenceapplication-web:dev
+    container_name: referenceapplication-web
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      # Publish on the loopback interface only. Forwarded headers below trust any proxy for local development, so
+      # exposing the port on all interfaces would let other machines on the network spoof client addresses.
+      - "127.0.0.1:8080:8080"
+    env_file:
+      - path: ./.env
+        required: false
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: http://+:8080
+      DOTNET_RUNNING_IN_CONTAINER: "true"
+
+      ConnectionStrings__ApplicationDatabase: ${CONNECTIONSTRINGS_APPLICATIONDATABASE:-Data Source=/app/data/application-dev.db}
+
+      ReferenceApplication__DataProtection__ApplicationName: ReferenceApplication.Web
+      ReferenceApplication__DataProtection__KeyRingPath: /app/data-protection-keys
+
+      ReferenceApplication__ForwardedHeaders__Enabled: ${REFERENCEAPPLICATION_FORWARDEDHEADERS_ENABLED:-true}
+      ReferenceApplication__ForwardedHeaders__Headers__0: XForwardedFor
+      ReferenceApplication__ForwardedHeaders__Headers__1: XForwardedProto
+      ReferenceApplication__ForwardedHeaders__ForwardLimit: ${REFERENCEAPPLICATION_FORWARDEDHEADERS_FORWARDLIMIT:-1}
+      ReferenceApplication__ForwardedHeaders__RequireHeaderSymmetry: ${REFERENCEAPPLICATION_FORWARDEDHEADERS_REQUIREHEADERSYMMETRY:-false}
+
+      # Local Docker development only.
+      # Production deployments should prefer explicit KnownProxies or KnownNetworks.
+      ReferenceApplication__ForwardedHeaders__ClearKnownNetworksAndProxies: ${REFERENCEAPPLICATION_FORWARDEDHEADERS_CLEARKNOWNNETWORKSANDPROXIES:-true}
+    volumes:
+      - referenceapplication-data:/app/data
+      - referenceapplication-data-protection-keys:/app/data-protection-keys
+      - referenceapplication-logs:/app/Logs
+
+volumes:
+  referenceapplication-data:
+  referenceapplication-data-protection-keys:
+  referenceapplication-logs:

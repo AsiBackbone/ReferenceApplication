@@ -1,0 +1,178 @@
+###############################################################################
+# .gitattributes
+# .NET Core Application Template
+#
+# Goals:
+# - Normalize text line endings consistently.
+# - Keep repository text files stored with LF endings unless (Windows/Visual Studio-oriented files).
+# - Preserve CRLF only where Windows command scripts require it.
+# - Protect binary files from text normalization and noisy diffs.
+###############################################################################
+
+# Normalize all text files to LF.
+# This keeps the repository and working tree consistent across Windows, Linux, and macOS.
+* text=auto eol=lf
+
+
+###############################################################################
+# Windows command scripts
+###############################################################################
+
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+
+###############################################################################
+# Shell / scripting files
+###############################################################################
+
+*.sh       text eol=lf
+*.bash     text eol=lf
+*.zsh      text eol=lf
+*.ps1      text eol=lf
+*.psm1     text eol=lf
+*.psd1     text eol=lf
+
+
+###############################################################################
+# .NET / C# project files (Windows/Visual Studio-oriented files)
+###############################################################################
+
+*.cs        text eol=crlf diff=csharp
+*.cshtml    text eol=crlf
+*.razor     text eol=crlf
+*.csproj    text eol=crlf
+*.vbproj    text eol=crlf
+*.fsproj    text eol=crlf
+*.sln       text eol=crlf
+*.slnx      text eol=crlf
+*.props     text eol=crlf
+*.targets   text eol=crlf
+*.nuspec    text eol=crlf
+*.resx      text eol=crlf
+*.config    text eol=crlf
+
+
+###############################################################################
+# Web assets (Windows/Visual Studio-oriented files)
+###############################################################################
+
+*.html      text eol=crlf
+*.htm       text eol=crlf
+*.css       text eol=crlf
+*.scss      text eol=crlf
+*.sass      text eol=crlf
+*.js        text eol=crlf
+*.jsx       text eol=crlf
+*.ts        text eol=crlf
+*.tsx       text eol=crlf
+*.mjs       text eol=crlf
+*.cjs       text eol=crlf
+
+
+###############################################################################
+# Configuration files (Windows/Visual Studio-oriented files)
+###############################################################################
+
+*.json      text eol=crlf
+*.jsonc     text eol=crlf
+*.xml       text eol=crlf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.toml      text eol=crlf
+*.ini       text eol=crlf
+*.env       text eol=crlf
+*.example   text eol=crlf
+*.editorconfig text eol=crlf
+
+# Cross-repository contract vectors keep LF so every checkout matches the published bytes.
+contracts/**/*.json text eol=lf
+
+
+###############################################################################
+# SQL / database scripts (Windows/Visual Studio-oriented files)
+###############################################################################
+
+*.sql       text eol=crlf
+
+
+###############################################################################
+# Documentation (Windows/Visual Studio-oriented files)
+###############################################################################
+
+*.md        text eol=crlf diff=markdown
+*.txt       text eol=crlf
+*.rst       text eol=crlf
+
+
+###############################################################################
+# Docker / container files
+###############################################################################
+
+Dockerfile      text eol=lf
+*.dockerfile    text eol=lf
+.dockerignore   text eol=lf
+
+
+###############################################################################
+# GitHub / CI files (Windows/Visual Studio-oriented files)
+###############################################################################
+
+.github/**/*.yml   text eol=lf
+.github/**/*.yaml  text eol=lf
+
+
+###############################################################################
+# Binary files
+###############################################################################
+
+# Images
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.ico     binary
+*.webp    binary
+*.svgz    binary
+
+# Fonts
+*.ttf     binary
+*.otf     binary
+*.woff    binary
+*.woff2   binary
+*.eot     binary
+
+# Archives
+*.zip     binary
+*.7z      binary
+*.rar     binary
+*.tar     binary
+*.gz      binary
+
+# Documents
+*.pdf     binary
+*.doc     binary
+*.docx    binary
+*.xls     binary
+*.xlsx    binary
+*.ppt     binary
+*.pptx    binary
+
+# Database files
+*.db       binary
+*.sqlite   binary
+*.sqlite3  binary
+*.mdf      binary
+*.ldf      binary
+*.bak      binary
+
+# Keys / certificates
+*.pfx      binary
+*.snk      binary
+
+# Executables / compiled output
+*.exe      binary
+*.dll      binary
+*.pdb      binary
+*.so       binary
+*.dylib    binary
