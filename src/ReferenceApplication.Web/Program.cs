@@ -42,6 +42,7 @@ try
     builder.Services.AddApplicationAuthentication(builder.Configuration, builder.Environment);
     builder.Services.AddApplicationAuthorization(builder.Configuration);
     builder.Services.AddApplicationDataAccess(builder.Configuration);
+    builder.Services.AddApplicationAsiBackbone();
 
     Log.Information("Starting ReferenceApplication.Web application");
     WebApplication app = builder.Build();
@@ -54,7 +55,7 @@ try
     Log.Information("Running ReferenceApplication.Web application");
     app.Run();
 }
-catch (Exception ex)
+catch (Exception ex) when (ex is not HostAbortedException)
 {
     Log.Fatal(ex, "ReferenceApplication.Web application terminated unexpectedly");
     throw;

@@ -16,6 +16,17 @@ public partial class HomeController(ILogger<HomeController> logger) : Controller
     private readonly ILogger<HomeController> _logger = logger;
 
     /// <summary>
+    /// Displays the ReferenceApplication landing page.
+    /// </summary>
+    /// <returns>The landing page view.</returns>
+    [AllowAnonymous]
+    [HttpGet("/")]
+    public IActionResult Index()
+    {
+        return View();
+    }
+
+    /// <summary>
     /// Displays an error page for a request routed here by the error-handling pipeline. The response status
     /// code comes from the pipeline rather than the route value, and a request that did not arrive through
     /// the pipeline is answered with 404 instead of the error page.

@@ -19,11 +19,19 @@ public sealed class RootEndpointTests
 
         string body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains(".NET Core Application Template", body, StringComparison.Ordinal);
-        Assert.Contains("ASP.NET Core Baseline", body, StringComparison.Ordinal);
-        Assert.Contains("Secure defaults", body, StringComparison.Ordinal);
-        Assert.Contains("Operational clarity", body, StringComparison.Ordinal);
-        Assert.Contains("Template ready", body, StringComparison.Ordinal);
+        Assert.Contains("AsiBackbone Reference Application", body, StringComparison.Ordinal);
+        Assert.Contains("NCAT + AsiBackbone Integration", body, StringComparison.Ordinal);
+        Assert.Contains("3 of 6 walkthrough steps complete", body, StringComparison.Ordinal);
+        Assert.Contains("Secure NCAT foundation", body, StringComparison.Ordinal);
+        Assert.Contains("AsiBackbone integration", body, StringComparison.Ordinal);
+        Assert.Contains("Integration walkthrough", body, StringComparison.Ordinal);
+        Assert.Contains(
+            "https://asibackbone.github.io/ReferenceApplication/walkthrough/",
+            body,
+            StringComparison.Ordinal);
+        Assert.Contains("https://github.com/AsiBackbone/ReferenceApplication", body, StringComparison.Ordinal);
+        Assert.DoesNotContain(".NET Core Application Template", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("https://github.com/AsiBackbone/NetCoreApplicationTemplate", body, StringComparison.Ordinal);
         Assert.Contains("/css/landing.css", body, StringComparison.Ordinal);
     }
 }

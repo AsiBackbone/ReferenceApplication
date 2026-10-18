@@ -16,7 +16,6 @@ using ReferenceApplication.Web.Tests.Infrastructure;
 using ReferenceApplication.Web.Tests.TestControllers;
 
 namespace ReferenceApplication.Web.Tests;
-
 /// <summary>
 /// Provides integration tests for the application rate limiting configuration and policies.
 /// </summary>
@@ -132,7 +131,7 @@ public sealed class RateLimitingTests
         Assert.Equal(RateLimitingServiceExtensions.RejectionTitle, root.GetProperty("title").GetString());
         Assert.Equal(RateLimitingServiceExtensions.RejectionProblemType, root.GetProperty("type").GetString());
         Assert.Equal(RateLimitingServiceExtensions.RejectionDetail, root.GetProperty("detail").GetString());
-        Assert.Equal("/", root.GetProperty("instance").GetString());
+        Assert.Equal("/test/rate-limiting/global", root.GetProperty("instance").GetString());
         Assert.False(string.IsNullOrWhiteSpace(root.GetProperty("traceId").GetString()));
         Assert.False(string.IsNullOrWhiteSpace(root.GetProperty("requestId").GetString()));
         Assert.False(string.IsNullOrWhiteSpace(root.GetProperty("correlationId").GetString()));
@@ -710,10 +709,16 @@ public sealed class RateLimitingTests
 
     private static async Task<HttpResponseMessage> SendWithAcceptAsync(HttpClient client, string mediaType)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, "/");
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(mediaType));
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            "/test/rate-limiting/global");
 
-        return await client.SendAsync(request, TestContext.Current.CancellationToken);
+        request.Headers.Accept.Add(
+            new MediaTypeWithQualityHeaderValue(mediaType));
+
+        return await client.SendAsync(
+            request,
+            TestContext.Current.CancellationToken);
     }
 
     private static ServiceProvider CreateRequestLoggingServices(ApplicationRequestLoggingOptions requestLoggingOptions)

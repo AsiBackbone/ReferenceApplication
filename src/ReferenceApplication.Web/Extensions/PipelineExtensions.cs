@@ -1,3 +1,4 @@
+using AsiBackbone.AspNetCore.Endpoints;
 using ReferenceApplication.Web.Authentication.Extensions;
 using ReferenceApplication.Web.ErrorHandling;
 
@@ -56,7 +57,10 @@ public static class PipelineExtensions
         app.UseApplicationAuthentication();
         app.UseAuthorization();
 
-        // 10. Endpoint mapping.
+        // 10. AsiBackbone reads the selected endpoint and authenticated actor before endpoint execution.
+        app.UseAsiBackboneEndpointGovernance(requireEndpointRoutingRegistered: true);
+
+        // 11. Endpoint mapping.
         app.MapControllers();
         app.MapRazorPages();
 

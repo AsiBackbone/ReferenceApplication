@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.RateLimiting;
 using ReferenceApplication.Web.Constants;
 
 namespace ReferenceApplication.Web.Tests.TestControllers;
-
 /// <summary>
 /// Provides test endpoints for demonstrating and verifying rate limiting policies in the application.
 /// </summary>
@@ -79,5 +78,15 @@ public sealed class RateLimitingTestController : ControllerBase
     private static TaskCompletionSource CreateSignal()
     {
         return new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+
+    /// <summary>
+    /// Returns a simple response for tests that exercise the global rate limiter.
+    /// </summary>
+    /// <returns>An <see cref="IActionResult"/> containing a successful test response.</returns>
+    [HttpGet("global")]
+    public IActionResult Global()
+    {
+        return Ok(new { result = "global" });
     }
 }
