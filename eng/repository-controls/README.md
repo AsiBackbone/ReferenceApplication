@@ -38,3 +38,21 @@ does not inherit checks that validate the integrated application.
 Dependabot monitors NuGet, Docker, and GitHub Actions dependencies on staggered
 weekly schedules. Its pull requests use the same required review, CI, dependency
 review, OWASP, CodeQL, and workflow-security checks as other changes to `main`.
+
+## OpenSSF Scorecard exceptions
+
+The ReferenceApplication is a reference repository that shows how to integrate
+AsiBackbone and the .NET Core Application Template. It is not a distributed
+product. The following Scorecard findings are proportionate exceptions. Their
+code-scanning alerts are dismissed as "won't fix" with the same reasoning.
+Reopen an alert when its condition no longer holds.
+
+| Scorecard check | Reason for the exception | Reconsider when |
+| --- | --- | --- |
+| CII-Best-Practices | The OpenSSF Best Practices badge belongs to the product repositories, not to a reference repository. | The repository is distributed as a product. |
+| Code-Review | The organization has one active maintainer, so no independent approval is available. Both rulesets require pull requests but set `required_approving_review_count` to `0`, matching the organization's policy in [`AsiBackbone/.github` SECURITY.md](https://github.com/AsiBackbone/.github/blob/main/SECURITY.md). | An independent active maintainer is available. |
+| Branch-Protection | Required approvers, Code Owner review, and last-push approval cannot be satisfied by a single maintainer, for the same reason. `main` still blocks deletion and force pushes, requires linear history and pull requests, and requires the status checks listed above. | An independent active maintainer is available. |
+| SAST, CI-Tests | The only commits and pull requests without CodeQL or CI predate the workflows: the initial NCAT scaffold commit and the first baseline integration (#1, #2). Every later change to `main` has to pass the required CodeQL and build-and-test checks, so these findings fall out of Scorecard's window as new changes land. | A change reaches `main` without those checks. |
+
+The Maintained finding is not dismissed. It reflects only that the repository is
+younger than 90 days, and it clears on its own once the repository is older.
