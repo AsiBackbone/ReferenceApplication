@@ -172,7 +172,7 @@ public sealed class ApplicationSaveChangesPipeline :
     {
         foreach (EntityEntry entry in entries)
         {
-            if (entry.Entity is AuditRecord ||
+            if (AccountabilityRecordTypes.IsAccountabilityRecord(entry.Entity) ||
                 entry.State is not (EntityState.Added or EntityState.Modified))
             {
                 continue;
@@ -227,7 +227,8 @@ public sealed class ApplicationSaveChangesPipeline :
     {
         foreach (EntityEntry entry in entries)
         {
-            if (entry.State is not (EntityState.Added or EntityState.Modified))
+            if (entry.State is not (EntityState.Added or EntityState.Modified) ||
+                AccountabilityRecordTypes.IsAccountabilityRecord(entry.Entity))
             {
                 continue;
             }
@@ -334,7 +335,7 @@ public sealed class ApplicationSaveChangesPipeline :
 
         foreach (EntityEntry entry in entries)
         {
-            if (entry.Entity is AuditRecord ||
+            if (AccountabilityRecordTypes.IsAccountabilityRecord(entry.Entity) ||
                 entry.State == EntityState.Detached ||
                 entry.State == EntityState.Unchanged)
             {

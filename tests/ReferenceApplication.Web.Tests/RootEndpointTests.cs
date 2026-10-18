@@ -21,7 +21,7 @@ public sealed class RootEndpointTests
 
         Assert.Contains("AsiBackbone Reference Application", body, StringComparison.Ordinal);
         Assert.Contains("NCAT + AsiBackbone Integration", body, StringComparison.Ordinal);
-        Assert.Contains("5 of 6 walkthrough steps complete", body, StringComparison.Ordinal);
+        Assert.Contains("6 of 6 walkthrough steps complete", body, StringComparison.Ordinal);
         Assert.Contains("Secure NCAT foundation", body, StringComparison.Ordinal);
         Assert.Contains("AsiBackbone integration", body, StringComparison.Ordinal);
         Assert.Contains("Integration walkthrough", body, StringComparison.Ordinal);

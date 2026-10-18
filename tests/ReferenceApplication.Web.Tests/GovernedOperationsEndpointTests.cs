@@ -18,8 +18,10 @@ namespace ReferenceApplication.Web.Tests;
 /// <summary>
 /// Verifies the Step 5 production endpoints through authorization, antiforgery, and AsiBackbone endpoint governance.
 /// </summary>
-public sealed class GovernedOperationsEndpointTests
+public sealed class GovernedOperationsEndpointTests : IDisposable
 {
+    private readonly TestSqliteDatabase _database = TestSqliteDatabase.Create();
+
     private const string _testAuthenticationScheme = "GovernedOperationsTestAuthentication";
     private const string _testUserHeaderName = "X-Test-User";
     private const string _testRoleHeaderName = "X-Test-Role";
@@ -33,7 +35,7 @@ public sealed class GovernedOperationsEndpointTests
     [Fact]
     public async Task Description_AnonymousCaller_ReturnsWithoutGovernance()
     {
-        using WebApplicationFactory<Program> factory = CreateFactoryWithTestAuthentication();
+        using WebApplicationFactory<Program> factory = await CreateFactoryWithTestAuthenticationAsync();
         using HttpClient client = factory.CreateHttpsClient();
 
         using HttpResponseMessage response = await client.GetAsync(
@@ -53,7 +55,7 @@ public sealed class GovernedOperationsEndpointTests
     [Fact]
     public async Task AdministratorAction_Administrator_Executes()
     {
-        using WebApplicationFactory<Program> factory = CreateFactoryWithTestAuthentication();
+        using WebApplicationFactory<Program> factory = await CreateFactoryWithTestAuthenticationAsync();
         using HttpClient client = factory.CreateHttpsClient();
 
         using HttpResponseMessage response = await PostAsync(client, "administrator", role: "administrator");
@@ -71,7 +73,7 @@ public sealed class GovernedOperationsEndpointTests
     [Fact]
     public async Task AdministratorAction_NonAdministrator_ReturnsProblemDetails()
     {
-        using WebApplicationFactory<Program> factory = CreateFactoryWithTestAuthentication();
+        using WebApplicationFactory<Program> factory = await CreateFactoryWithTestAuthenticationAsync();
         using HttpClient client = factory.CreateHttpsClient();
 
         using HttpResponseMessage response = await PostAsync(client, "administrator", role: "reader");
@@ -85,7 +87,7 @@ public sealed class GovernedOperationsEndpointTests
     [Fact]
     public async Task CapabilityAction_ActorWithGrant_Executes()
     {
-        using WebApplicationFactory<Program> factory = CreateFactoryWithTestAuthentication();
+        using WebApplicationFactory<Program> factory = await CreateFactoryWithTestAuthenticationAsync();
         using HttpClient client = factory.CreateHttpsClient();
 
         using HttpResponseMessage response = await PostAsync(
@@ -106,7 +108,7 @@ public sealed class GovernedOperationsEndpointTests
     [Fact]
     public async Task CapabilityAction_ActorWithoutGrant_ReturnsProblemDetails()
     {
-        using WebApplicationFactory<Program> factory = CreateFactoryWithTestAuthentication();
+        using WebApplicationFactory<Program> factory = await CreateFactoryWithTestAuthenticationAsync();
         using HttpClient client = factory.CreateHttpsClient();
 
         using HttpResponseMessage response = await PostAsync(client, "capability");
@@ -120,7 +122,7 @@ public sealed class GovernedOperationsEndpointTests
     [Fact]
     public async Task ConsequentialAction_AuthorizedActor_RequiresAcknowledgment()
     {
-        using WebApplicationFactory<Program> factory = CreateFactoryWithTestAuthentication();
+        using WebApplicationFactory<Program> factory = await CreateFactoryWithTestAuthenticationAsync();
         using HttpClient client = factory.CreateHttpsClient();
 
         using HttpResponseMessage response = await PostAsync(
@@ -156,7 +158,7 @@ public sealed class GovernedOperationsEndpointTests
     [Fact]
     public async Task ConsequentialAction_AdministratorWithoutGrant_IsDeniedNotChallenged()
     {
-        using WebApplicationFactory<Program> factory = CreateFactoryWithTestAuthentication();
+        using WebApplicationFactory<Program> factory = await CreateFactoryWithTestAuthenticationAsync();
         using HttpClient client = factory.CreateHttpsClient();
 
         using HttpResponseMessage response = await PostAsync(client, "consequential", role: "administrator");
@@ -179,7 +181,7 @@ public sealed class GovernedOperationsEndpointTests
     [Fact]
     public async Task ConsequentialAction_GrantWithoutAdministratorRole_IsDeniedNotChallenged()
     {
-        using WebApplicationFactory<Program> factory = CreateFactoryWithTestAuthentication();
+        using WebApplicationFactory<Program> factory = await CreateFactoryWithTestAuthenticationAsync();
         using HttpClient client = factory.CreateHttpsClient();
 
         using HttpResponseMessage response = await PostAsync(
@@ -198,7 +200,7 @@ public sealed class GovernedOperationsEndpointTests
     [Fact]
     public async Task AdministratorAction_AnonymousCaller_IsChallengedByAuthorization()
     {
-        using WebApplicationFactory<Program> factory = CreateFactoryWithTestAuthentication();
+        using WebApplicationFactory<Program> factory = await CreateFactoryWithTestAuthenticationAsync();
         using HttpClient client = factory.CreateHttpsClient();
 
         using HttpRequestMessage request = new(HttpMethod.Post, $"{_basePath}/administrator")
@@ -220,7 +222,7 @@ public sealed class GovernedOperationsEndpointTests
     [Fact]
     public async Task AdministratorAction_WithoutAntiforgeryToken_IsRejected()
     {
-        using WebApplicationFactory<Program> factory = CreateFactoryWithTestAuthentication();
+        using WebApplicationFactory<Program> factory = await CreateFactoryWithTestAuthenticationAsync();
         using HttpClient client = factory.CreateHttpsClient();
 
         using HttpResponseMessage response = await PostAsync(
@@ -316,9 +318,15 @@ public sealed class GovernedOperationsEndpointTests
         return request;
     }
 
-    private static WebApplicationFactory<Program> CreateFactoryWithTestAuthentication()
+    /// <inheritdoc />
+    public void Dispose()
     {
-        return ApplicationWebApplicationFactory.CreateAllowingAnonymousAccess(new Dictionary<string, string?>
+        _database.Dispose();
+    }
+
+    private Task<WebApplicationFactory<Program>> CreateFactoryWithTestAuthenticationAsync()
+    {
+        return _database.ApplyAsync(ApplicationWebApplicationFactory.CreateAllowingAnonymousAccess(new Dictionary<string, string?>
         {
             ["ReferenceApplication:Authentication:Enabled"] = "true",
             ["ReferenceApplication:Authentication:DefaultScheme"] = _testAuthenticationScheme,
@@ -334,7 +342,7 @@ public sealed class GovernedOperationsEndpointTests
             .AddAuthentication()
             .AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>(
                 _testAuthenticationScheme,
-                _ => { })));
+                _ => { }))));
     }
 
     private sealed class HeaderAuthenticationHandler(

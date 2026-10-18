@@ -6,6 +6,44 @@ This project follows Semantic Versioning using the format `MAJOR.MINOR.PATCH`. R
 the [integration walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) is being written. The
 release version is independent of the NCAT version, which the `ncat-v<version>` tags record.
 
+## 0.1.0-alpha.6 - 2026-10-18
+
+Completes walkthrough [Step 6: Persist and Verify Audit Evidence](https://asibackbone.github.io/ReferenceApplication/walkthrough/06-persist-and-verify-audit.html).
+All six walkthrough steps are now complete.
+
+### Added
+
+* AsiBackbone's EF Core model in the host-owned `ApplicationDbContext`, with the host-owned
+  `AddGovernedAuditEvidence` migration. The migration creates the AsiBackbone audit ledger, reason-code, metadata,
+  acknowledgment, outbox, and lifecycle tables and a `GovernedOperationRecords` table, and alters no existing table.
+* `LedgerDecisionReceiptSink`, which persists every endpoint governance decision receipt to the AsiBackbone audit ledger
+  before the endpoint executes and fails closed when the record cannot be stored.
+* Request-scoped governance decision evidence. NCAT's HTTP audit context uses it, so every mutation in a governed
+  request carries the decision audit record identifier, an operation execution identifier, and the decision's
+  correlation and trace identifiers.
+* `AsiBackboneAuditCompletionPublisher`, the host-owned form of AsiBackbone's NCAT audit-completion adapter. It turns
+  NCAT audit-completion outbox entries into AsiBackbone lifecycle events linked to the decision: idempotent and
+  conflict-checked, deferred until the decision exists, and rejecting mismatched correlation or trace identifiers.
+* `POST /api/v1/governed-operations/records`, an administrator-governed operation that creates a record inside NCAT's
+  audited transaction and stages its audit completion in the same transaction.
+* `AddApplicationGovernanceEvidence`, which enables NCAT's audit-completion outbox with the AsiBackbone destination.
+* End-to-end tests against migrated SQLite databases for the full evidence chain, denials, decision outcomes,
+  anonymous and ungoverned requests, invalid input, and failing closed. Also tests for the model and migrations,
+  evidence preservation, the sink, the publisher, and the audit context, plus edge-case tests for the Step 4 rules and
+  the Step 5 capability validator.
+
+### Changed
+
+* NCAT's save pipeline and UTC timestamp convention now treat NCAT audit records and AsiBackbone persistence entities as
+  accountability evidence. Evidence is stored exactly as created: no string canonicalization, timestamp normalization,
+  or mutation auditing. Application data is unaffected.
+* The governed POST operations emit governance audit, so allowed decisions, denials, and acknowledgment challenges are
+  all recorded.
+* The governed-operation endpoint tests run against a migrated database, because governed operations now require
+  durable decision evidence.
+* The landing page, README, and documentation homepage report all six walkthrough steps complete. The homepage's
+  governance-rules route no longer describes the rules as planned.
+
 ## 0.1.0-alpha.5 - 2026-10-18
 
 Completes walkthrough [Step 5: Govern Endpoints](https://asibackbone.github.io/ReferenceApplication/walkthrough/05-govern-endpoints.html).

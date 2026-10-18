@@ -276,6 +276,11 @@ git cherry-pick -x "ncat-v$New"
 Resolve conflicts with these rules:
 
 - Keep ReferenceApplication-specific and AsiBackbone package entries.
+- Keep the walkthrough Step 6 changes to NCAT-derived data access: the AsiBackbone model configuration and sets in
+  `ApplicationDbContext`, the accountability-record exclusions (`AccountabilityRecordTypes`) in
+  `ApplicationSaveChangesPipeline` and the UTC timestamp convention, and the governance evidence link in
+  `HttpContextApplicationAuditContextAccessor`. Regenerate the model snapshot with `dotnet-ef` rather than hand-merging
+  it, then confirm that `AccountabilityRecordPersistenceTests` still pass.
 - Keep ReferenceApplication's own `VersionPrefix`, `VersionSuffix`, `AssemblyVersion`, `FileVersion`, and
   `RepositoryUrl` in `Directory.Build.props`. The release version is independent of the NCAT version, which the
   `ncat-v<version>` tags record.
