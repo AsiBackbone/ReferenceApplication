@@ -22,11 +22,11 @@ Each step names what changed, where it changed, and which authoritative article 
 | [1. Scaffold from NCAT](01-scaffold-from-ncat.md) | An unmodified NCAT application, preserved on the `ncat-baseline` branch | Complete |
 | [2. Add AsiBackbone packages](02-add-asibackbone-packages.md) | The host references the AsiBackbone packages it needs, with locked versions | Complete |
 | [3. Register AsiBackbone services](03-register-asibackbone-services.md) | AsiBackbone is composed into the NCAT startup path | Complete |
-| [4. Define governance rules](04-define-governance-rules.md) | Sample governance rules the host evaluates | Planned |
+| [4. Define governance rules](04-define-governance-rules.md) | Sample governance rules the host evaluates | Complete |
 | [5. Govern endpoints](05-govern-endpoints.md) | Consequential endpoints run through governance before executing | Planned |
 | [6. Persist and verify audit evidence](06-persist-and-verify-audit.md) | Decision evidence persisted through the host-owned `DbContext` and correlated with NCAT mutation audit | Planned |
 
-Steps marked **Planned** describe the intended procedure. Each page is updated with the concrete code, commands, and commit references when that step lands in the repository.
+Steps marked **Planned** describe the intended procedure. Each page is updated with the concrete code and commands when that step lands in the repository.
 
 ## Supplemental procedures
 

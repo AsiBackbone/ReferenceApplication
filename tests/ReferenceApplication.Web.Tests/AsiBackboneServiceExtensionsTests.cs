@@ -4,11 +4,14 @@ using AsiBackbone.AspNetCore.Actors;
 using AsiBackbone.AspNetCore.Correlation;
 using AsiBackbone.AspNetCore.Endpoints;
 using AsiBackbone.Core.Actors;
+using AsiBackbone.Core.Constraints;
+using AsiBackbone.Core.Evaluation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using ReferenceApplication.Web.Authentication.Claims;
 using ReferenceApplication.Web.Extensions;
+using ReferenceApplication.Web.Governance;
 
 namespace ReferenceApplication.Web.Tests;
 
@@ -50,6 +53,7 @@ public sealed class AsiBackboneServiceExtensionsTests
     [InlineData(typeof(IHttpGovernanceRequestCorrelationResolver))]
     [InlineData(typeof(IAcknowledgmentChallengeService))]
     [InlineData(typeof(IEndpointGovernanceService))]
+    [InlineData(typeof(IGovernancePolicyEvaluator<GovernanceEvaluationContext>))]
     public void AddApplicationAsiBackbone_ResolvesScopedIntegrationService(Type serviceType)
     {
         using ServiceProvider provider = CreateServiceProvider();
@@ -92,6 +96,21 @@ public sealed class AsiBackboneServiceExtensionsTests
         Assert.Equal(
             [ApplicationClaimTypes.Name, .. HttpGovernanceActorContextOptions.DefaultDisplayNameClaimTypes],
             options.DisplayNameClaimTypes);
+    }
+
+    /// <summary>
+    /// Verifies that endpoint decisions carry the stable identity of the host-owned Step 4 policy set.
+    /// </summary>
+    [Fact]
+    public void AddApplicationAsiBackbone_ConfiguresEndpointPolicyIdentity()
+    {
+        using ServiceProvider provider = CreateServiceProvider();
+
+        EndpointGovernanceOptions options =
+            provider.GetRequiredService<IOptions<EndpointGovernanceOptions>>().Value;
+
+        Assert.Equal(ReferenceApplicationGovernancePolicySet.Version, options.PolicyVersion);
+        Assert.Equal(ReferenceApplicationGovernancePolicySet.PolicyHash, options.PolicyHash);
     }
 
     /// <summary>
