@@ -1,6 +1,6 @@
 # AsiBackbone Reference Application
 
-The AsiBackbone Reference Application is an ASP.NET Core host built from the [.NET Core Application Template (NCAT)](https://github.com/AsiBackbone/NetCoreApplicationTemplate). It integrates [AsiBackbone](https://github.com/AsiBackbone/AsiBackbone) step by step: the application provides runnable sample governance rules that can be read, tested, and adapted, and persists the resulting decision evidence alongside NCAT's mutation audit.
+The AsiBackbone Reference Application is an ASP.NET Core host built from the [.NET Core Application Template (NCAT)](https://github.com/AsiBackbone/NetCoreApplicationTemplate). It integrates [AsiBackbone](https://github.com/AsiBackbone/AsiBackbone) step by step: the application provides runnable sample governance rules that can be read, tested, and adapted, persists the resulting decision evidence alongside NCAT's mutation audit, and is expanding to make that evidence observable and measurable.
 
 - **Documentation:** <https://asibackbone.github.io/ReferenceApplication/> (API reference and integration walkthrough)
 - **Training:** [AsiBackbone Learning](https://asibackbone.github.io/Learning/) is the authoritative training site.
@@ -10,7 +10,7 @@ The AsiBackbone Reference Application is an ASP.NET Core host built from the [.N
 
 ## Status
 
-All six walkthrough steps are complete. The [Integration Walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) documents each one:
+The original six-step [Integration Walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) foundation is complete. The walkthrough is expanding with an operational evidence explorer and governance-overhead benchmarks:
 
 | Step | Status |
 |:---|:---|
@@ -20,6 +20,8 @@ All six walkthrough steps are complete. The [Integration Walkthrough](https://as
 | 4. Define governance rules | Complete |
 | 5. Govern endpoints | Complete |
 | 6. Persist and verify audit evidence | Complete |
+| 7. Observe governance in action | In progress |
+| 8. Benchmark governance overhead | Planned |
 
 ## Branches
 
@@ -42,7 +44,7 @@ The desired branch rulesets for `main` and `ncat-baseline` are versioned under `
 
 `main` remains open for ongoing integration through pull requests. A stable commit is marked with a semantic-version tag such as `v1.0.0` and published as a GitHub release; development then continues on `main` toward the next release.
 
-The release version is set by `VersionPrefix` and `VersionSuffix` in `Directory.Build.props` and matches the tag, for example `0.1.0` and `alpha.1` for `v0.1.0-alpha.1`. While the integration walkthrough is being written, releases are `0.x` pre-releases. The release version is independent of the NCAT version, which the `ncat-v<version>` tags record.
+The release version is set by `VersionPrefix` and `VersionSuffix` in `Directory.Build.props` and matches the tag, for example `0.1.0` and `alpha.1` for `v0.1.0-alpha.1`. While the expanded integration walkthrough remains in progress, releases are `0.x` pre-releases. The release version is independent of the NCAT version, which the `ncat-v<version>` tags record.
 
 The `ncat-baseline` branch is updated separately through a pull request containing only the raw scaffold generated from the selected NCAT version. Bringing a new baseline into the Reference Application is a second, deliberate integration change targeting `main`.
 
@@ -126,6 +128,8 @@ Every routed endpoint requires an authenticated user unless it is deliberately m
 - `/health`, `/health/live`, and `/health/ready`, for infrastructure probes;
 - `GET /` is explicitly anonymous for the current walkthrough stage; authentication requirements for the landing page will be revisited as integration progresses; and
 - `GET /api/v1/governed-operations` is the intentionally ungoverned, read-only description of the Step 5 sample.
+
+The Step 7 evidence query at `GET /api/v1/governance-evidence/{correlationId}` requires the configured administrator role. Its response is intentionally minimized: it exposes identifiers, outcomes, reason codes, policy and evidence hashes, counts, statuses, and timestamps, but never NCAT mutation values or request bodies.
 
 `POST /Account/Logout` and all Step 5 governed operations require an authenticated user and a valid antiforgery token. Restrict production access to the health endpoints at the ingress, firewall, or proxy layer.
 
