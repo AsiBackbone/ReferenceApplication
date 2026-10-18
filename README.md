@@ -1,6 +1,6 @@
 # AsiBackbone Reference Application
 
-The AsiBackbone Reference Application is an ASP.NET Core host built from the [.NET Core Application Template (NCAT)](https://github.com/AsiBackbone/NetCoreApplicationTemplate). Integration with [AsiBackbone](https://github.com/AsiBackbone/AsiBackbone) is in progress; the finished application will provide runnable sample governance rules that can be read, tested, and adapted.
+The AsiBackbone Reference Application is an ASP.NET Core host built from the [.NET Core Application Template (NCAT)](https://github.com/AsiBackbone/NetCoreApplicationTemplate). It integrates [AsiBackbone](https://github.com/AsiBackbone/AsiBackbone) step by step: the application provides runnable sample governance rules that can be read, tested, and adapted, and persists the resulting decision evidence alongside NCAT's mutation audit.
 
 - **Documentation:** <https://asibackbone.github.io/ReferenceApplication/> (API reference and integration walkthrough)
 - **Training:** [AsiBackbone Learning](https://asibackbone.github.io/Learning/) is the authoritative training site.
@@ -10,7 +10,7 @@ The AsiBackbone Reference Application is an ASP.NET Core host built from the [.N
 
 ## Status
 
-Integration is in progress. The [Integration Walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) tracks each step:
+All six walkthrough steps are complete. The [Integration Walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) documents each one:
 
 | Step | Status |
 |:---|:---|
@@ -19,7 +19,7 @@ Integration is in progress. The [Integration Walkthrough](https://asibackbone.gi
 | 3. Register AsiBackbone services | Complete |
 | 4. Define governance rules | Complete |
 | 5. Govern endpoints | Complete |
-| 6. Persist and verify audit evidence | Planned |
+| 6. Persist and verify audit evidence | Complete |
 
 ## Branches
 
@@ -139,7 +139,7 @@ Outside Development, startup fails when forwarded client-IP processing and rate 
 
 ### Data access
 
-The host uses SQLite through `ConnectionStrings:ApplicationDatabase` and keeps NCAT's checked-in SQLite migration history. Migrations never run automatically at startup; apply them deliberately during setup or deployment. The planned AsiBackbone integration will add model configuration to the host-owned `ApplicationDbContext`, while the host will retain ownership of the provider, connection strings, and migrations.
+The host uses SQLite through `ConnectionStrings:ApplicationDatabase` and keeps NCAT's checked-in SQLite migration history. Migrations never run automatically at startup; apply them deliberately during setup or deployment. Walkthrough Step 6 added AsiBackbone's model configuration and a host-owned migration to `ApplicationDbContext`; the host retains ownership of the provider, connection strings, and migrations.
 
 ## Documentation site
 

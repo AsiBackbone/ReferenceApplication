@@ -1,3 +1,5 @@
+using AsiBackbone.EntityFrameworkCore;
+using AsiBackbone.EntityFrameworkCore.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Logging;
@@ -35,6 +37,22 @@ public sealed partial class ApplicationDbContext(
     /// </summary>
     public DbSet<ExternalLoginAccount> ExternalLoginAccounts => Set<ExternalLoginAccount>();
 
+    /// <summary>
+    /// Gets the sample records created by governed operations in walkthrough Step 6.
+    /// </summary>
+    public DbSet<GovernedOperationRecord> GovernedOperationRecords => Set<GovernedOperationRecord>();
+
+    /// <summary>
+    /// Gets the AsiBackbone audit ledger records that persist endpoint governance decision receipts.
+    /// </summary>
+    public DbSet<AuditLedgerRecordEntity> AsiBackboneAuditLedgerRecords => Set<AuditLedgerRecordEntity>();
+
+    /// <summary>
+    /// Gets the AsiBackbone decision receipt lifecycle events, including NCAT audit-completion evidence.
+    /// </summary>
+    public DbSet<DecisionReceiptLifecycleEventEntity> AsiBackboneDecisionReceiptLifecycleEvents =>
+        Set<DecisionReceiptLifecycleEventEntity>();
+
     [LoggerMessage(
         EventId = 19001,
         Level = LogLevel.Warning,
@@ -50,6 +68,10 @@ public sealed partial class ApplicationDbContext(
         ArgumentNullException.ThrowIfNull(modelBuilder);
 
         _ = modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+
+        // AsiBackbone contributes its accountability tables to this host-owned model; the host keeps the provider,
+        // connection string, and migrations.
+        _ = modelBuilder.ApplyAsiBackboneConfigurations();
         ConfigureDataEntityDefaults(modelBuilder);
         ConfigureTimestampDefaults(modelBuilder);
 
@@ -125,6 +147,13 @@ public sealed partial class ApplicationDbContext(
     {
         foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes())
         {
+            // AsiBackbone configures its own evidence columns; this convention applies to application data only.
+            if (AccountabilityRecordTypes.IsAccountabilityRecord(entityType.ClrType) &&
+                entityType.ClrType != typeof(AuditRecord))
+            {
+                continue;
+            }
+
             foreach (IMutableProperty property in entityType.GetProperties())
             {
                 Type propertyType = Nullable.GetUnderlyingType(property.ClrType)

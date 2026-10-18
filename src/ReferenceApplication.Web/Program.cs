@@ -43,6 +43,7 @@ try
     builder.Services.AddApplicationAuthorization(builder.Configuration);
     builder.Services.AddApplicationDataAccess(builder.Configuration);
     builder.Services.AddApplicationAsiBackbone();
+    builder.Services.AddApplicationGovernanceEvidence();
 
     Log.Information("Starting ReferenceApplication.Web application");
     WebApplication app = builder.Build();

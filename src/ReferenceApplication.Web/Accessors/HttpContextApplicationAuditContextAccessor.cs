@@ -2,14 +2,21 @@ using System.Diagnostics;
 using System.Security.Claims;
 using ReferenceApplication.Infrastructure.Data.Auditing;
 using ReferenceApplication.Web.Authentication.Claims;
+using ReferenceApplication.Web.Governance;
 
 namespace ReferenceApplication.Web.Accessors;
 
 /// <summary>
 /// Resolves structured application audit context from the active HTTP request.
 /// </summary>
+/// <param name="httpContextAccessor">The HTTP context accessor.</param>
+/// <param name="governanceEvidenceAccessor">
+/// The optional request-scoped governance evidence. When the request persisted a governance decision, mutation audit
+/// records carry its decision audit record identifier and the decision's correlation and trace identifiers.
+/// </param>
 public sealed class HttpContextApplicationAuditContextAccessor(
-    IHttpContextAccessor httpContextAccessor)
+    IHttpContextAccessor httpContextAccessor,
+    IGovernanceDecisionEvidenceAccessor? governanceEvidenceAccessor = null)
     : IApplicationAuditContextAccessor
 {
     private const string _subjectClaimType = "sub";
@@ -28,6 +35,23 @@ public sealed class HttpContextApplicationAuditContextAccessor(
 
             if (!string.IsNullOrWhiteSpace(subject))
             {
+                GovernanceDecisionEvidence? evidence = governanceEvidenceAccessor?.Current;
+                if (evidence is not null)
+                {
+                    // A governed request links its mutation audit to the persisted decision. The correlation and trace
+                    // identifiers are taken from the decision record so the AsiBackbone audit-completion publisher can
+                    // verify that the completion belongs to that decision.
+                    return new ApplicationAuditContext(
+                        subject,
+                        ApplicationAuditActorTypes.Human,
+                        subject,
+                        operationExecutionId: evidence.OperationExecutionId,
+                        correlationId: evidence.CorrelationId,
+                        traceId: evidence.TraceId,
+                        spanId: Activity.Current?.SpanId.ToString(),
+                        decisionAuditRecordId: evidence.DecisionAuditRecordId);
+                }
+
                 return new ApplicationAuditContext(
                     subject,
                     ApplicationAuditActorTypes.Human,
