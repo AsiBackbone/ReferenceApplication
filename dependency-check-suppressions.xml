@@ -26,11 +26,15 @@
     </suppress>
 
     <!--
-        The CPE for OpenTelemetry matches every OpenTelemetry NuGet package
-        ReferenceApplication references directly (the OTLP exporter and the
-        hosting extensions), so each CVE below is reported once per package.
-        Each suppression names only those two packages and one CVE, so any
-        other CVE, including genuine OpenTelemetry .NET advisories, stays
+        The CPE for OpenTelemetry matches every OpenTelemetry .NET NuGet
+        package ReferenceApplication references: the OTLP exporter, the
+        hosting extensions, and the ASP.NET Core and HTTP instrumentation.
+        Dependency-Check folds packages with identical findings together as
+        "related dependencies" and reports each CVE once per remaining
+        package. Each suppression therefore covers every OpenTelemetry .NET
+        package, so suppressing one package cannot surface the same false
+        positive on a related one. Each suppression names exactly one CVE, so
+        any other CVE, including genuine OpenTelemetry .NET advisories, stays
         visible.
     -->
 
@@ -41,7 +45,7 @@
             (go.opentelemetry.io/otel/exporters/otlp/...), not the
             OpenTelemetry .NET NuGet packages used by ReferenceApplication.
         </notes>
-        <packageUrl regex="true">^pkg:nuget/OpenTelemetry\.(Exporter\.OpenTelemetryProtocol|Extensions\.Hosting)@.*$</packageUrl>
+        <packageUrl regex="true">^pkg:nuget/OpenTelemetry\..*@.*$</packageUrl>
         <cve>CVE-2026-39882</cve>
     </suppress>
 
@@ -52,7 +56,7 @@
             (go.opentelemetry.io/otel/baggage and .../propagation), not the
             OpenTelemetry .NET NuGet packages used by ReferenceApplication.
         </notes>
-        <packageUrl regex="true">^pkg:nuget/OpenTelemetry\.(Exporter\.OpenTelemetryProtocol|Extensions\.Hosting)@.*$</packageUrl>
+        <packageUrl regex="true">^pkg:nuget/OpenTelemetry\..*@.*$</packageUrl>
         <cve>CVE-2026-41178</cve>
     </suppress>
 
@@ -63,7 +67,7 @@
             implementation, not the OpenTelemetry .NET NuGet packages used by
             ReferenceApplication.
         </notes>
-        <packageUrl regex="true">^pkg:nuget/OpenTelemetry\.(Exporter\.OpenTelemetryProtocol|Extensions\.Hosting)@.*$</packageUrl>
+        <packageUrl regex="true">^pkg:nuget/OpenTelemetry\..*@.*$</packageUrl>
         <cve>CVE-2026-44967</cve>
     </suppress>
 
@@ -74,7 +78,7 @@
             (opentelemetry-js), not the OpenTelemetry .NET NuGet packages used
             by ReferenceApplication.
         </notes>
-        <packageUrl regex="true">^pkg:nuget/OpenTelemetry\.(Exporter\.OpenTelemetryProtocol|Extensions\.Hosting)@.*$</packageUrl>
+        <packageUrl regex="true">^pkg:nuget/OpenTelemetry\..*@.*$</packageUrl>
         <cve>CVE-2026-54285</cve>
     </suppress>
 
