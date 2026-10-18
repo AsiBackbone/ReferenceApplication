@@ -48,7 +48,44 @@ accountability evidence. The save pipeline skips canonicalization, timestamp nor
 them, and the model's UTC-precision convention leaves AsiBackbone's column configuration to AsiBackbone. Application
 data, including `GovernedOperationRecord`, is normalized and audited exactly as before.
 
-### Generate the host-owned migration
+### Apply the host-owned migration
+
+The repository already contains the Step 6 migration,
+`src/ReferenceApplication.Infrastructure/Data/Migrations/*_AddGovernedAuditEvidence.cs`. It only creates tables: the
+AsiBackbone audit ledger, reason-code, metadata, acknowledgment, outbox, and lifecycle tables, plus
+`GovernedOperationRecords`. It does not alter any existing NCAT table.
+
+Apply it with the same explicit procedure as the inherited history, described in
+[Create the development database](local-database-setup.md). From the repository root:
+
+```powershell
+Push-Location src/ReferenceApplication.Web
+
+dotnet tool run dotnet-ef migrations list `
+  --project ../ReferenceApplication.Infrastructure `
+  --startup-project . `
+  --context ApplicationDbContext
+
+dotnet tool run dotnet-ef database update `
+  --project ../ReferenceApplication.Infrastructure `
+  --startup-project . `
+  --context ApplicationDbContext
+
+Pop-Location
+```
+
+`migrations list` shows `AddGovernedAuditEvidence` last, marked `(Pending)` until `database update` applies it. The
+application does not apply migrations automatically at startup, and governed operations fail closed until the migration
+is applied, because they cannot store their decision evidence.
+
+### How the migration was created
+
+> [!NOTE]
+> Do not run this command in a clone of this repository. The migration already exists, so `dotnet-ef` stops with
+> `The name 'AddGovernedAuditEvidence' is used by an existing migration.` and changes nothing. The command is shown for
+> applying the same pattern to your own NCAT-based application.
+
+After applying `ApplyAsiBackboneConfigurations()` in its `DbContext`, a host generates its own migration:
 
 ```powershell
 Push-Location src/ReferenceApplication.Web
@@ -62,18 +99,7 @@ dotnet tool run dotnet-ef migrations add AddGovernedAuditEvidence `
 Pop-Location
 ```
 
-The migration only creates tables: the AsiBackbone audit ledger, reason-code, metadata, acknowledgment, outbox, and
-lifecycle tables, plus `GovernedOperationRecords`. It does not alter any existing NCAT table. Apply it with the same
-explicit procedure as the inherited history, described in [Create the development database](local-database-setup.md):
-
-```powershell
-dotnet tool run dotnet-ef database update `
-  --project ../ReferenceApplication.Infrastructure `
-  --startup-project . `
-  --context ApplicationDbContext
-```
-
-The application does not apply migrations automatically at startup.
+Review the generated migration before applying it. For this step, the review confirmed it creates tables only.
 
 ## 2. Persist decision receipts
 
