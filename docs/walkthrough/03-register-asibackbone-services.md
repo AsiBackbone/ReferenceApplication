@@ -1,27 +1,27 @@
 ---
 title: "Step 3: Register AsiBackbone Services"
-description: The planned AsiBackbone service and middleware composition in the NCAT startup path with host-owned actor mapping.
+description: The AsiBackbone service and middleware composition in the NCAT startup path with host-owned actor mapping.
 ---
 
 # Step 3: Register AsiBackbone Services
 
-**Status:** Planned against AsiBackbone `7.2.0`. This page will be updated with the commit when the step lands in the repository.
+**Status:** Complete with AsiBackbone `7.2.0`. Released in [`v0.1.0-alpha.3`](https://github.com/AsiBackbone/ReferenceApplication/releases/tag/v0.1.0-alpha.3).
 
-## Planned outcome
+## Outcome
 
-The host will register AsiBackbone's ASP.NET Core integration services through an application-owned extension and add
-endpoint governance to the established NCAT middleware pipeline. No governance rules or governed endpoints will be added
-in this step; those remain Steps 4 and 5.
+The host registers AsiBackbone's ASP.NET Core integration services through an application-owned extension and adds
+endpoint governance to the established NCAT middleware pipeline. This step adds no governance rules or governed
+endpoints; those are [Step 4](04-define-governance-rules.md) and [Step 5](05-govern-endpoints.md).
 
 The integration preserves host ownership of authentication. NCAT continues to authenticate users and normalize
-provider-specific claims. AsiBackbone will map the normalized `application:subject` claim to the stable governance actor
+provider-specific claims. AsiBackbone maps the normalized `application:subject` claim to the stable governance actor
 ID and `application:name` to its display name. Standard stable identifier and display-name claims remain fallbacks when
 a host deliberately disables or customizes NCAT claim transformation.
 
 ## Service registration
 
-`AddApplicationAsiBackbone` will live with the other host registration extensions under
-`src/ReferenceApplication.Web/Extensions`. It will call `AddAsiBackboneAspNetCore()` and configure
+`AddApplicationAsiBackbone` lives with the other host registration extensions under
+`src/ReferenceApplication.Web/Extensions`. It calls `AddAsiBackboneAspNetCore()` and configures
 `HttpGovernanceActorContextOptions` so the application-owned claims take precedence:
 
 ```csharp
@@ -38,7 +38,7 @@ those boundaries until later steps.
 
 ## Middleware placement
 
-The NCAT-derived pipeline will call the optional endpoint-governance middleware after routing, authentication, and
+The NCAT-derived pipeline calls the optional endpoint-governance middleware after routing, authentication, and
 authorization, and before controller and Razor Page endpoints execute:
 
 ```csharp
@@ -53,15 +53,15 @@ Passing `requireEndpointRoutingRegistered: true` converts an accidental future m
 startup failure. AsiBackbone endpoint governance remains opt-in at this stage, so existing endpoints without governance
 metadata continue through the pipeline unchanged.
 
-## Planned verification
+## Verification
 
-The Step 3 tests will verify that:
+The Step 3 tests verify that:
 
 - registration returns the same service collection and resolves the framework's scoped integration services;
 - normalized NCAT subject and name claims resolve to a known, authenticated human governance actor; and
 - the complete web host starts with the middleware in place and exposes the expected AsiBackbone services.
 
-The complete inherited NCAT suite will run alongside those tests:
+The complete inherited NCAT suite runs alongside those tests:
 
 ```powershell
 dotnet restore ReferenceApplication.slnx --locked-mode

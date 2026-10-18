@@ -1,0 +1,64 @@
+# Changelog
+
+All notable changes to the AsiBackbone Reference Application are documented in this file.
+
+This project follows Semantic Versioning using the format `MAJOR.MINOR.PATCH`. Releases are `0.x` pre-releases while
+the [integration walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) is being written. The
+release version is independent of the NCAT version, which the `ncat-v<version>` tags record.
+
+## 0.1.0-alpha.3 - 2026-10-18
+
+Completes walkthrough [Step 3: Register AsiBackbone Services](https://asibackbone.github.io/ReferenceApplication/walkthrough/03-register-asibackbone-services.html).
+
+### Added
+
+* `AddApplicationAsiBackbone` registers AsiBackbone's ASP.NET Core integration services and maps the governance actor
+  from the application's normalized claims: `application:subject` for the actor identifier and `application:name` for
+  the display name. AsiBackbone's standard identifier and display-name claims remain fallbacks.
+* The middleware pipeline calls `UseAsiBackboneEndpointGovernance(requireEndpointRoutingRegistered: true)` after
+  routing, authentication, and authorization, and before endpoints execute. Endpoint governance remains opt-in, so
+  endpoints without governance metadata are unchanged.
+* Tests for the AsiBackbone service registration, actor mapping, and middleware placement, including an end-to-end
+  check that an authenticated request resolves to the actor from the normalized claims.
+* Tests that guard the startup exception filter described under *Fixed*.
+
+### Changed
+
+* `/` now serves a ReferenceApplication landing page from `HomeController.Index`, with explicit anonymous access,
+  replacing the NCAT template's Razor Page. Tests that used `/` as a convenient endpoint now use dedicated test
+  endpoints, and the NCAT test for fallback authorization on an unannotated Razor Page no longer applies.
+
+### Fixed
+
+* EF Core design-time commands such as `dotnet ef migrations list` and `dotnet ef database update` no longer log a
+  spurious fatal "application terminated unexpectedly" error. The startup `catch` in `Program.cs` now excludes the
+  `HostAbortedException` those commands throw on purpose; genuine startup failures are still logged as fatal and
+  rethrown.
+
+## 0.1.0-alpha.2 - 2026-10-18
+
+Completes walkthrough [Step 2: Add AsiBackbone Packages](https://asibackbone.github.io/ReferenceApplication/walkthrough/02-add-asibackbone-packages.html).
+
+### Added
+
+* AsiBackbone 7.2.0 packages under central package management, with locked dependency graphs:
+  `AsiBackbone.Core`, `AsiBackbone.AspNetCore`, `AsiBackbone.EntityFrameworkCore`, `AsiBackbone.Analyzers`
+  (build-only), and `AsiBackbone.Testing`. No services or middleware are registered.
+
+## 0.1.0-alpha.1 - 2026-10-18
+
+First pre-release: the NCAT 2.11.5 baseline with walkthrough
+[Step 1: Scaffold from NCAT](https://asibackbone.github.io/ReferenceApplication/walkthrough/01-scaffold-from-ncat.html)
+complete.
+
+### Added
+
+* An ASP.NET Core host generated from the .NET Core Application Template 2.11.5. The unmodified scaffold is kept on
+  the protected `ncat-baseline` branch and tagged `ncat-v2.11.5`.
+* The documentation site with the generated API reference and the integration walkthrough.
+* Repository automation and controls: CI, CodeQL, OWASP Dependency-Check, workflow security analysis, OpenSSF
+  Scorecard, strict DocFX builds, and versioned branch rulesets.
+
+### Fixed
+
+* Suppressed cross-ecosystem OpenTelemetry CVE false positives in dependency scanning (#10, #12).

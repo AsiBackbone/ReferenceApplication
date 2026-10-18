@@ -16,7 +16,7 @@ Integration is in progress. The [Integration Walkthrough](https://asibackbone.gi
 |:---|:---|
 | 1. Scaffold from NCAT | Complete |
 | 2. Add AsiBackbone packages | Complete |
-| 3. Register AsiBackbone services | Planned |
+| 3. Register AsiBackbone services | Complete |
 | 4. Define governance rules | Planned |
 | 5. Govern endpoints | Planned |
 | 6. Persist and verify audit evidence | Planned |
