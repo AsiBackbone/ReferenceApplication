@@ -45,9 +45,9 @@ dotnet tool run dotnet-ef database update `
 Pop-Location
 ```
 
-The EF tools stop the temporary web host after resolving its design-time services. The current startup logger can display
-a `HostAbortedException` while that happens; the command succeeded when it exits with code `0` and prints the migration
-list or `Done.`
+The EF tools stop the temporary web host after resolving its design-time services. Since walkthrough Step 3, the startup
+`catch` excludes the `HostAbortedException` used for that stop, so no fatal error is logged. The command succeeded when it
+exits with code `0` and prints the migration list or `Done.`
 
 Using the web project as the working directory makes the relative SQLite path deterministic. The command creates:
 
@@ -71,9 +71,14 @@ readiness dependencies are available.
 
 ## Relationship to Step 6
 
-This checkpoint applies the inherited NCAT schema only. Step 6 will add AsiBackbone persistence configuration to the
-host-owned `ApplicationDbContext` and generate another host-owned migration. Apply that migration with the same explicit
-`dotnet tool run dotnet-ef database update` procedure; it will not run automatically at application startup.
+The repository's migration history also includes the Step 6 migration, `AddGovernedAuditEvidence`, which adds the
+AsiBackbone persistence tables to the host-owned `ApplicationDbContext`. The `database update` command above applies the
+whole history, including that migration. If you created the database before Step 6, run the same command again; it
+applies only the pending migration. Migrations never run automatically at application startup.
+
+The repository already contains every migration, so do not run `migrations add` here. See
+[Step 6: Persist and Verify Audit Evidence](06-persist-and-verify-audit.md#how-the-migration-was-created) for how the
+Step 6 migration was created.
 
 ## Authoritative references
 

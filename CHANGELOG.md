@@ -43,6 +43,9 @@ All six walkthrough steps are now complete.
   durable decision evidence.
 * The landing page, README, and documentation homepage report all six walkthrough steps complete. The homepage's
   governance-rules route no longer describes the rules as planned.
+* The Step 6 page and the development-database guide now tell readers of this repository to apply the included
+  `AddGovernedAuditEvidence` migration with `database update`, and present `migrations add` only as how the migration
+  was created. Running `migrations add` in a clone fails because the migration already exists.
 
 ## 0.1.0-alpha.5 - 2026-10-18
 
