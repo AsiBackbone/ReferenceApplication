@@ -1,0 +1,83 @@
+version: 2
+
+updates:
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+      time: "15:00"
+      timezone: "America/Chicago"
+    # Cooldown applies to routine version updates only. Dependabot security
+    # updates are not delayed by this setting.
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      microsoft-aspnetcore:
+        patterns:
+          - "Microsoft.AspNetCore.*"
+      microsoft-entity-framework-core:
+        patterns:
+          - "Microsoft.EntityFrameworkCore*"
+      serilog:
+        patterns:
+          - "Serilog*"
+      opentelemetry:
+        patterns:
+          - "OpenTelemetry*"
+      test-dependencies:
+        patterns:
+          - "Microsoft.NET.Test.Sdk"
+          - "xunit*"
+          - "coverlet*"
+          - "System.Drawing.Common"
+      external-authentication:
+        patterns:
+          - "AspNet.Security.OAuth.GitHub"
+          - "Sustainsys.Saml2.AspNetCore2"
+
+  # The Dockerfile pins its base images by digest. Dependabot keeps those
+  # immutable pins current through reviewable pull requests.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+      time: "15:15"
+      timezone: "America/Chicago"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      dotnet-base-images:
+        patterns:
+          - "mcr.microsoft.com/dotnet/*"
+
+  # GitHub Actions remain SHA-pinned; Dependabot updates the pins as a grouped,
+  # reviewable change without adding a cooldown beyond the weekly schedule.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+      time: "15:30"
+      timezone: "America/Chicago"
+    cooldown:
+      default-days: 7
+      exclude:
+        - "*"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

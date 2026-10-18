@@ -1,0 +1,18 @@
+- name: Overview
+  href: index.md
+- name: 1. Scaffold from NCAT
+  href: 01-scaffold-from-ncat.md
+- name: Supplemental - Refresh the NCAT baseline
+  href: refresh-ncat-baseline.md
+- name: 2. Add AsiBackbone packages
+  href: 02-add-asibackbone-packages.md
+- name: 3. Register AsiBackbone services
+  href: 03-register-asibackbone-services.md
+- name: Supplemental - Create the development database
+  href: local-database-setup.md
+- name: 4. Define governance rules
+  href: 04-define-governance-rules.md
+- name: 5. Govern endpoints
+  href: 05-govern-endpoints.md
+- name: 6. Persist and verify audit evidence
+  href: 06-persist-and-verify-audit.md
