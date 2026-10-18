@@ -15,7 +15,8 @@
 
 # DocFX generated output
 docs/_site/
-docs/api/
+docs/api/*
+!docs/api/index.md
 
 # SQLite development databases
 *.db

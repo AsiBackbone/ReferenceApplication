@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions
+    xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.4.xsd"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="
+        https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.4.xsd
+        https://dependency-check.github.io/DependencyCheck/dependency-suppression.1.4.xsd">
+
+    <suppress>
+        <notes>
+            False-positive CPE match. CVE-2012-2055 affects GitHub Enterprise
+            before 2012-03-04, not the AspNet.Security.OAuth.GitHub or
+            Microsoft.SourceLink.GitHub NuGet packages.
+        </notes>
+        <packageUrl regex="true">^pkg:nuget/(AspNet\.Security\.OAuth\.GitHub|Microsoft\.SourceLink\.GitHub)@.*$</packageUrl>
+        <cve>CVE-2012-2055</cve>
+    </suppress>
+
+    <suppress>
+        <notes>
+            False-positive CPE match. CVE-2026-39883 affects OpenTelemetry-Go,
+            not the OpenTelemetry .NET NuGet packages used by ReferenceApplication.
+        </notes>
+        <packageUrl regex="true">^pkg:nuget/OpenTelemetry\..*@.*$</packageUrl>
+        <cve>CVE-2026-39883</cve>
+    </suppress>
+
+</suppressions>

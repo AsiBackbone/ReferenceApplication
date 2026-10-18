@@ -1,0 +1,95 @@
+name: Publish Documentation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Deny all GitHub token permissions by default.
+permissions: {}
+
+concurrency:
+  group: github-pages-${{ github.event_name == 'pull_request' && github.ref || 'deploy' }}
+  cancel-in-progress: false
+
+env:
+  CONFIGURATION: Release
+  SOLUTION_FILE: './ReferenceApplication.slnx'
+
+jobs:
+  build-docs:
+    name: Build documentation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore ${{ env.SOLUTION_FILE }} --locked-mode
+
+      - name: Build
+        run: dotnet build ${{ env.SOLUTION_FILE }} --configuration ${{ env.CONFIGURATION }} --no-restore /p:ContinuousIntegrationBuild=true
+
+      - name: Restore .NET tools
+        run: dotnet tool restore
+
+      - name: Build DocFX site
+        run: dotnet tool run docfx -- docs/docfx.json --warningsAsErrors
+
+      - name: Test documentation landing-page validator
+        shell: pwsh
+        run: ./scripts/Validate-LandingPage.ps1 -SelfTest
+
+      - name: Validate documentation landing page
+        shell: pwsh
+        run: ./scripts/Validate-LandingPage.ps1 -SiteDirectory ./docs/_site
+
+      - name: Ensure published HTML metadata
+        shell: pwsh
+        run: ./scripts/Ensure-PublishedHtmlMetadata.ps1 -SiteDirectory "./docs/_site"
+
+      - name: Remove internal DocFX build manifest
+        # manifest.json is a DocFX build artifact with no published consumer; see AsiBackbone/.github LANDING-PAGE-STANDARD.md.
+        run: rm -- docs/_site/manifest.json
+
+      - name: Upload GitHub Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: docs/_site
+
+  deploy-docs:
+    name: Deploy documentation
+    if: github.event_name != 'pull_request'
+    needs: build-docs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
