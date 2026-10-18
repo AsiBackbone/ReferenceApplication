@@ -63,12 +63,16 @@ procedure leaves the newer version installed.
 ## 1. Set the versions and generate the scaffolds
 
 From the directory that will hold the scratch folder (outside the repository), set the two
-versions once. The remaining steps rely on these variables, so run them in the same PowerShell
-session, or set them again after opening a new one.
+versions once, and name the two short-lived working branches the refresh uses: one for the
+pull request into `ncat-baseline` and one for the pull request into `main`. Choose names that suit
+your task; this guide does not prescribe them. The remaining steps rely on these variables, so run
+them in the same PowerShell session, or set them again after opening a new one.
 
 ```powershell
 $Old = '2.11.4'
 $New = '2.11.5'
+$BaselineBranch = Read-Host 'Short-lived branch for the ncat-baseline pull request'
+$IntegrationBranch = Read-Host 'Short-lived branch for the main pull request'
 $Scratch = Join-Path (Get-Location) "ncat-refresh-$($New -replace '\.', '')"
 
 New-Item -ItemType Directory -Path $Scratch | Out-Null
@@ -142,12 +146,12 @@ if ($tagCommit -ne $baselineCommit) {
   throw "origin/ncat-baseline has moved since ncat-v$Old. Investigate before continuing."
 }
 
-git worktree add "..\ReferenceApplication-ncat-$New" -b "codex/ncat-baseline-$New" origin/ncat-baseline
+git worktree add "..\ReferenceApplication-ncat-$New" -b $BaselineBranch origin/ncat-baseline
 
 Set-Location "..\ReferenceApplication-ncat-$New"
 ```
 
-The commands contain no placeholders: `$Old` and `$New` come from step 1, and
+The commands contain no placeholders: `$Old`, `$New`, and `$BaselineBranch` come from step 1, and
 `git rev-list -n 1` resolves the annotated tag to the commit it points at.
 
 Define the helper that replaces the worktree contents with a scaffold and stages the result.
@@ -235,7 +239,7 @@ Commit and push the branch:
 
 ```powershell
 git commit -m "chore: refresh NCAT baseline to $New"
-git push -u origin "codex/ncat-baseline-$New"
+git push -u origin $BaselineBranch
 ```
 
 Open a pull request targeting `ncat-baseline`, not `main`.
@@ -261,10 +265,11 @@ final `diff --stat` matches the delta reviewed in step 3.
 
 ## 5. Overlay it onto the integrated application
 
-Create an integration branch from `main` and cherry-pick the tagged baseline commit:
+Create the second short-lived working branch from `main` and cherry-pick the tagged baseline
+commit:
 
 ```powershell
-git switch --create "codex/integrate-ncat-$New" origin/main
+git switch --create $IntegrationBranch origin/main
 git cherry-pick -x "ncat-v$New"
 ```
 
@@ -305,7 +310,7 @@ dotnet test --solution ReferenceApplication.slnx --configuration Release --no-bu
 ```
 
 The first restore may change lock files even when the cherry-pick had no conflicts; commit any
-such change on the integration branch.
+such change on the pull request branch.
 
 Update every place that records the current NCAT version, at least:
 
@@ -332,7 +337,7 @@ worktree, its local branch, and the scratch folder:
 
 ```powershell
 git worktree remove "..\ReferenceApplication-ncat-$New"
-git branch -D "codex/ncat-baseline-$New"
+git branch -D $BaselineBranch
 Remove-Item -Recurse -Force $Scratch
 ```
 

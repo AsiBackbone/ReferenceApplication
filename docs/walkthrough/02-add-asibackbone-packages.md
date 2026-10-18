@@ -1,17 +1,17 @@
 ---
 title: "Step 2: Add AsiBackbone Packages"
-description: The AsiBackbone 7.1.1 package references added under central package management with locked dependency graphs.
+description: The planned AsiBackbone 7.1.1 package references under central package management with locked dependency graphs.
 ---
 
 # Step 2: Add AsiBackbone Packages
 
-**Status:** Complete on `initial_development` with AsiBackbone `7.1.1`.
+**Status:** Planned against AsiBackbone `7.1.1`. This page will be updated with the commit when the step lands in the repository.
 
-## Outcome
+## Planned outcome
 
-The host projects reference only the AsiBackbone packages needed by the planned integration. All five packages use the stable `7.1.1` version through central package management, and each project's resolved dependency graph is recorded in its existing `packages.lock.json` file.
+The host projects will reference only the AsiBackbone packages needed by the planned integration. All five packages will use the stable `7.1.1` version through central package management, and each project's resolved dependency graph will be recorded in its existing `packages.lock.json` file.
 
-No AsiBackbone services or middleware are registered in this step. That wiring remains Step 3, keeping package acquisition separate from runtime behavior changes.
+No AsiBackbone services or middleware will be registered in this step. That wiring remains Step 3, keeping package acquisition separate from runtime behavior changes.
 
 ## Package placement
 
@@ -23,9 +23,9 @@ No AsiBackbone services or middleware are registered in this step. That wiring r
 | `AsiBackbone.Analyzers` | Web, Infrastructure | Build-time safety rails; marked `PrivateAssets="all"` so it remains a build concern |
 | `AsiBackbone.Testing` | Tests | Test harness helpers for later governance assertions |
 
-`AsiBackbone.AspNetCore`, `AsiBackbone.EntityFrameworkCore`, and `AsiBackbone.Testing` already depend on Core where required. The Web and Infrastructure projects nevertheless reference `AsiBackbone.Core` directly because later walkthrough steps will use its public contracts directly; this avoids relying on transitive compile assets for code the host owns.
+`AsiBackbone.AspNetCore`, `AsiBackbone.EntityFrameworkCore`, and `AsiBackbone.Testing` already depend on Core where required. The Web and Infrastructure projects will nevertheless reference `AsiBackbone.Core` directly because later walkthrough steps will use its public contracts directly; this avoids relying on transitive compile assets for code the host owns.
 
-## Procedure
+## Planned procedure
 
 1. Confirm `7.1.1` as the current stable release in [AsiBackbone Getting Started](https://asibackbone.github.io/AsiBackbone/articles/getting-started.html) and the [AsiBackbone 7.1.1 release](https://github.com/AsiBackbone/AsiBackbone/releases/tag/v7.1.1).
 
