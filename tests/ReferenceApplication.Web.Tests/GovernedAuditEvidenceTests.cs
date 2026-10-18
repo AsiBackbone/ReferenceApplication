@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using System.Text.Json;
 using AsiBackbone.Core.Audit;
 using AsiBackbone.Core.Decisions;
 using AsiBackbone.Core.HostIntegration;
@@ -38,6 +39,7 @@ public sealed class GovernedAuditEvidenceTests : IDisposable
     private const string _testPermissionHeaderName = "X-Test-Permission";
     private const string _antiforgeryFormFieldName = "__RequestVerificationToken";
     private const string _basePath = "/api/v1/governed-operations";
+    private static readonly JsonSerializerOptions _webJsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly TestSqliteDatabase _database = TestSqliteDatabase.Create();
 
@@ -121,6 +123,32 @@ public sealed class GovernedAuditEvidenceTests : IDisposable
         // 6. A later dispatch finds nothing left to deliver and writes no second event.
         Assert.Equal(0, (await DispatchAsync(factory)).AttemptedCount);
         Assert.Equal(1, await dbContext.AsiBackboneDecisionReceiptLifecycleEvents.CountAsync(TestContext.Current.CancellationToken));
+
+        // 7. The administrator-only query returns the complete evidence chain as one minimized, ordered timeline.
+        string correlationId = Assert.IsType<string>(decision.CorrelationId);
+        using HttpResponseMessage evidenceResponse = await GetEvidenceAsync(client, correlationId);
+        Assert.Equal(HttpStatusCode.OK, evidenceResponse.StatusCode);
+        string evidenceJson = await evidenceResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        GovernanceEvidenceTimelineResponse timeline = Assert.IsType<GovernanceEvidenceTimelineResponse>(
+            JsonSerializer.Deserialize<GovernanceEvidenceTimelineResponse>(
+                evidenceJson,
+                _webJsonOptions));
+
+        Assert.Equal(correlationId, timeline.CorrelationId);
+        Assert.Contains(timeline.Entries, entry => entry.Kind == "decision" && entry.Outcome == "Allowed");
+        Assert.Contains(timeline.Entries, entry => entry.Kind == "application-record" && entry.EvidenceId == created.RecordId.ToString("D"));
+        Assert.Contains(timeline.Entries, entry => entry.Kind == "mutation-audit" && entry.MutationBatchId == created.MutationBatchId);
+        Assert.Contains(timeline.Entries, entry => entry.Kind == "audit-completion" && entry.Status == ApplicationAuditCompletionOutboxStatuses.Delivered);
+        Assert.Contains(timeline.Entries, entry => entry.Kind == "lifecycle-event" && entry.Status == DecisionReceiptLifecycleStage.GatewayExecutionCompleted.ToString());
+        Assert.Equal(
+            timeline.Entries.OrderBy(entry => entry.OccurredUtc)
+                .ThenBy(entry => entry.Kind, StringComparer.Ordinal)
+                .ThenBy(entry => entry.EvidenceId, StringComparer.Ordinal),
+            timeline.Entries);
+        Assert.DoesNotContain("Quarterly review", evidenceJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("originalValues", evidenceJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("currentValues", evidenceJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("keyValues", evidenceJson, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -151,6 +179,61 @@ public sealed class GovernedAuditEvidenceTests : IDisposable
         Assert.Equal(0, await dbContext.GovernedOperationRecords.CountAsync(TestContext.Current.CancellationToken));
         Assert.Equal(0, await dbContext.AuditRecords.CountAsync(TestContext.Current.CancellationToken));
         Assert.Equal(0, await dbContext.ApplicationAuditCompletionOutboxEntries.CountAsync(TestContext.Current.CancellationToken));
+
+        using HttpResponseMessage evidenceResponse = await GetEvidenceAsync(client, decision.CorrelationId!);
+        Assert.Equal(HttpStatusCode.OK, evidenceResponse.StatusCode);
+        GovernanceEvidenceTimelineResponse timeline = Assert.IsType<GovernanceEvidenceTimelineResponse>(
+            await evidenceResponse.Content.ReadFromJsonAsync<GovernanceEvidenceTimelineResponse>(
+                TestContext.Current.CancellationToken));
+        GovernanceEvidenceTimelineEntry denied = Assert.Single(timeline.Entries);
+        Assert.Equal("decision", denied.Kind);
+        Assert.Equal(GovernanceDecisionOutcome.Denied.ToString(), denied.Outcome);
+        Assert.Contains(AdministratorRoleConstraint.DeniedReasonCode, denied.ReasonCodes);
+    }
+
+    /// <summary>
+    /// Verifies that an unknown correlation identifier does not disclose or synthesize evidence.
+    /// </summary>
+    [Fact]
+    public async Task GovernanceEvidence_UnknownCorrelation_ReturnsNotFound()
+    {
+        using WebApplicationFactory<Program> factory = await CreateFactoryAsync();
+        using HttpClient client = factory.CreateHttpsClient();
+
+        using HttpResponseMessage response = await GetEvidenceAsync(client, "unknown-correlation");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    /// <summary>
+    /// Verifies that evidence cannot be read anonymously or by a non-administrator.
+    /// </summary>
+    [Fact]
+    public async Task GovernanceEvidence_AccessControl_RejectsAnonymousAndNonAdministrator()
+    {
+        using WebApplicationFactory<Program> factory = await CreateFactoryAsync();
+        using HttpClient client = factory.CreateHttpsClient();
+        using HttpResponseMessage createResponse = await PostAsync(
+            client,
+            "records",
+            role: "administrator",
+            form: new Dictionary<string, string> { ["Title"] = "Protected evidence" });
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        string correlationId = (await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>()
+            .AsiBackboneAuditLedgerRecords
+            .SingleAsync(TestContext.Current.CancellationToken)).CorrelationId!;
+
+        using HttpResponseMessage anonymous = await GetEvidenceAsync(client, correlationId, user: null, role: null);
+        using HttpResponseMessage nonAdministrator = await GetEvidenceAsync(
+            client,
+            correlationId,
+            user: "test-reader",
+            role: "reader");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, nonAdministrator.StatusCode);
     }
 
     /// <summary>
@@ -308,6 +391,30 @@ public sealed class GovernedAuditEvidenceTests : IDisposable
         }
 
         return request;
+    }
+
+    private static async Task<HttpResponseMessage> GetEvidenceAsync(
+        HttpClient client,
+        string correlationId,
+        string? user = "test-admin",
+        string? role = "administrator")
+    {
+        using HttpRequestMessage request = new(
+            HttpMethod.Get,
+            $"/api/v1/governance-evidence/{Uri.EscapeDataString(correlationId)}");
+        request.Headers.Accept.ParseAdd("application/json");
+
+        if (user is not null)
+        {
+            request.Headers.Add(_testUserHeaderName, user);
+        }
+
+        if (role is not null)
+        {
+            request.Headers.Add(_testRoleHeaderName, role);
+        }
+
+        return await client.SendAsync(request, TestContext.Current.CancellationToken);
     }
 
     private Task<WebApplicationFactory<Program>> CreateFactoryAsync(bool migrate = true)

@@ -44,6 +44,7 @@ public static class GovernanceEvidenceServiceExtensions
         services.AddScoped<IGovernanceDecisionEvidenceAccessor>(serviceProvider =>
             serviceProvider.GetRequiredService<GovernanceDecisionEvidenceAccessor>());
         services.AddScoped<IDecisionReceiptSink, LedgerDecisionReceiptSink>();
+        services.AddScoped<IGovernanceEvidenceQuery, GovernanceEvidenceQuery>();
 
         services.AddScoped<IApplicationAuditCompletionPublisher, AsiBackboneAuditCompletionPublisher>();
         services.AddApplicationAuditCompletionOutbox(options =>
