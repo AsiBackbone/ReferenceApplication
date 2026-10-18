@@ -5,7 +5,7 @@ description: The planned AsiBackbone service and middleware composition in the N
 
 # Step 3: Register AsiBackbone Services
 
-**Status:** Planned against AsiBackbone `7.1.1`. This page will be updated with the commit when the step lands in the repository.
+**Status:** Planned against AsiBackbone `7.2.0`. This page will be updated with the commit when the step lands in the repository.
 
 ## Planned outcome
 
