@@ -25,4 +25,57 @@
         <cve>CVE-2026-39883</cve>
     </suppress>
 
+    <!--
+        The CPE for OpenTelemetry matches every OpenTelemetry NuGet package
+        ReferenceApplication references directly (the OTLP exporter and the
+        hosting extensions), so each CVE below is reported once per package.
+        Each suppression names only those two packages and one CVE, so any
+        other CVE, including genuine OpenTelemetry .NET advisories, stays
+        visible.
+    -->
+
+    <suppress>
+        <notes>
+            False-positive CPE match. CVE-2026-39882 (GHSA-w8rr-5gcm-pp58)
+            affects the OpenTelemetry-Go OTLP HTTP exporters
+            (go.opentelemetry.io/otel/exporters/otlp/...), not the
+            OpenTelemetry .NET NuGet packages used by ReferenceApplication.
+        </notes>
+        <packageUrl regex="true">^pkg:nuget/OpenTelemetry\.(Exporter\.OpenTelemetryProtocol|Extensions\.Hosting)@.*$</packageUrl>
+        <cve>CVE-2026-39882</cve>
+    </suppress>
+
+    <suppress>
+        <notes>
+            False-positive CPE match. CVE-2026-41178 (GHSA-5wrp-cwcj-q835)
+            affects the OpenTelemetry-Go baggage and propagation packages
+            (go.opentelemetry.io/otel/baggage and .../propagation), not the
+            OpenTelemetry .NET NuGet packages used by ReferenceApplication.
+        </notes>
+        <packageUrl regex="true">^pkg:nuget/OpenTelemetry\.(Exporter\.OpenTelemetryProtocol|Extensions\.Hosting)@.*$</packageUrl>
+        <cve>CVE-2026-41178</cve>
+    </suppress>
+
+    <suppress>
+        <notes>
+            False-positive CPE match. CVE-2026-44967 affects the OTLP HTTP
+            exporters of opentelemetry-cpp, the OpenTelemetry C++
+            implementation, not the OpenTelemetry .NET NuGet packages used by
+            ReferenceApplication.
+        </notes>
+        <packageUrl regex="true">^pkg:nuget/OpenTelemetry\.(Exporter\.OpenTelemetryProtocol|Extensions\.Hosting)@.*$</packageUrl>
+        <cve>CVE-2026-44967</cve>
+    </suppress>
+
+    <suppress>
+        <notes>
+            False-positive CPE match. CVE-2026-54285 (GHSA-8988-4f7v-96qf)
+            affects W3CBaggagePropagator in the npm package @opentelemetry/core
+            (opentelemetry-js), not the OpenTelemetry .NET NuGet packages used
+            by ReferenceApplication.
+        </notes>
+        <packageUrl regex="true">^pkg:nuget/OpenTelemetry\.(Exporter\.OpenTelemetryProtocol|Extensions\.Hosting)@.*$</packageUrl>
+        <cve>CVE-2026-54285</cve>
+    </suppress>
+
 </suppressions>
