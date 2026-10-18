@@ -69,21 +69,26 @@ public sealed class AsiBackboneAuditCompletionPublisher : IApplicationAuditCompl
 
     private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
     private readonly ILoggerFactory _loggerFactory;
+    private readonly GovernanceEvidenceNotificationPublisher _notificationPublisher;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AsiBackboneAuditCompletionPublisher" /> class.
     /// </summary>
     /// <param name="dbContextFactory">The factory for short-lived application database contexts.</param>
     /// <param name="loggerFactory">The logger factory used for the AsiBackbone EF Core stores.</param>
+    /// <param name="notificationPublisher">The isolated best-effort evidence notification publisher.</param>
     public AsiBackboneAuditCompletionPublisher(
         IDbContextFactory<ApplicationDbContext> dbContextFactory,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        GovernanceEvidenceNotificationPublisher notificationPublisher)
     {
         ArgumentNullException.ThrowIfNull(dbContextFactory);
         ArgumentNullException.ThrowIfNull(loggerFactory);
+        ArgumentNullException.ThrowIfNull(notificationPublisher);
 
         _dbContextFactory = dbContextFactory;
         _loggerFactory = loggerFactory;
+        _notificationPublisher = notificationPublisher;
     }
 
     /// <inheritdoc />
@@ -197,6 +202,14 @@ public sealed class AsiBackboneAuditCompletionPublisher : IApplicationAuditCompl
             return ApplicationAuditCompletionPublishResult.Retry(
                 "lifecycle-persistence-failed",
                 exception.GetType().Name);
+        }
+
+        if (!string.IsNullOrWhiteSpace(lifecycleEvent.CorrelationId))
+        {
+            _notificationPublisher.Publish(new GovernanceEvidenceNotification(
+                lifecycleEvent.CorrelationId,
+                GovernanceEvidenceNotificationKinds.LifecycleEvent,
+                lifecycleEvent.EventId));
         }
 
         return ApplicationAuditCompletionPublishResult.Success();

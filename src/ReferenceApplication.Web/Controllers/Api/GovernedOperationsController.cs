@@ -94,6 +94,7 @@ public sealed class GovernedOperationsController : ControllerBase
     /// <param name="auditedTransaction">The NCAT audited transaction coordinator.</param>
     /// <param name="completionOutbox">The NCAT audit-completion outbox.</param>
     /// <param name="evidenceAccessor">The governance decision evidence persisted for this request.</param>
+    /// <param name="notificationPublisher">The isolated best-effort evidence notification publisher.</param>
     /// <param name="cancellationToken">A token that cancels the request.</param>
     /// <returns>The created record and the identifiers that link it to its governance decision.</returns>
     /// <remarks>
@@ -113,12 +114,14 @@ public sealed class GovernedOperationsController : ControllerBase
         [FromServices] IApplicationAuditedTransaction auditedTransaction,
         [FromServices] IApplicationAuditCompletionOutbox completionOutbox,
         [FromServices] IGovernanceDecisionEvidenceAccessor evidenceAccessor,
+        [FromServices] GovernanceEvidenceNotificationPublisher notificationPublisher,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(auditedTransaction);
         ArgumentNullException.ThrowIfNull(completionOutbox);
         ArgumentNullException.ThrowIfNull(evidenceAccessor);
+        ArgumentNullException.ThrowIfNull(notificationPublisher);
 
         // Endpoint governance persisted the decision before this action ran; without it the mutation would be
         // unlinked, so fail rather than write an unattributable change.
@@ -142,6 +145,14 @@ public sealed class GovernedOperationsController : ControllerBase
             async (dbContext, receipt, token) =>
                 _ = await completionOutbox.StageAsync(dbContext, receipt, cancellationToken: token).ConfigureAwait(false),
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (result.AuditReceipt is { } auditReceipt && !string.IsNullOrWhiteSpace(auditReceipt.CorrelationId))
+        {
+            notificationPublisher.Publish(new GovernanceEvidenceNotification(
+                auditReceipt.CorrelationId,
+                GovernanceEvidenceNotificationKinds.MutationAudit,
+                auditReceipt.MutationBatchId));
+        }
 
         return StatusCode(StatusCodes.Status201Created, new GovernedRecordCreatedResponse(
             RecordId: record.Id,

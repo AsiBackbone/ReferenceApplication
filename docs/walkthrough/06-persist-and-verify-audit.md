@@ -185,6 +185,31 @@ builder.Services.AddApplicationGovernanceEvidence();
 registers the evidence holder, the receipt sink, and the completion publisher, and enables the NCAT audit-completion
 outbox.
 
+## Observe persisted evidence notifications
+
+Administrators can open `GET /api/v1/governance-evidence/notifications` as a Server-Sent Events stream. Supply an
+optional exact `correlationId` query value to filter the stream; without it, an administrator receives all new
+notifications in that application process. The endpoint uses the same administrator policy as the evidence query API,
+handles a disconnected client as normal cancellation, and needs no CSP exception or client library.
+
+Each `evidence` event contains only three identifiers:
+
+```json
+{
+  "correlationId": "0HNP...",
+  "kind": "mutation-audit",
+  "recordId": "mutation-batch-id"
+}
+```
+
+The possible kinds are `decision`, `mutation-audit`, and `lifecycle-event`. The client uses the correlation identifier
+to re-query `GET /api/v1/governance-evidence/{correlationId}`; notifications never duplicate the evidence payload.
+
+The in-process stream is a best-effort freshness hint, not a durable queue. Each subscriber has a bounded buffer and a
+slow client can miss a hint, so the database-backed evidence API remains authoritative. Notification publishing occurs
+only after the corresponding evidence is persisted. A notifier failure is logged and cannot fail or delay the governed
+request or audit-completion outbox delivery.
+
 ## Verification
 
 The walkthrough Step 6 tests use real SQLite databases created from the application's migrations.
@@ -201,7 +226,11 @@ The walkthrough Step 6 tests use real SQLite databases created from the applicat
   - every governed operation persists exactly one decision per request with its outcome;
   - anonymous and ungoverned requests persist no decision;
   - an invalid request makes no change;
-  - a governed request fails closed when its decision cannot be stored.
+  - a governed request fails closed when its decision cannot be stored;
+  - a subscriber receives the decision, mutation-audit, and lifecycle-event notifications in persistence order;
+  - a throwing notifier does not affect the governed request or completion delivery;
+  - anonymous and non-administrator clients cannot open the notification stream.
+- `GovernanceEvidenceControllerTests` verify the identifier-only SSE wire format and normal client-disconnect handling.
 - `AccountabilityRecordPersistenceTests` verify the model and migrations, including that the migrations match the
   current model. They also verify that AsiBackbone evidence is stored byte-for-byte with sub-millisecond timestamps and is
   never mutation-audited, while application data in the same context is still canonicalized, normalized, and audited.
