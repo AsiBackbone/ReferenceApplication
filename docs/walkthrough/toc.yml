@@ -14,5 +14,7 @@
   href: 04-define-governance-rules.md
 - name: 5. Govern endpoints
   href: 05-govern-endpoints.md
+- name: Supplemental - Use the Development demo identity
+  href: development-demo-identity.md
 - name: 6. Persist and verify audit evidence
   href: 06-persist-and-verify-audit.md

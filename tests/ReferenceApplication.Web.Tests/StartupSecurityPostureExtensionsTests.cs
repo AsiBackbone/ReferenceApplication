@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ReferenceApplication.Web.Authentication.Demo;
 using ReferenceApplication.Web.Authentication.Options;
 using ReferenceApplication.Web.Extensions;
 using ReferenceApplication.Web.Options;
@@ -200,17 +201,65 @@ public sealed class StartupSecurityPostureExtensionsTests
         Assert.Empty(logger.Entries);
     }
 
+    [Fact]
+    public void LogApplicationSecurityPosture_DevelopmentDemoIdentityEnabled_EmitsWarning()
+    {
+        TestLogger logger = new();
+        IConfiguration configuration = CreateConfiguration(
+            authenticationEnabled: true,
+            demoIdentityEnabled: true);
+        TestHostEnvironment environment = new(Environments.Development);
+
+        StartupSecurityPostureExtensions.LogApplicationSecurityPosture(
+            logger,
+            configuration,
+            environment);
+
+        LogEntry entry = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Warning, entry.Level);
+        Assert.Contains("demo identity controls are active", entry.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(DemoIdentityOptions.SignInPath, entry.Message, StringComparison.Ordinal);
+        Assert.Contains(
+            $"{DemoIdentityOptions.SectionName}:{nameof(DemoIdentityOptions.Enabled)}",
+            entry.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("Staging")]
+    [InlineData("Production")]
+    public void LogApplicationSecurityPosture_NonDevelopmentDemoSwitch_DoesNotReportDemoControls(string environmentName)
+    {
+        TestLogger logger = new();
+        IConfiguration configuration = CreateConfiguration(
+            authenticationEnabled: true,
+            demoIdentityEnabled: true);
+        TestHostEnvironment environment = new(environmentName);
+
+        StartupSecurityPostureExtensions.LogApplicationSecurityPosture(
+            logger,
+            configuration,
+            environment);
+
+        Assert.DoesNotContain(
+            logger.Entries,
+            entry => entry.Message.Contains("demo identity controls are active", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static IConfiguration CreateConfiguration(
         bool authenticationEnabled,
         string? allowedHosts = null,
         string? keyRingPath = null,
         string? keyEncryptionCertificatePath = null,
-        bool useDataProtectionDefaults = false)
+        bool useDataProtectionDefaults = false,
+        bool demoIdentityEnabled = false)
     {
         Dictionary<string, string?> values = new()
         {
             [$"{ApplicationAuthenticationOptions.SectionName}:Enabled"] =
-                authenticationEnabled.ToString()
+                authenticationEnabled.ToString(),
+            [$"{DemoIdentityOptions.SectionName}:{nameof(DemoIdentityOptions.Enabled)}"] =
+                demoIdentityEnabled.ToString()
         };
 
         values["AllowedHosts"] = allowedHosts ?? "app.example.com";

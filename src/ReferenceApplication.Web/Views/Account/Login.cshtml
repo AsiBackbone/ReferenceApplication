@@ -6,6 +6,30 @@
 
 <h1>Sign In</h1>
 
+@if (Model.ShowDemoIdentityControls)
+{
+    <section aria-labelledby="demo-identity-heading">
+        <h2 id="demo-identity-heading">Development demo identity</h2>
+        <p>
+            This local-only control creates a temporary application cookie for exercising governance outcomes. It is
+            not a production identity provider.
+        </p>
+        <form method="post" action="/Account/DemoSignIn">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <div>
+                <input id="demo-administrator" type="checkbox" name="administrator" value="true" />
+                <label for="demo-administrator">Administrator role</label>
+            </div>
+            <div>
+                <input id="demo-capability" type="checkbox" name="consequentialCapability" value="true" />
+                <label for="demo-capability"><code>referenceapplication.consequential.execute</code> capability</label>
+            </div>
+            <button type="submit">Use demo identity</button>
+        </form>
+    </section>
+}
+
 @if (Model.ExternalProviders.Count == 0)
 {
     <p>

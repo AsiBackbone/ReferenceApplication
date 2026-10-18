@@ -40,6 +40,7 @@ try
     builder.Services.AddApplicationProblemDetails(builder.Environment);
     builder.Services.AddApplicationDataProtection(builder.Configuration, builder.Environment);
     builder.Services.AddApplicationAuthentication(builder.Configuration, builder.Environment);
+    builder.Services.AddApplicationDemoIdentity(builder.Configuration, builder.Environment);
     builder.Services.AddApplicationAuthorization(builder.Configuration);
     builder.Services.AddApplicationDataAccess(builder.Configuration);
     builder.Services.AddApplicationAsiBackbone();
