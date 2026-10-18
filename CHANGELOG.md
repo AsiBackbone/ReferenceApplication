@@ -6,6 +6,24 @@ This project follows Semantic Versioning using the format `MAJOR.MINOR.PATCH`. R
 the [integration walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) is being written. The
 release version is independent of the NCAT version, which the `ncat-v<version>` tags record.
 
+## Unreleased
+
+### Changed
+
+* Updated the AsiBackbone packages (`AsiBackbone.Core`, `AsiBackbone.AspNetCore`, `AsiBackbone.EntityFrameworkCore`,
+  `AsiBackbone.Analyzers`, and `AsiBackbone.Testing`) from 7.2.0 to the 7.2.1 patch release and regenerated the lock
+  files. Walkthrough Step 2 now installs 7.2.1.
+
+### Fixed
+
+* An administrator **without** the capability grant is now denied with HTTP 403 Problem Details on the consequential
+  endpoint, instead of receiving an HTTP 428 acknowledgment challenge. AsiBackbone 7.2.1 validates capability grants
+  for acknowledgment-required decisions
+  ([AsiBackbone/AsiBackbone#887](https://github.com/AsiBackbone/AsiBackbone/issues/887)). This resolves the
+  0.1.0-alpha.5 known issue ([#17](https://github.com/AsiBackbone/ReferenceApplication/issues/17)). The test that pinned
+  the 7.2.0 behavior now asserts the denial, and the Step 5 page replaces its known-limitation section with an
+  explanation of the required ordering.
+
 ## 0.1.0-alpha.5 - 2026-10-18
 
 Completes walkthrough [Step 5: Govern Endpoints](https://asibackbone.github.io/ReferenceApplication/walkthrough/05-govern-endpoints.html).
@@ -35,7 +53,8 @@ Completes walkthrough [Step 5: Govern Endpoints](https://asibackbone.github.io/R
   challenge on the consequential endpoint instead of HTTP 403, because the framework skips capability validation for
   acknowledgment-required decisions. The action still does not execute. Tracked in
   [AsiBackbone/AsiBackbone#887](https://github.com/AsiBackbone/AsiBackbone/issues/887) and
-  [#17](https://github.com/AsiBackbone/ReferenceApplication/issues/17).
+  [#17](https://github.com/AsiBackbone/ReferenceApplication/issues/17); fixed by the AsiBackbone 7.2.1 update (see
+  *Unreleased*).
 
 ## 0.1.0-alpha.4 - 2026-10-18
 
