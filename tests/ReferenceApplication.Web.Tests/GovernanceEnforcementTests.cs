@@ -31,6 +31,7 @@ public sealed class GovernanceEnforcementTests
     private const string _testAuthenticationScheme = "GovernanceTestAuthentication";
     private const string _testUserHeaderName = "X-Test-User";
     private const string _testRoleHeaderName = "X-Test-Role";
+    private const string _antiforgeryFormFieldName = "__RequestVerificationToken";
 
     /// <summary>
     /// Verifies that the metadata AsiBackbone produces for a real endpoint identifies each attached policy marker, and
@@ -149,6 +150,29 @@ public sealed class GovernanceEnforcementTests
     }
 
     /// <summary>
+    /// Verifies that governance does not replace antiforgery protection: an administrator who passes the governance
+    /// rule is still rejected without a valid antiforgery token.
+    /// </summary>
+    [Fact]
+    public async Task AdministratorEndpoint_AdministratorWithoutAntiforgeryToken_IsRejected()
+    {
+        using WebApplicationFactory<Program> factory = CreateFactoryWithTestAuthentication();
+        using HttpClient client = factory.CreateHttpsClient();
+
+        using HttpResponseMessage response = await PostAsync(
+            client,
+            "administrator-action",
+            role: "administrator",
+            includeAntiforgeryToken: false);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.DoesNotContain(
+            AsiBackboneTestController.ExecutedMarker,
+            await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken),
+            StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// Verifies that a consequential endpoint does not execute until the required acknowledgment is provided.
     /// </summary>
     [Fact]
@@ -203,13 +227,45 @@ public sealed class GovernanceEnforcementTests
             StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Posts to a governed test endpoint as the given test user. Unless told otherwise, it first obtains an
+    /// antiforgery token for that same user, because the endpoints validate antiforgery tokens as Step 5's
+    /// consequential endpoints will, and a token is bound to the identity that requested it.
+    /// </summary>
     private static async Task<HttpResponseMessage> PostAsync(
         HttpClient client,
         string action,
         string? user = "test-user",
-        string? role = null)
+        string? role = null,
+        bool includeAntiforgeryToken = true)
     {
-        using HttpRequestMessage request = new(HttpMethod.Post, $"/test/asibackbone/{action}");
+        Dictionary<string, string> form = new(StringComparer.Ordinal);
+
+        if (includeAntiforgeryToken)
+        {
+            using HttpRequestMessage tokenRequest = CreateRequest(
+                HttpMethod.Get,
+                "/test/authentication/antiforgery-token",
+                user,
+                role);
+            using HttpResponseMessage tokenResponse = await client.SendAsync(
+                tokenRequest,
+                TestContext.Current.CancellationToken);
+            tokenResponse.EnsureSuccessStatusCode();
+
+            form[_antiforgeryFormFieldName] = await tokenResponse.Content.ReadAsStringAsync(
+                TestContext.Current.CancellationToken);
+        }
+
+        using HttpRequestMessage request = CreateRequest(HttpMethod.Post, $"/test/asibackbone/{action}", user, role);
+        request.Content = new FormUrlEncodedContent(form);
+
+        return await client.SendAsync(request, TestContext.Current.CancellationToken);
+    }
+
+    private static HttpRequestMessage CreateRequest(HttpMethod method, string path, string? user, string? role)
+    {
+        HttpRequestMessage request = new(method, path);
 
         if (user is not null)
         {
@@ -221,7 +277,7 @@ public sealed class GovernanceEnforcementTests
             request.Headers.Add(_testRoleHeaderName, role);
         }
 
-        return await client.SendAsync(request, TestContext.Current.CancellationToken);
+        return request;
     }
 
     private static WebApplicationFactory<Program> CreateFactoryWithTestAuthentication()

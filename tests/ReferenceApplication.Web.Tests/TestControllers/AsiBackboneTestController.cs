@@ -74,7 +74,7 @@ public sealed class AsiBackboneTestController : ControllerBase
     /// <returns>A response confirming the action executed, which only an administrator may receive.</returns>
     [HttpPost("administrator-action")]
     [AllowAnonymous]
-    [IgnoreAntiforgeryToken]
+    [ValidateAntiForgeryToken]
     [GovernancePolicy(typeof(AdministratorActionPolicy))]
     public IActionResult AdministratorAction()
     {
@@ -87,7 +87,7 @@ public sealed class AsiBackboneTestController : ControllerBase
     /// <returns>A response confirming the action executed, which an unacknowledged request must never receive.</returns>
     [HttpPost("consequential-action")]
     [AllowAnonymous]
-    [IgnoreAntiforgeryToken]
+    [ValidateAntiForgeryToken]
     [GovernancePolicy(typeof(ConsequentialActionPolicy))]
     public IActionResult ConsequentialAction()
     {
@@ -101,7 +101,7 @@ public sealed class AsiBackboneTestController : ControllerBase
     /// <returns>A response confirming the action executed, which this incomplete declaration must never receive.</returns>
     [HttpPost("capability-action-without-scope")]
     [AllowAnonymous]
-    [IgnoreAntiforgeryToken]
+    [ValidateAntiForgeryToken]
     [GovernancePolicy(typeof(CapabilityProtectedActionPolicy))]
     public IActionResult CapabilityActionWithoutScope()
     {
