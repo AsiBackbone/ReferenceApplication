@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ReferenceApplication.Web.Authentication;
+using ReferenceApplication.Web.Authentication.Demo;
+using ReferenceApplication.Web.Authentication.Extensions;
 using ReferenceApplication.Web.Models;
 
 namespace ReferenceApplication.Web.Controllers;
@@ -16,9 +18,21 @@ namespace ReferenceApplication.Web.Controllers;
 /// needed.</remarks>
 /// <param name="schemeProvider">The authentication scheme provider used to retrieve available external authentication schemes for login operations.
 /// Cannot be null.</param>
-public class AccountController(IAuthenticationSchemeProvider schemeProvider) : Controller
+/// <param name="demoIdentityServices">The Development-only demo identity service collection. It is empty unless the
+/// control was explicitly enabled in Development.</param>
+/// <param name="configuration">The application configuration used to reconfirm the explicit demo switch.</param>
+/// <param name="environment">The host environment used to reconfirm the Development boundary.</param>
+public class AccountController(
+    IAuthenticationSchemeProvider schemeProvider,
+    IEnumerable<IDemoIdentityService>? demoIdentityServices = null,
+    IConfiguration? configuration = null,
+    IHostEnvironment? environment = null) : Controller
 {
     private readonly IAuthenticationSchemeProvider _schemeProvider = schemeProvider;
+    private readonly bool _showDemoIdentityControls = demoIdentityServices?.Any() == true &&
+        configuration is not null &&
+        environment is not null &&
+        DemoIdentityServiceExtensions.IsDemoIdentityActive(configuration, environment);
 
     /// <summary>
     /// Displays the login page and provides available external authentication providers.
@@ -46,6 +60,7 @@ public class AccountController(IAuthenticationSchemeProvider schemeProvider) : C
         AccountLoginViewModel model = new()
         {
             ReturnUrl = safeReturnUrl,
+            ShowDemoIdentityControls = _showDemoIdentityControls,
             ExternalProviders = schemes
                 .Select(scheme => new ExternalAuthenticationProviderViewModel
                 {

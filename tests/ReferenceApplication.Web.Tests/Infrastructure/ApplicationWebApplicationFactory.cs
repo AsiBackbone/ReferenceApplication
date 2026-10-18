@@ -15,9 +15,13 @@ namespace ReferenceApplication.Web.Tests.Infrastructure;
 /// integration tests.</remarks>
 /// <param name="configurationValues">A read-only dictionary containing configuration key-value pairs to be applied to the test application's
 /// configuration. Keys represent configuration paths; values may be null to clear a setting.</param>
-internal sealed class ApplicationWebApplicationFactory(IReadOnlyDictionary<string, string?> configurationValues) : WebApplicationFactory<Program>
+/// <param name="environmentName">The host environment used by the test application.</param>
+internal sealed class ApplicationWebApplicationFactory(
+    IReadOnlyDictionary<string, string?> configurationValues,
+    string environmentName = "Testing") : WebApplicationFactory<Program>
 {
     private readonly IReadOnlyDictionary<string, string?> _configurationValues = configurationValues;
+    private readonly string _environmentName = environmentName;
 
     private const string _requireAuthenticatedUserByDefaultKey =
         "ReferenceApplication:Authorization:RequireAuthenticatedUserByDefault";
@@ -27,6 +31,7 @@ internal sealed class ApplicationWebApplicationFactory(IReadOnlyDictionary<strin
     /// authorization.
     /// </summary>
     /// <param name="configurationValues">Additional configuration values, applied after the anonymous-access setting.</param>
+    /// <param name="environmentName">The host environment used by the test application.</param>
     /// <returns>A factory configured without the authorization fallback policy.</returns>
     /// <remarks>
     /// The factory otherwise matches the scaffold, which ships
@@ -35,7 +40,8 @@ internal sealed class ApplicationWebApplicationFactory(IReadOnlyDictionary<strin
     /// limiting, error handling, API versioning — on endpoints a real application would expose anonymously.
     /// </remarks>
     internal static ApplicationWebApplicationFactory CreateAllowingAnonymousAccess(
-        IReadOnlyDictionary<string, string?>? configurationValues = null)
+        IReadOnlyDictionary<string, string?>? configurationValues = null,
+        string environmentName = "Testing")
     {
         Dictionary<string, string?> values = new()
         {
@@ -47,7 +53,7 @@ internal sealed class ApplicationWebApplicationFactory(IReadOnlyDictionary<strin
             values[key] = value;
         }
 
-        return new ApplicationWebApplicationFactory(values);
+        return new ApplicationWebApplicationFactory(values, environmentName);
     }
 
     /// <summary>
@@ -60,7 +66,7 @@ internal sealed class ApplicationWebApplicationFactory(IReadOnlyDictionary<strin
     /// required services.</param>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Testing");
+        builder.UseEnvironment(_environmentName);
 
         // RequireAuthenticatedUserByDefault is deliberately not set here, so tests run under whatever the
         // application's own appsettings ships. That value is not fixed across scaffolds: generating with

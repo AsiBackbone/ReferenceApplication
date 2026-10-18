@@ -38,6 +38,9 @@ These procedures support the walkthrough without adding new AsiBackbone integrat
 - After Step 3 and before exercising database-dependent integration scenarios, follow
   [Create the development database](local-database-setup.md). It applies the inherited NCAT migration history because
   the application deliberately does not create or migrate databases at startup.
+- After Step 5, use the [Development-only demo identity controls](development-demo-identity.md) to exercise allowed,
+  denied, and acknowledgment-required outcomes without an external identity provider. The control is off by default
+  and cannot be registered outside the `Development` environment.
 
 ## Test inheritance rule used throughout
 

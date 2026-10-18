@@ -24,6 +24,10 @@ The POST routes keep NCAT's authenticated-by-default authorization policy and va
 with `[ValidateAntiForgeryToken]`, matching NCAT's own `AccountController`. Endpoint governance adds an execution
 boundary; it does not replace either control.
 
+For local exploration without an external identity provider, the supplemental
+[Development-only demo identity controls](development-demo-identity.md) can issue a temporary cookie containing fixed,
+selectable walkthrough claims. The control is off by default and is not registered outside `Development`.
+
 ## Attach endpoint metadata
 
 Controller attributes make the protected operations and the order-independent requirements visible next to the action:

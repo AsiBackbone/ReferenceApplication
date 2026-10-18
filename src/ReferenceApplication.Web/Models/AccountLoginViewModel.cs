@@ -14,4 +14,9 @@ public sealed class AccountLoginViewModel
     /// Gets or sets the external authentication providers available for challenge.
     /// </summary>
     public IReadOnlyList<ExternalAuthenticationProviderViewModel> ExternalProviders { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the Development-only demo identity controls should be shown.
+    /// </summary>
+    public bool ShowDemoIdentityControls { get; set; }
 }

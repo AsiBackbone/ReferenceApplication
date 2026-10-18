@@ -1,3 +1,5 @@
+using ReferenceApplication.Web.Authentication.Demo;
+using ReferenceApplication.Web.Authentication.Extensions;
 using ReferenceApplication.Web.Authentication.Options;
 using ReferenceApplication.Web.Options;
 
@@ -55,6 +57,14 @@ public static class StartupSecurityPostureExtensions
             "This is a supported configuration, not an authentication framework failure. " +
             "Review deployment exposure and authorization expectations before production use.");
 
+    private static readonly Action<ILogger, string, string, Exception?> _logDemoIdentityActive =
+        LoggerMessage.Define<string, string>(
+            LogLevel.Warning,
+            new EventId(1006, "DevelopmentDemoIdentityActive"),
+            "Security posture: Development-only demo identity controls are active at {SignInPath} because " +
+            "{ConfigurationKey} is enabled. These controls issue a local cookie with selectable walkthrough claims; " +
+            "do not expose this host beyond a trusted development environment.");
+
     private static readonly Action<ILogger, string, Exception?> _logAnonymousProductionHealthEndpoints =
         LoggerMessage.Define<string>(
             LogLevel.Warning,
@@ -102,6 +112,15 @@ public static class StartupSecurityPostureExtensions
             _logAuthenticationDisabled(
                 logger,
                 _authenticationEnabledConfigurationKey,
+                null);
+        }
+
+        if (DemoIdentityServiceExtensions.IsDemoIdentityActive(configuration, environment))
+        {
+            _logDemoIdentityActive(
+                logger,
+                DemoIdentityOptions.SignInPath,
+                $"{DemoIdentityOptions.SectionName}:{nameof(DemoIdentityOptions.Enabled)}",
                 null);
         }
 

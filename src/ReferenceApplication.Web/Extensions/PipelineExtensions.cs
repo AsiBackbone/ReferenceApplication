@@ -63,6 +63,7 @@ public static class PipelineExtensions
         // 11. Endpoint mapping.
         app.MapControllers();
         app.MapRazorPages();
+        app.MapApplicationDemoIdentity();
 
         return app;
     }
