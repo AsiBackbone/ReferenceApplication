@@ -73,7 +73,7 @@ Run every command from PowerShell. Do not open the generated folder in Visual St
 
 6. Protect the baseline. The desired branch rulesets for `main` and `ncat-baseline` are versioned under `eng/repository-controls/`, so repository settings are reviewable alongside the code.
 
-7. Do all integration work on a separate branch (`asibackbone_integration`) that starts from the baseline.
+7. Keep the baseline untouched: make integration changes on short-lived working branches and merge them into `main` through pull requests, never into `ncat-baseline`.
 
 ## Resulting layout
 

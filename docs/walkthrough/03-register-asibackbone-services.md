@@ -1,27 +1,27 @@
 ---
 title: "Step 3: Register AsiBackbone Services"
-description: The AsiBackbone service and middleware composition added to the NCAT startup path with host-owned actor mapping.
+description: The planned AsiBackbone service and middleware composition in the NCAT startup path with host-owned actor mapping.
 ---
 
 # Step 3: Register AsiBackbone Services
 
-**Status:** Complete on `initial_development` with AsiBackbone `7.1.1`.
+**Status:** Planned against AsiBackbone `7.1.1`. This page will be updated with the commit when the step lands in the repository.
 
-## Outcome
+## Planned outcome
 
-The host now registers AsiBackbone's ASP.NET Core integration services through an application-owned extension and adds
-endpoint governance to the established NCAT middleware pipeline. No governance rules or governed endpoints are added in
-this step; those remain Steps 4 and 5.
+The host will register AsiBackbone's ASP.NET Core integration services through an application-owned extension and add
+endpoint governance to the established NCAT middleware pipeline. No governance rules or governed endpoints will be added
+in this step; those remain Steps 4 and 5.
 
 The integration preserves host ownership of authentication. NCAT continues to authenticate users and normalize
-provider-specific claims. AsiBackbone maps the normalized `application:subject` claim to the stable governance actor ID
-and `application:name` to its display name. Standard stable identifier and display-name claims remain fallbacks when a
-host deliberately disables or customizes NCAT claim transformation.
+provider-specific claims. AsiBackbone will map the normalized `application:subject` claim to the stable governance actor
+ID and `application:name` to its display name. Standard stable identifier and display-name claims remain fallbacks when
+a host deliberately disables or customizes NCAT claim transformation.
 
 ## Service registration
 
-`AddApplicationAsiBackbone` lives with the other host registration extensions under
-`src/ReferenceApplication.Web/Extensions`. It calls `AddAsiBackboneAspNetCore()` and configures
+`AddApplicationAsiBackbone` will live with the other host registration extensions under
+`src/ReferenceApplication.Web/Extensions`. It will call `AddAsiBackboneAspNetCore()` and configure
 `HttpGovernanceActorContextOptions` so the application-owned claims take precedence:
 
 ```csharp
@@ -33,12 +33,12 @@ builder.Services.AddApplicationAsiBackbone();
 
 The framework registration supplies the HTTP actor resolver, request-correlation resolver, acknowledgment challenge
 service, endpoint governance service, and validated integration options. Persistence, policy evaluators, capability
-validators, and decision receipt sinks are intentionally not selected here because the host has not defined those
-boundaries yet.
+validators, and decision receipt sinks are intentionally not selected in this step because the host does not define
+those boundaries until later steps.
 
 ## Middleware placement
 
-The NCAT-derived pipeline calls the optional endpoint-governance middleware after routing, authentication, and
+The NCAT-derived pipeline will call the optional endpoint-governance middleware after routing, authentication, and
 authorization, and before controller and Razor Page endpoints execute:
 
 ```csharp
@@ -53,15 +53,15 @@ Passing `requireEndpointRoutingRegistered: true` converts an accidental future m
 startup failure. AsiBackbone endpoint governance remains opt-in at this stage, so existing endpoints without governance
 metadata continue through the pipeline unchanged.
 
-## Verification
+## Planned verification
 
-The Step 3 tests verify that:
+The Step 3 tests will verify that:
 
 - registration returns the same service collection and resolves the framework's scoped integration services;
 - normalized NCAT subject and name claims resolve to a known, authenticated human governance actor; and
 - the complete web host starts with the middleware in place and exposes the expected AsiBackbone services.
 
-The complete inherited NCAT suite is run alongside those tests:
+The complete inherited NCAT suite will run alongside those tests:
 
 ```powershell
 dotnet restore ReferenceApplication.slnx --locked-mode

@@ -10,7 +10,7 @@ The AsiBackbone Reference Application is an ASP.NET Core host built from the [.N
 
 ## Status
 
-Integration is in progress on the `initial_development` branch. The [Integration Walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) tracks each step:
+Integration is in progress. The [Integration Walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) tracks each step:
 
 | Step | Status |
 |:---|:---|
@@ -27,7 +27,8 @@ Integration is in progress on the `initial_development` branch. The [Integration
 |:---|:---|
 | `main` | Default ongoing development and integration branch; GitHub Pages deploys accepted changes from here |
 | `ncat-baseline` | The unmodified NCAT scaffold, protected, kept for comparison |
-| `initial_development` | Temporary bootstrap branch for the initial documentation, automation, and AsiBackbone integration |
+
+These are the only permanent branches. Make each change on a short-lived working branch, named for the task, and open a pull request into `main`, or into `ncat-baseline` for a raw NCAT refresh.
 
 To see everything the Reference Application adds on top of NCAT:
 
