@@ -79,16 +79,6 @@ The Reference Application consumes both related projects; neither of them depend
 
 <div class="project-grid">
   <article class="project-card">
-    <span class="project-role">Start a secure application</span>
-    <h3><a href="https://asibackbone.github.io/NetCoreApplicationTemplate/">.NET Core Application Template</a></h3>
-    <p>A secure-by-default ASP.NET Core application template with authentication and authorization, structured logging, security headers, rate limiting, EF Core data access, reverse proxy support, and Problem Details error handling.</p>
-    <p class="project-links">
-      <a href="https://asibackbone.github.io/NetCoreApplicationTemplate/" aria-label=".NET Core Application Template documentation">Documentation</a>
-      <a href="https://github.com/AsiBackbone/NetCoreApplicationTemplate" aria-label=".NET Core Application Template repository">Repository</a>
-      <a href="https://doi.org/10.5281/zenodo.20373042" aria-label=".NET Core Application Template archive (DOI)">Archive (DOI)</a>
-    </p>
-  </article>
-  <article class="project-card">
     <span class="project-role">Learn the patterns</span>
     <h3><a href="https://asibackbone.github.io/Learning/">AsiBackbone Learning</a></h3>
     <p>Practical .NET architecture tutorials, labs, runnable samples, and reference patterns for governed execution, secure applications, AI integration, and policy-driven systems, including comparisons that show when these patterns are unnecessary.</p>
@@ -106,6 +96,16 @@ The Reference Application consumes both related projects; neither of them depend
       <a href="https://asibackbone.github.io/AsiBackbone/" aria-label="AsiBackbone documentation">Documentation</a>
       <a href="https://github.com/AsiBackbone/AsiBackbone" aria-label="AsiBackbone repository">Repository</a>
       <a href="https://doi.org/10.5281/zenodo.20546032" aria-label="AsiBackbone archive (DOI)">Archive (DOI)</a>
+    </p>
+  </article>
+  <article class="project-card">
+    <span class="project-role">Start a secure application</span>
+    <h3><a href="https://asibackbone.github.io/NetCoreApplicationTemplate/">.NET Core Application Template</a></h3>
+    <p>A secure-by-default ASP.NET Core application template with authentication and authorization, structured logging, security headers, rate limiting, EF Core data access, reverse proxy support, and Problem Details error handling.</p>
+    <p class="project-links">
+      <a href="https://asibackbone.github.io/NetCoreApplicationTemplate/" aria-label=".NET Core Application Template documentation">Documentation</a>
+      <a href="https://github.com/AsiBackbone/NetCoreApplicationTemplate" aria-label=".NET Core Application Template repository">Repository</a>
+      <a href="https://doi.org/10.5281/zenodo.20373042" aria-label=".NET Core Application Template archive (DOI)">Archive (DOI)</a>
     </p>
   </article>
   <article class="project-card" aria-current="page">
