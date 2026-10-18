@@ -6,6 +6,37 @@ This project follows Semantic Versioning using the format `MAJOR.MINOR.PATCH`. R
 the [integration walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) is being written. The
 release version is independent of the NCAT version, which the `ncat-v<version>` tags record.
 
+## 0.1.0-alpha.5 - 2026-10-18
+
+Completes walkthrough [Step 5: Govern Endpoints](https://asibackbone.github.io/ReferenceApplication/walkthrough/05-govern-endpoints.html).
+
+### Added
+
+* A versioned `/api/v1/governed-operations` sample API with three antiforgery-protected POST operations:
+  * an administrator-governed operation;
+  * a capability-protected operation; and
+  * a consequential operation that combines administrator, capability, and acknowledgment requirements.
+* A host-owned endpoint capability validator that requires every declared capability scope to appear as an exact
+  normalized application permission claim on an authenticated identity.
+* End-to-end tests for the ungoverned read-only route, administrator and capability allow/deny paths, the
+  acknowledgment challenge, combined administrator-and-capability requirements on the consequential endpoint,
+  anonymous rejection by authorization, and antiforgery enforcement.
+* Validator tests for grants on unauthenticated identities and for acknowledgment-required decisions.
+
+### Changed
+
+* Governance denials now use the application's safe Problem Details shape while preserving HTTP 403 semantics.
+* The governed POST actions validate antiforgery tokens explicitly with `[ValidateAntiForgeryToken]`.
+* The landing page reports 5 of 6 walkthrough steps complete.
+
+### Known issues
+
+* On AsiBackbone 7.2.0, an administrator **without** the capability grant receives an HTTP 428 acknowledgment
+  challenge on the consequential endpoint instead of HTTP 403, because the framework skips capability validation for
+  acknowledgment-required decisions. The action still does not execute. Tracked in
+  [AsiBackbone/AsiBackbone#887](https://github.com/AsiBackbone/AsiBackbone/issues/887) and
+  [#17](https://github.com/AsiBackbone/ReferenceApplication/issues/17).
+
 ## 0.1.0-alpha.4 - 2026-10-18
 
 Completes walkthrough [Step 4: Define Governance Rules](https://asibackbone.github.io/ReferenceApplication/walkthrough/04-define-governance-rules.html).

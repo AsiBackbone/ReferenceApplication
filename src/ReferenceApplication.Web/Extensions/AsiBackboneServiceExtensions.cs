@@ -41,8 +41,14 @@ public static class AsiBackboneServiceExtensions
         {
             options.PolicyVersion = ReferenceApplicationGovernancePolicySet.Version;
             options.PolicyHash = ReferenceApplicationGovernancePolicySet.PolicyHash;
+            options.DefaultForbiddenResultFactory = httpContext => Results.Problem(
+                title: "Endpoint governance denied the request.",
+                detail: "The request did not satisfy the endpoint governance requirements.",
+                statusCode: StatusCodes.Status403Forbidden,
+                instance: httpContext.Request.Path);
         });
 
+        services.AddScoped<IEndpointCapabilityGrantValidator, ClaimEndpointCapabilityGrantValidator>();
         services.AddScoped<IGovernanceConstraint<GovernanceEvaluationContext>, AdministratorRoleConstraint>();
         services.AddScoped<IGovernanceConstraint<GovernanceEvaluationContext>, CapabilityScopeDeclarationConstraint>();
         services.AddScoped<IGovernanceDecisionPolicy<GovernanceEvaluationContext>, ConsequentialActionDecisionPolicy>();

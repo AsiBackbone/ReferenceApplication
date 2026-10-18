@@ -18,7 +18,7 @@ Integration is in progress. The [Integration Walkthrough](https://asibackbone.gi
 | 2. Add AsiBackbone packages | Complete |
 | 3. Register AsiBackbone services | Complete |
 | 4. Define governance rules | Complete |
-| 5. Govern endpoints | Planned |
+| 5. Govern endpoints | Complete |
 | 6. Persist and verify audit evidence | Planned |
 
 ## Branches
@@ -123,10 +123,11 @@ Every routed endpoint requires an authenticated user unless it is deliberately m
 
 - `GET /Account/Login` and `GET /External/Challenge`, to enter the authentication flow;
 - `GET /Account/AccessDenied` and `GET /Home/Error/{statusCode?}`, so failure handling cannot redirect recursively; and
-- `/health`, `/health/live`, and `/health/ready`, for infrastructure probes.
-- `GET /` is explicitly anonymous for the current walkthrough stage; authentication requirements for the landing page will be revisited as integration progresses.
+- `/health`, `/health/live`, and `/health/ready`, for infrastructure probes;
+- `GET /` is explicitly anonymous for the current walkthrough stage; authentication requirements for the landing page will be revisited as integration progresses; and
+- `GET /api/v1/governed-operations` is the intentionally ungoverned, read-only description of the Step 5 sample.
 
-`POST /Account/Logout` requires an authenticated user and a valid antiforgery token. Restrict production access to the health endpoints at the ingress, firewall, or proxy layer.
+`POST /Account/Logout` and all Step 5 governed operations require an authenticated user and a valid antiforgery token. Restrict production access to the health endpoints at the ingress, firewall, or proxy layer.
 
 ### Data Protection keys
 
