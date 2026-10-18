@@ -5,7 +5,7 @@ description: The production sample endpoints, claim-backed capability boundary, 
 
 # Step 5: Govern Endpoints
 
-**Status:** Complete with AsiBackbone `7.2.0`. Released in [`v0.1.0-alpha.5`](https://github.com/AsiBackbone/ReferenceApplication/releases/tag/v0.1.0-alpha.5).
+**Status:** Complete with AsiBackbone `7.2.1`. First released in [`v0.1.0-alpha.5`](https://github.com/AsiBackbone/ReferenceApplication/releases/tag/v0.1.0-alpha.5) on AsiBackbone `7.2.0`; see [Capability before acknowledgment](#capability-before-acknowledgment) for why the step now requires `7.2.1`.
 
 ## Outcome
 
@@ -18,7 +18,7 @@ behind explicit host-owned rules:
 | `GET /api/v1/governed-operations` | None; explicitly anonymous | Returns the read-only sample description. |
 | `POST /api/v1/governed-operations/administrator` | `AdministratorActionPolicy` | Executes for an authenticated actor in a configured administrator role. |
 | `POST /api/v1/governed-operations/capability` | `CapabilityProtectedActionPolicy` and `referenceapplication.consequential.execute` capability | Executes when the actor holds the declared capability. |
-| `POST /api/v1/governed-operations/consequential` | All three policy markers, the capability scope, and acknowledgment metadata | Returns an acknowledgment challenge to an administrator who holds the capability. The action body does not execute. See [Known limitation](#known-limitation) for an administrator without the capability. |
+| `POST /api/v1/governed-operations/consequential` | All three policy markers, the capability scope, and acknowledgment metadata | Returns an acknowledgment challenge to an administrator who holds the capability; an administrator without it is denied. The action body does not execute. |
 
 The POST routes keep NCAT's authenticated-by-default authorization policy and validate antiforgery tokens explicitly
 with `[ValidateAntiForgeryToken]`, matching NCAT's own `AccountController`. Endpoint governance adds an execution
@@ -60,8 +60,9 @@ endpoint metadata only states what the operation requires; it never proves the a
 
 The validator preserves only a decision that is already denied. Every other decision, including one that requires
 acknowledgment, must pass the grant check, and a missing grant is denied with
-`referenceapplication.capability.grant_required`. A missing grant therefore always takes precedence over an
-acknowledgment challenge whenever AsiBackbone calls the validator. Registration is scoped to the request:
+`referenceapplication.capability.grant_required`. AsiBackbone `7.2.1` calls the validator for every decision that is not
+already denied, so a missing grant always takes precedence over an acknowledgment challenge. Registration is scoped to
+the request:
 
 ```csharp
 services.AddScoped<IEndpointCapabilityGrantValidator, ClaimEndpointCapabilityGrantValidator>();
@@ -82,26 +83,27 @@ The effective order is:
 
 1. authentication and ASP.NET Core authorization;
 2. AsiBackbone policy evaluation;
-3. host-owned capability validation, when the policy decision can proceed;
+3. host-owned capability validation, for every decision that is not already denied;
 4. denial or acknowledgment challenge when required;
 5. MVC antiforgery validation when governance allows the request to continue; and
 6. MVC action execution only when every boundary permits it.
 
-## Known limitation
-
-AsiBackbone `7.2.0` runs capability validation only when the policy decision can proceed. An acknowledgment-required
-decision cannot proceed, so on the consequential endpoint the framework skips step 3 and issues the acknowledgment
-challenge directly. An administrator who does **not** hold `referenceapplication.consequential.execute` therefore
-receives HTTP 428 instead of HTTP 403. The action body still does not execute.
-
-This is tracked upstream in [AsiBackbone/AsiBackbone#887](https://github.com/AsiBackbone/AsiBackbone/issues/887) and in
-this repository in [AsiBackbone/ReferenceApplication#17](https://github.com/AsiBackbone/ReferenceApplication/issues/17).
-Until a fixed AsiBackbone release is adopted, any acknowledgment-completion flow must re-check the capability grant
-before executing the operation. The validator above needs no change: it already denies a missing grant on an
-acknowledgment-required decision once AsiBackbone calls it on that path.
-
 Antiforgery validation still applies to every unsafe MVC route. The tests obtain a token for the same identity that
 submits the POST, and separately prove that a request without one is rejected.
+
+## Capability before acknowledgment
+
+Step 5 requires AsiBackbone `7.2.1` or later. In `7.2.0`, capability validation ran only when the policy decision could
+proceed immediately. An acknowledgment-required decision cannot, so on the consequential endpoint the framework skipped
+step 3 and issued the acknowledgment challenge directly: an administrator who did **not** hold
+`referenceapplication.consequential.execute` received HTTP 428 instead of HTTP 403. The action body never executed, but
+the actor was offered an acknowledgment for an operation they were not entitled to.
+
+AsiBackbone `7.2.1` fixed this ([AsiBackbone/AsiBackbone#887](https://github.com/AsiBackbone/AsiBackbone/issues/887)).
+Capability validation now runs for every decision that is not already denied, so a missing grant is denied before any
+acknowledgment challenge. The validator needed no change for the upgrade, because it already denied a missing grant on
+an acknowledgment-required decision. The upgrade is tracked in
+[AsiBackbone/ReferenceApplication#17](https://github.com/AsiBackbone/ReferenceApplication/issues/17).
 
 ## Verification
 
@@ -113,8 +115,9 @@ submits the POST, and separately prove that a request without one is rejected.
 - an administrator with the capability receives an HTTP 428 acknowledgment challenge and the consequential action
   body does not execute;
 - an actor with the capability but without an administrator role is denied on the consequential endpoint;
-- an administrator without the capability is challenged rather than denied on the consequential endpoint, pinning the
-  [known limitation](#known-limitation), and the action still does not execute;
+- an administrator without the capability is denied on the consequential endpoint with safe Problem Details rather than
+  offered an acknowledgment challenge, as described in
+  [Capability before acknowledgment](#capability-before-acknowledgment);
 - an anonymous caller is rejected by ASP.NET Core authorization before governance runs; and
 - an otherwise-valid administrator request without an antiforgery token is rejected.
 

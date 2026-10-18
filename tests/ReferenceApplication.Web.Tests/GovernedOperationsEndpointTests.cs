@@ -145,26 +145,29 @@ public sealed class GovernedOperationsEndpointTests
     }
 
     /// <summary>
-    /// Pins AsiBackbone 7.2.0 behavior for an administrator without the capability grant on the consequential
-    /// endpoint: the framework skips capability validation for acknowledgment-required decisions, so the actor is
-    /// challenged (HTTP 428) instead of denied (HTTP 403). The action body still does not execute.
+    /// Verifies that an administrator without the capability grant is denied on the consequential endpoint rather
+    /// than offered an acknowledgment challenge: acknowledgment must never stand in for a missing grant.
     /// </summary>
     /// <remarks>
-    /// Known limitation tracked upstream in AsiBackbone/AsiBackbone#887 and here in
-    /// AsiBackbone/ReferenceApplication#17. Once a fixed AsiBackbone release is adopted, this test should expect
-    /// HTTP 403 Problem Details and be renamed <c>ConsequentialAction_AdministratorWithoutGrant_IsDeniedNotChallenged</c>.
+    /// Requires AsiBackbone 7.2.1 or later, which validates capability grants for acknowledgment-required decisions
+    /// (AsiBackbone/AsiBackbone#887). On 7.2.0 this request received an HTTP 428 challenge
+    /// (AsiBackbone/ReferenceApplication#17).
     /// </remarks>
     [Fact]
-    public async Task ConsequentialAction_AdministratorWithoutGrant_IsChallengedPendingUpstreamFix()
+    public async Task ConsequentialAction_AdministratorWithoutGrant_IsDeniedNotChallenged()
     {
         using WebApplicationFactory<Program> factory = CreateFactoryWithTestAuthentication();
         using HttpClient client = factory.CreateHttpsClient();
 
         using HttpResponseMessage response = await PostAsync(client, "consequential", role: "administrator");
 
-        Assert.Equal(HttpStatusCode.PreconditionRequired, response.StatusCode);
+        await AssertGovernanceProblemAsync(response);
         Assert.DoesNotContain(
             "Consequential action executed.",
+            await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken),
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "handshakeId",
             await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken),
             StringComparison.Ordinal);
     }

@@ -1,15 +1,15 @@
 ---
 title: "Step 2: Add AsiBackbone Packages"
-description: The AsiBackbone 7.2.0 package references under central package management with locked dependency graphs.
+description: The AsiBackbone 7.2.1 package references under central package management with locked dependency graphs.
 ---
 
 # Step 2: Add AsiBackbone Packages
 
-**Status:** Complete with AsiBackbone `7.2.0`. Released in [`v0.1.0-alpha.2`](https://github.com/AsiBackbone/ReferenceApplication/releases/tag/v0.1.0-alpha.2).
+**Status:** Complete with AsiBackbone `7.2.1`. First released in [`v0.1.0-alpha.2`](https://github.com/AsiBackbone/ReferenceApplication/releases/tag/v0.1.0-alpha.2) on AsiBackbone `7.2.0`; the packages were later updated to the `7.2.1` patch release, which [Step 5](05-govern-endpoints.md#capability-before-acknowledgment) requires.
 
 ## Outcome
 
-The host projects reference only the AsiBackbone packages needed by the integration. All five packages use the stable `7.2.0` version through central package management, and each project's resolved dependency graph is recorded in its existing `packages.lock.json` file.
+The host projects reference only the AsiBackbone packages needed by the integration. All five packages use the stable `7.2.1` version through central package management, and each project's resolved dependency graph is recorded in its existing `packages.lock.json` file.
 
 This step adds packages only; it registers no AsiBackbone services or middleware. That wiring is [Step 3](03-register-asibackbone-services.md), so package acquisition stays separate from runtime behavior changes.
 
@@ -27,7 +27,7 @@ This step adds packages only; it registers no AsiBackbone services or middleware
 
 ## Procedure
 
-1. Confirm `7.2.0` as the current stable release in [AsiBackbone Getting Started](https://asibackbone.github.io/AsiBackbone/articles/getting-started.html) and the [AsiBackbone 7.2.0 release](https://github.com/AsiBackbone/AsiBackbone/releases/tag/v7.2.0).
+1. Confirm `7.2.1` as the current stable release in [AsiBackbone Getting Started](https://asibackbone.github.io/AsiBackbone/articles/getting-started.html) and the [AsiBackbone 7.2.1 release](https://github.com/AsiBackbone/AsiBackbone/releases/tag/v7.2.1).
 
 2. Add each version once to `Directory.Packages.props`, then add version-less `PackageReference` items to the projects listed in [Package placement](#package-placement):
 
@@ -35,11 +35,11 @@ This step adds packages only; it registers no AsiBackbone services or middleware
 
      ```xml
      <ItemGroup>
-       <PackageVersion Include="AsiBackbone.Analyzers" Version="7.2.0" />
-       <PackageVersion Include="AsiBackbone.AspNetCore" Version="7.2.0" />
-       <PackageVersion Include="AsiBackbone.Core" Version="7.2.0" />
-       <PackageVersion Include="AsiBackbone.EntityFrameworkCore" Version="7.2.0" />
-       <PackageVersion Include="AsiBackbone.Testing" Version="7.2.0" />
+       <PackageVersion Include="AsiBackbone.Analyzers" Version="7.2.1" />
+       <PackageVersion Include="AsiBackbone.AspNetCore" Version="7.2.1" />
+       <PackageVersion Include="AsiBackbone.Core" Version="7.2.1" />
+       <PackageVersion Include="AsiBackbone.EntityFrameworkCore" Version="7.2.1" />
+       <PackageVersion Include="AsiBackbone.Testing" Version="7.2.1" />
      </ItemGroup>
      ```
 
