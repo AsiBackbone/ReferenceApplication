@@ -5,7 +5,7 @@ description: How the Reference Application was generated from the netcoreapp-tem
 
 # Step 1: Scaffold from NCAT
 
-**Status:** Complete
+**Status:** Complete. Released in [`v0.1.0-alpha.1`](https://github.com/AsiBackbone/ReferenceApplication/releases/tag/v0.1.0-alpha.1).
 
 ## Outcome
 

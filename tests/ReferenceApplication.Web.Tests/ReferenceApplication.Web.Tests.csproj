@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AsiBackbone.Testing" />
     <PackageReference Include="coverlet.MTP">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
