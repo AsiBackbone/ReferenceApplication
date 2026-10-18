@@ -1,15 +1,15 @@
 ---
 title: "Step 2: Add AsiBackbone Packages"
-description: The planned AsiBackbone 7.1.1 package references under central package management with locked dependency graphs.
+description: The planned AsiBackbone 7.2.0 package references under central package management with locked dependency graphs.
 ---
 
 # Step 2: Add AsiBackbone Packages
 
-**Status:** Planned against AsiBackbone `7.1.1`. This page will be updated with the commit when the step lands in the repository.
+**Status:** Planned against AsiBackbone `7.2.0`. This page will be updated with the commit when the step lands in the repository.
 
 ## Planned outcome
 
-The host projects will reference only the AsiBackbone packages needed by the planned integration. All five packages will use the stable `7.1.1` version through central package management, and each project's resolved dependency graph will be recorded in its existing `packages.lock.json` file.
+The host projects will reference only the AsiBackbone packages needed by the planned integration. All five packages will use the stable `7.2.0` version through central package management, and each project's resolved dependency graph will be recorded in its existing `packages.lock.json` file.
 
 No AsiBackbone services or middleware will be registered in this step. That wiring remains Step 3, keeping package acquisition separate from runtime behavior changes.
 
@@ -27,7 +27,7 @@ No AsiBackbone services or middleware will be registered in this step. That wiri
 
 ## Planned procedure
 
-1. Confirm `7.1.1` as the current stable release in [AsiBackbone Getting Started](https://asibackbone.github.io/AsiBackbone/articles/getting-started.html) and the [AsiBackbone 7.1.1 release](https://github.com/AsiBackbone/AsiBackbone/releases/tag/v7.1.1).
+1. Confirm `7.2.0` as the current stable release in [AsiBackbone Getting Started](https://asibackbone.github.io/AsiBackbone/articles/getting-started.html) and the [AsiBackbone 7.2.0 release](https://github.com/AsiBackbone/AsiBackbone/releases/tag/v7.2.0).
 
 2. Add each version once to `Directory.Packages.props`, then add version-less `PackageReference` items to the projects listed above.
 

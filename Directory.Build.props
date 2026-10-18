@@ -5,13 +5,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>14.0</LangVersion>
 
-    <VersionPrefix>2.11.5</VersionPrefix>
-    <VersionSuffix></VersionSuffix>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionSuffix>alpha.1</VersionSuffix>
     <Version Condition="'$(VersionSuffix)' == ''">$(VersionPrefix)</Version>
     <Version Condition="'$(VersionSuffix)' != ''">$(VersionPrefix)-$(VersionSuffix)</Version>
-    <AssemblyVersion>2.11.5.0</AssemblyVersion>
-    <FileVersion>2.11.5.0</FileVersion>
-    <InformationalVersion>$(Version)+$(RepositoryUrl)</InformationalVersion>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
 
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
     <EnableSourceLink Condition="'$(EnableSourceLink)' == '' and '$(GITHUB_ACTIONS)' == 'true'">true</EnableSourceLink>
@@ -31,7 +30,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
 
-    <RepositoryUrl>https://github.com/AsiBackbone/NetCoreApplicationTemplate</RepositoryUrl>
+    <RepositoryUrl>https://github.com/AsiBackbone/ReferenceApplication</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 </Project>
