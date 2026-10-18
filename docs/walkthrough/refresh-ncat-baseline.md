@@ -276,6 +276,9 @@ git cherry-pick -x "ncat-v$New"
 Resolve conflicts with these rules:
 
 - Keep ReferenceApplication-specific and AsiBackbone package entries.
+- Keep ReferenceApplication's own `VersionPrefix`, `VersionSuffix`, `AssemblyVersion`, `FileVersion`, and
+  `RepositoryUrl` in `Directory.Build.props`. The release version is independent of the NCAT version, which the
+  `ncat-v<version>` tags record.
 - Adopt NCAT's shared dependency versions.
 - Adopt the new generated-migration `.editorconfig` rules.
 - Do not replace customized application files unless the release delta actually changes them.
