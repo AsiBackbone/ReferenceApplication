@@ -92,8 +92,8 @@ mismatch cannot silently turn every rule into `NotApplicable`:
   administrator;
 - a consequential endpoint does not execute without acknowledgment;
 - an endpoint with the capability-protected marker but no declared scope is rejected; and
-- governance does not replace antiforgery protection: the test endpoints are antiforgery-validated POSTs, as Step 5's
-  consequential endpoints will be, and an administrator's request without a valid token is still rejected.
+- governance does not replace antiforgery protection: the test endpoints are antiforgery-validated POSTs, like Step 5's
+  consequential endpoints, and an administrator's request without a valid token is still rejected.
 
 `AsiBackboneServiceExtensionsTests` and `AsiBackboneIntegrationTests` verify that the evaluator and the policy version
 and hash are registered through the complete application service composition.

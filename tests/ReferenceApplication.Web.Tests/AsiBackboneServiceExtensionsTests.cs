@@ -53,6 +53,7 @@ public sealed class AsiBackboneServiceExtensionsTests
     [InlineData(typeof(IHttpGovernanceRequestCorrelationResolver))]
     [InlineData(typeof(IAcknowledgmentChallengeService))]
     [InlineData(typeof(IEndpointGovernanceService))]
+    [InlineData(typeof(IEndpointCapabilityGrantValidator))]
     [InlineData(typeof(IGovernancePolicyEvaluator<GovernanceEvaluationContext>))]
     public void AddApplicationAsiBackbone_ResolvesScopedIntegrationService(Type serviceType)
     {

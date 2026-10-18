@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using ReferenceApplication.Web.Authentication.Claims;
+using ReferenceApplication.Web.Governance;
 using ReferenceApplication.Web.Tests.Extensions;
 using ReferenceApplication.Web.Tests.Infrastructure;
 using ReferenceApplication.Web.Tests.TestControllers;
@@ -23,8 +24,8 @@ namespace ReferenceApplication.Web.Tests;
 
 /// <summary>
 /// Provides integration tests for the AsiBackbone composition added to the complete web host in walkthrough Steps 3
-/// and 4: service registration, host-owned actor mapping, policy evaluation, and endpoint-governance middleware
-/// placement.
+/// through 5: service registration, host-owned actor mapping, policy and capability evaluation, and
+/// endpoint-governance middleware placement.
 /// </summary>
 public sealed class AsiBackboneIntegrationTests
 {
@@ -47,6 +48,8 @@ public sealed class AsiBackboneIntegrationTests
         Assert.NotNull(scope.ServiceProvider.GetService<IHttpGovernanceRequestCorrelationResolver>());
         Assert.NotNull(scope.ServiceProvider.GetService<IAcknowledgmentChallengeService>());
         Assert.NotNull(scope.ServiceProvider.GetService<IEndpointGovernanceService>());
+        Assert.IsType<ClaimEndpointCapabilityGrantValidator>(
+            scope.ServiceProvider.GetService<IEndpointCapabilityGrantValidator>());
         Assert.NotNull(scope.ServiceProvider.GetService<IGovernancePolicyEvaluator<GovernanceEvaluationContext>>());
     }
 

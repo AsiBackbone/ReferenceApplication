@@ -229,8 +229,8 @@ public sealed class GovernanceEnforcementTests
 
     /// <summary>
     /// Posts to a governed test endpoint as the given test user. Unless told otherwise, it first obtains an
-    /// antiforgery token for that same user, because the endpoints validate antiforgery tokens as Step 5's
-    /// consequential endpoints will, and a token is bound to the identity that requested it.
+    /// antiforgery token for that same user, because the endpoints validate antiforgery tokens in the same way as the
+    /// Step 5 consequential endpoints, and a token is bound to the identity that requested it.
     /// </summary>
     private static async Task<HttpResponseMessage> PostAsync(
         HttpClient client,
