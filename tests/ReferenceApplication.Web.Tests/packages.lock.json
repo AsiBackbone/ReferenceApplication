@@ -2,6 +2,17 @@
   "version": 2,
   "dependencies": {
     "net10.0": {
+      "AsiBackbone.Testing": {
+        "type": "Direct",
+        "requested": "[7.2.0, )",
+        "resolved": "7.2.0",
+        "contentHash": "xLUI+dXLw3fJYP1qB6tV//1WICiBeA6wF2TMuQtiRGqYh8GafrCnyEIuyp+tr1EbBxem7fZL/gOxtPKuiuZtfQ==",
+        "dependencies": {
+          "AsiBackbone.AspNetCore": "7.2.0",
+          "AsiBackbone.Core": "7.2.0",
+          "AsiBackbone.Storage.InMemory": "7.2.0"
+        }
+      },
       "coverlet.MTP": {
         "type": "Direct",
         "requested": "[10.1.0, )",
@@ -78,6 +89,23 @@
         "contentHash": "TdjM2OAx7w/0E88E6PgaigLoTbQaxbSR3HF/8p92plchTjf29jPHW27ylvEOz+Nx8CvPwWKGQlOR1fDv6/Qh5A==",
         "dependencies": {
           "xunit.v3.mtp-v2": "[4.0.2]"
+        }
+      },
+      "AsiBackbone.DependencyInjection": {
+        "type": "Transitive",
+        "resolved": "7.2.0",
+        "contentHash": "vIyvvAcId6W+PnwAW8d0PAZEzSkLyx9Z40f6MwwscMs8ck7YFKG70P3T6WTxOvx2Fq4ltenjupLCrEpWBiHEaw==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection": "10.0.13"
+        }
+      },
+      "AsiBackbone.Storage.InMemory": {
+        "type": "Transitive",
+        "resolved": "7.2.0",
+        "contentHash": "WPBaDQuP/5U6EV2laKpCOIITcmOZPF2BP88aJfLA2jnNGlmdrOoW63DlGGHMgW37G/xSQoLPRli7bQw30FsDOg==",
+        "dependencies": {
+          "AsiBackbone.Core": "7.2.0",
+          "AsiBackbone.DependencyInjection": "7.2.0"
         }
       },
       "Asp.Versioning.Abstractions": {
@@ -933,6 +961,8 @@
       "referenceapplication.infrastructure": {
         "type": "Project",
         "dependencies": {
+          "AsiBackbone.Core": "[7.2.0, )",
+          "AsiBackbone.EntityFrameworkCore": "[7.2.0, )",
           "Microsoft.EntityFrameworkCore": "[10.0.13, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[10.0.13, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[10.0.13, )",
@@ -944,6 +974,8 @@
       "referenceapplication.web": {
         "type": "Project",
         "dependencies": {
+          "AsiBackbone.AspNetCore": "[7.2.0, )",
+          "AsiBackbone.Core": "[7.2.0, )",
           "Asp.Versioning.Mvc": "[10.2.1, )",
           "AspNet.Security.OAuth.GitHub": "[10.0.0, )",
           "Microsoft.AspNetCore.Authentication.Google": "[10.0.13, )",
@@ -953,7 +985,7 @@
           "OpenTelemetry.Extensions.Hosting": "[1.20.0, )",
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.20.0, )",
           "OpenTelemetry.Instrumentation.Http": "[1.20.0, )",
-          "ReferenceApplication.Infrastructure": "[2.11.5, )",
+          "ReferenceApplication.Infrastructure": "[0.1.0-alpha.2, )",
           "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )",
           "Serilog.AspNetCore": "[10.0.0, )",
           "Serilog.Enrichers.Environment": "[3.0.1, )",
@@ -962,6 +994,39 @@
           "Serilog.Sinks.Console": "[6.1.1, )",
           "Serilog.Sinks.File": "[7.0.0, )",
           "Sustainsys.Saml2.AspNetCore2": "[2.11.0, )"
+        }
+      },
+      "AsiBackbone.AspNetCore": {
+        "type": "CentralTransitive",
+        "requested": "[7.2.0, )",
+        "resolved": "7.2.0",
+        "contentHash": "UHdI3FTHwkARgMSI+vCx0zLTbnBTGuNGCcrfaMW3oyulD3x08Ony6NsbKCpY8Hafdfh3TR40kl2CFRKyiQdGOw==",
+        "dependencies": {
+          "AsiBackbone.Core": "7.2.0",
+          "AsiBackbone.DependencyInjection": "7.2.0"
+        }
+      },
+      "AsiBackbone.Core": {
+        "type": "CentralTransitive",
+        "requested": "[7.2.0, )",
+        "resolved": "7.2.0",
+        "contentHash": "v7EcxNJL4UuouEk19NtvytNatENFMvgGeHGm0Xj4vFd5UbPnvD9v3knvG1IvggTnVKxWILjY2FQmi68WDfwBmA==",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.13",
+          "Microsoft.Extensions.Options": "10.0.13"
+        }
+      },
+      "AsiBackbone.EntityFrameworkCore": {
+        "type": "CentralTransitive",
+        "requested": "[7.2.0, )",
+        "resolved": "7.2.0",
+        "contentHash": "Q5MQTIi4doAcaGjNJaj7O29yTclfyTfPM8jjDdQ8NIxiy8Ko8+H1/Oo/WBaFubthT2gsD7c8Muxw/R9ZZCt8xg==",
+        "dependencies": {
+          "AsiBackbone.Core": "7.2.0",
+          "AsiBackbone.DependencyInjection": "7.2.0",
+          "Microsoft.EntityFrameworkCore": "10.0.13",
+          "Microsoft.EntityFrameworkCore.Relational": "10.0.13",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.13"
         }
       },
       "Asp.Versioning.Mvc": {

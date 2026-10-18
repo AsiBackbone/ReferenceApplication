@@ -20,7 +20,7 @@ Each step names what changed, where it changed, and which authoritative article 
 | Step | Outcome | Status |
 |:---|:---|:---|
 | [1. Scaffold from NCAT](01-scaffold-from-ncat.md) | An unmodified NCAT application, preserved on the `ncat-baseline` branch | Complete |
-| [2. Add AsiBackbone packages](02-add-asibackbone-packages.md) | The host references the AsiBackbone packages it needs, with locked versions | Planned |
+| [2. Add AsiBackbone packages](02-add-asibackbone-packages.md) | The host references the AsiBackbone packages it needs, with locked versions | Complete |
 | [3. Register AsiBackbone services](03-register-asibackbone-services.md) | AsiBackbone is composed into the NCAT startup path | Planned |
 | [4. Define governance rules](04-define-governance-rules.md) | Sample governance rules the host evaluates | Planned |
 | [5. Govern endpoints](05-govern-endpoints.md) | Consequential endpoints run through governance before executing | Planned |

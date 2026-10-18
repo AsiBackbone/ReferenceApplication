@@ -9,6 +9,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="AsiBackbone.Analyzers" PrivateAssets="all" />
+    <PackageReference Include="AsiBackbone.AspNetCore" />
+    <PackageReference Include="AsiBackbone.Core" />
     <PackageReference Include="Asp.Versioning.Mvc" />
     <PackageReference Include="AspNet.Security.OAuth.GitHub" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
