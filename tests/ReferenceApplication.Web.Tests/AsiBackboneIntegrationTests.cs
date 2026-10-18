@@ -6,6 +6,8 @@ using AsiBackbone.AspNetCore.Acknowledgments;
 using AsiBackbone.AspNetCore.Actors;
 using AsiBackbone.AspNetCore.Correlation;
 using AsiBackbone.AspNetCore.Endpoints;
+using AsiBackbone.Core.Constraints;
+using AsiBackbone.Core.Evaluation;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,8 +22,9 @@ using ReferenceApplication.Web.Tests.TestControllers;
 namespace ReferenceApplication.Web.Tests;
 
 /// <summary>
-/// Provides integration tests for the AsiBackbone composition added to the complete web host in walkthrough Step 3:
-/// service registration, host-owned actor mapping, and endpoint-governance middleware placement.
+/// Provides integration tests for the AsiBackbone composition added to the complete web host in walkthrough Steps 3
+/// and 4: service registration, host-owned actor mapping, policy evaluation, and endpoint-governance middleware
+/// placement.
 /// </summary>
 public sealed class AsiBackboneIntegrationTests
 {
@@ -44,6 +47,7 @@ public sealed class AsiBackboneIntegrationTests
         Assert.NotNull(scope.ServiceProvider.GetService<IHttpGovernanceRequestCorrelationResolver>());
         Assert.NotNull(scope.ServiceProvider.GetService<IAcknowledgmentChallengeService>());
         Assert.NotNull(scope.ServiceProvider.GetService<IEndpointGovernanceService>());
+        Assert.NotNull(scope.ServiceProvider.GetService<IGovernancePolicyEvaluator<GovernanceEvaluationContext>>());
     }
 
     /// <summary>
@@ -62,7 +66,7 @@ public sealed class AsiBackboneIntegrationTests
     }
 
     /// <summary>
-    /// Verifies that endpoint governance remains opt-in at Step 3, so an endpoint without governance metadata passes
+    /// Verifies that endpoint governance remains opt-in, so an endpoint without governance metadata passes
     /// through the middleware unchanged.
     /// </summary>
     [Fact]
@@ -84,23 +88,20 @@ public sealed class AsiBackboneIntegrationTests
 
     /// <summary>
     /// Verifies that the endpoint-governance middleware runs after routing has selected the endpoint and before the
-    /// endpoint executes: a governed endpoint is stopped with the configured configuration-failure status because
-    /// Step 3 deliberately registers no policy evaluator.
+    /// endpoint executes: an endpoint carrying an unrelated test marker is allowed by the registered evaluator because
+    /// no Step 4 rule applies to it.
     /// </summary>
     [Fact]
-    public async Task GovernedEndpoint_IsStoppedByMiddlewareBeforeActionExecutes()
+    public async Task GovernedEndpoint_WithUnrelatedPolicyMarker_IsAllowedByEvaluator()
     {
         using var factory = ApplicationWebApplicationFactory.CreateAllowingAnonymousAccess();
         using HttpClient client = factory.CreateHttpsClient();
-        int configurationFailureStatusCode = factory.Services
-            .GetRequiredService<IOptions<EndpointGovernanceOptions>>().Value.ConfigurationFailureStatusCode;
-
         using HttpResponseMessage response = await client.GetAsync(
             "/test/asibackbone/governed",
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(configurationFailureStatusCode, (int)response.StatusCode);
-        Assert.DoesNotContain(
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(
             AsiBackboneTestController.ExecutedMarker,
             await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken),
             StringComparison.Ordinal);

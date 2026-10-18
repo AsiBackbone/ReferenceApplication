@@ -32,9 +32,9 @@ builder.Services.AddApplicationAsiBackbone();
 ```
 
 The framework registration supplies the HTTP actor resolver, request-correlation resolver, acknowledgment challenge
-service, endpoint governance service, and validated integration options. Persistence, policy evaluators, capability
-validators, and decision receipt sinks are intentionally not selected in this step because the host does not define
-those boundaries until later steps.
+service, endpoint governance service, and validated integration options. The Step 3 change intentionally selected no
+policy evaluator, capability validator, persistence, or decision receipt sink. [Step 4](04-define-governance-rules.md)
+now adds the host-owned policy evaluator; the other boundaries remain with their later walkthrough steps.
 
 ## Middleware placement
 

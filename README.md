@@ -6,7 +6,7 @@ The AsiBackbone Reference Application is an ASP.NET Core host built from the [.N
 - **Training:** [AsiBackbone Learning](https://asibackbone.github.io/Learning/) is the authoritative training site.
 
 > [!NOTE]
-> The Reference Application is an example, not a product. Its planned sample governance rules will illustrate patterns and will not be recommendations for any specific domain.
+> The Reference Application is an example, not a product. Its sample governance rules illustrate patterns and are not recommendations for any specific domain.
 
 ## Status
 
@@ -17,7 +17,7 @@ Integration is in progress. The [Integration Walkthrough](https://asibackbone.gi
 | 1. Scaffold from NCAT | Complete |
 | 2. Add AsiBackbone packages | Complete |
 | 3. Register AsiBackbone services | Complete |
-| 4. Define governance rules | Planned |
+| 4. Define governance rules | Complete |
 | 5. Govern endpoints | Planned |
 | 6. Persist and verify audit evidence | Planned |
 

@@ -1,6 +1,10 @@
 using AsiBackbone.AspNetCore.Actors;
 using AsiBackbone.AspNetCore.DependencyInjection;
+using AsiBackbone.AspNetCore.Endpoints;
+using AsiBackbone.Core.Constraints;
+using AsiBackbone.Core.Evaluation;
 using ReferenceApplication.Web.Authentication.Claims;
+using ReferenceApplication.Web.Governance;
 
 namespace ReferenceApplication.Web.Extensions;
 
@@ -33,6 +37,23 @@ public static class AsiBackboneServiceExtensions
                 .. HttpGovernanceActorContextOptions.DefaultDisplayNameClaimTypes
             ];
         });
+        services.Configure<EndpointGovernanceOptions>(options =>
+        {
+            options.PolicyVersion = ReferenceApplicationGovernancePolicySet.Version;
+            options.PolicyHash = ReferenceApplicationGovernancePolicySet.PolicyHash;
+        });
+
+        services.AddScoped<IGovernanceConstraint<GovernanceEvaluationContext>, AdministratorRoleConstraint>();
+        services.AddScoped<IGovernanceConstraint<GovernanceEvaluationContext>, CapabilityScopeDeclarationConstraint>();
+        services.AddScoped<IGovernanceDecisionPolicy<GovernanceEvaluationContext>, ConsequentialActionDecisionPolicy>();
+        services.AddScoped<IGovernancePolicyEvaluator<GovernanceEvaluationContext>>(serviceProvider =>
+            DefaultGovernancePolicyEvaluator.CreateBuilder<GovernanceEvaluationContext>()
+                .AddConstraints(serviceProvider.GetServices<IGovernanceConstraint<GovernanceEvaluationContext>>())
+                .WithDecisionPolicy(
+                    serviceProvider.GetRequiredService<IGovernanceDecisionPolicy<GovernanceEvaluationContext>>())
+                .WithLogger(
+                    serviceProvider.GetService<ILogger<DefaultGovernancePolicyEvaluator<GovernanceEvaluationContext>>>())
+                .Build());
 
         return services;
     }

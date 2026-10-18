@@ -4,12 +4,13 @@ using AsiBackbone.Core.Actors;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ReferenceApplication.Web.Authentication.Claims;
+using ReferenceApplication.Web.Governance;
 
 namespace ReferenceApplication.Web.Tests.TestControllers;
 
 /// <summary>
 /// Provides test endpoints for verifying the AsiBackbone service registration and endpoint-governance middleware
-/// added in walkthrough Step 3.
+/// added in walkthrough Steps 3 and 4.
 /// </summary>
 [ApiController]
 [Route("test/asibackbone")]
@@ -55,14 +56,54 @@ public sealed class AsiBackboneTestController : ControllerBase
     }
 
     /// <summary>
-    /// An endpoint carrying AsiBackbone governance metadata. Step 3 registers no policy evaluator, so the middleware
-    /// must stop the request before this action executes.
+    /// An endpoint carrying an unrelated test policy marker. The Step 4 evaluator runs, finds no applicable sample
+    /// rule, and allows the request.
     /// </summary>
-    /// <returns>A response confirming the action executed, which a governed request must never receive.</returns>
+    /// <returns>A response confirming the action executed.</returns>
     [HttpGet("governed")]
     [AllowAnonymous]
     [GovernancePolicy(typeof(TestGovernancePolicy))]
     public IActionResult Governed()
+    {
+        return Ok(ExecutedMarker);
+    }
+
+    /// <summary>
+    /// An endpoint governed by the Step 4 administrator rule.
+    /// </summary>
+    /// <returns>A response confirming the action executed, which only an administrator may receive.</returns>
+    [HttpPost("administrator-action")]
+    [AllowAnonymous]
+    [IgnoreAntiforgeryToken]
+    [GovernancePolicy(typeof(AdministratorActionPolicy))]
+    public IActionResult AdministratorAction()
+    {
+        return Ok(ExecutedMarker);
+    }
+
+    /// <summary>
+    /// An endpoint governed by the Step 4 consequential-action rule, which requires acknowledgment before execution.
+    /// </summary>
+    /// <returns>A response confirming the action executed, which an unacknowledged request must never receive.</returns>
+    [HttpPost("consequential-action")]
+    [AllowAnonymous]
+    [IgnoreAntiforgeryToken]
+    [GovernancePolicy(typeof(ConsequentialActionPolicy))]
+    public IActionResult ConsequentialAction()
+    {
+        return Ok(ExecutedMarker);
+    }
+
+    /// <summary>
+    /// An endpoint that carries the Step 4 capability-protected marker without declaring the required capability
+    /// scope, which the capability-declaration rule must reject.
+    /// </summary>
+    /// <returns>A response confirming the action executed, which this incomplete declaration must never receive.</returns>
+    [HttpPost("capability-action-without-scope")]
+    [AllowAnonymous]
+    [IgnoreAntiforgeryToken]
+    [GovernancePolicy(typeof(CapabilityProtectedActionPolicy))]
+    public IActionResult CapabilityActionWithoutScope()
     {
         return Ok(ExecutedMarker);
     }

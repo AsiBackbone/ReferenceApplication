@@ -6,6 +6,33 @@ This project follows Semantic Versioning using the format `MAJOR.MINOR.PATCH`. R
 the [integration walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) is being written. The
 release version is independent of the NCAT version, which the `ncat-v<version>` tags record.
 
+## 0.1.0-alpha.4 - 2026-10-18
+
+Completes walkthrough [Step 4: Define Governance Rules](https://asibackbone.github.io/ReferenceApplication/walkthrough/04-define-governance-rules.html).
+
+### Added
+
+* A host-owned sample governance policy set under `src/ReferenceApplication.Web/Governance`, identified by policy
+  version `1.0.0` and a SHA-256 hash of its canonical definition. Both values are written into every endpoint
+  governance decision.
+* Three sample rules, each recognized by a policy marker type:
+  * `AdministratorActionPolicy`: the authenticated actor must hold a configured administrator role
+    (`referenceapplication.actor.administrator_required`).
+  * `ConsequentialActionPolicy`: an otherwise-allowed operation requires explicit acknowledgment
+    (`referenceapplication.consequential.acknowledgment_required`).
+  * `CapabilityProtectedActionPolicy`: the endpoint must declare the `referenceapplication.consequential.execute`
+    capability scope (`referenceapplication.capability.scope_required`).
+* A scoped AsiBackbone policy evaluator composed from those rules. Endpoints still opt in through policy markers;
+  none of the application's own endpoints carry them until Step 5.
+* Unit tests for each rule and the composed evaluator, and enforcement tests that run each rule through AsiBackbone's
+  real endpoint metadata and middleware, so a metadata-format mismatch cannot silently disable the rules.
+
+### Changed
+
+* The landing page reports 4 of 6 walkthrough steps complete.
+* An endpoint with governance metadata but no applicable rule is now evaluated and allowed. In Step 3 it was blocked
+  because no policy evaluator was registered.
+
 ## 0.1.0-alpha.3 - 2026-10-18
 
 Completes walkthrough [Step 3: Register AsiBackbone Services](https://asibackbone.github.io/ReferenceApplication/walkthrough/03-register-asibackbone-services.html).
