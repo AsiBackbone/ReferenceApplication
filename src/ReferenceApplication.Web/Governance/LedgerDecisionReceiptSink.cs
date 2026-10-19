@@ -73,7 +73,7 @@ public sealed partial class LedgerDecisionReceiptSink : IDecisionReceiptSink
                 "Governance decision evidence was already recorded for this request.");
         }
 
-        var record = AuditLedgerRecord.FromDecisionReceipt(receipt);
+        AuditLedgerRecord record = AuditLedgerRecordHashing.CreateHashed(receipt);
         OperationResult<AuditLedgerRecord> result;
 
         try

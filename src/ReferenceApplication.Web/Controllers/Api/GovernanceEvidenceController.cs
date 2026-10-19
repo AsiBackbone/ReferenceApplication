@@ -17,6 +17,7 @@ namespace ReferenceApplication.Web.Controllers.Api;
 [Route("api/v{version:apiVersion}/governance-evidence")]
 public sealed class GovernanceEvidenceController(
     IGovernanceEvidenceQuery evidenceQuery,
+    IGovernanceEvidenceVerifier evidenceVerifier,
     IGovernanceEvidenceNotifier evidenceNotifier) : ControllerBase
 {
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
@@ -24,6 +25,8 @@ public sealed class GovernanceEvidenceController(
         evidenceQuery ?? throw new ArgumentNullException(nameof(evidenceQuery));
     private readonly IGovernanceEvidenceNotifier _evidenceNotifier =
         evidenceNotifier ?? throw new ArgumentNullException(nameof(evidenceNotifier));
+    private readonly IGovernanceEvidenceVerifier _evidenceVerifier =
+        evidenceVerifier ?? throw new ArgumentNullException(nameof(evidenceVerifier));
 
     /// <summary>
     /// Streams identifier-only hints whenever persisted governance evidence changes.
@@ -98,5 +101,27 @@ public sealed class GovernanceEvidenceController(
             .ConfigureAwait(false);
 
         return evidence is null ? NotFound() : Ok(evidence);
+    }
+
+    /// <summary>
+    /// Recomputes the canonical hash of each decision ledger record for a governed request.
+    /// </summary>
+    /// <param name="correlationId">The exact correlation identifier recorded for the request.</param>
+    /// <param name="cancellationToken">A token that cancels the verification.</param>
+    /// <returns>The record-level verification results, or not found when the correlation identifier is unknown.</returns>
+    [HttpGet("{correlationId}/verification")]
+    [ProducesResponseType<GovernanceEvidenceVerificationResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<GovernanceEvidenceVerificationResponse>> Verify(
+        [FromRoute, Required, StringLength(128, MinimumLength = 1)] string correlationId,
+        CancellationToken cancellationToken)
+    {
+        GovernanceEvidenceVerificationResponse? verification = await _evidenceVerifier
+            .VerifyAsync(correlationId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return verification is null ? NotFound() : Ok(verification);
     }
 }

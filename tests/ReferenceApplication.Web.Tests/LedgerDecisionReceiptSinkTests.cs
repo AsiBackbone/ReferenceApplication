@@ -1,6 +1,7 @@
 using AsiBackbone.Core.Actors;
 using AsiBackbone.Core.Audit;
 using AsiBackbone.Core.Decisions;
+using AsiBackbone.Core.Signing;
 using AsiBackbone.EntityFrameworkCore.Audit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,6 +54,10 @@ public sealed class LedgerDecisionReceiptSinkTests
         Assert.Equal("1.0.0", stored.PolicyVersion);
         Assert.Equal("sha256:test", stored.PolicyHash);
         Assert.Equal("value", stored.Metadata["endpoint.test"]);
+        CanonicalPayloadHash computedHash = CanonicalPayloadHasher.ComputeHash(
+            CanonicalPayloadBuilder.ForAuditLedgerRecord(stored));
+        Assert.Equal(computedHash.HashValue, stored.RecordHash);
+        Assert.Null(stored.PreviousRecordHash);
 
         Assert.Equal(stored.OperationName, evidence.OperationName);
         Assert.Equal(stored.Outcome, evidence.Outcome);

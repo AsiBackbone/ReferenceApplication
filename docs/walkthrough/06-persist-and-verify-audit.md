@@ -116,6 +116,34 @@ AsiBackbone's `EfCoreAuditLedgerStore`.
   identifier, a new operation execution identifier, and the decision's correlation and trace identifiers. A request can
   record evidence only once.
 
+### Hash each decision record
+
+Before append, the sink builds AsiBackbone's canonical audit-ledger payload and stores its SHA-256 hash in
+`RecordHash`. The canonical payload binds the record identity and decision fields, including timestamps at their stored
+precision. Recomputing that hash therefore detects changes such as HTML-entity or Unicode substitutions and
+sub-millisecond timestamp edits. Records written before hashing was enabled keep a null `RecordHash`; verification
+reports those records as `not-hashed`, not as a mismatch.
+
+The Reference Application deliberately leaves `PreviousRecordHash` null. Every request writes evidence through its own
+short-lived context, and safely maintaining a single hash chain across concurrent requests and application instances
+would require serialized writes or a separately coordinated chain head. Independent record hashes preserve concurrent
+append behavior while still detecting a change relative to the hash stored with that record.
+
+An administrator can recompute the hashes for a governed request with:
+
+```text
+GET /api/v1/governance-evidence/{correlationId}/verification
+```
+
+Each record result is `verified`, `mismatch`, or `not-hashed` and includes the stored and recomputed hash when available.
+This endpoint uses the same administrator policy as the evidence timeline API.
+
+> [!IMPORTANT]
+> A matching hash proves only that the current canonical fields match the hash currently stored beside them. It is not
+> a digital signature, trusted timestamp, immutable external anchor, or proof of who wrote the record. An attacker who
+> can replace both the database record and its hash can manufacture a new match. Signing and external anchoring remain
+> separate deployment decisions.
+
 All governed POST operations now emit audit, so allowed decisions, denials, and acknowledgment challenges are all
 recorded:
 
@@ -230,12 +258,15 @@ The walkthrough Step 6 tests use real SQLite databases created from the applicat
   - a subscriber receives the decision, mutation-audit, and lifecycle-event notifications in persistence order;
   - a throwing notifier does not affect the governed request or completion delivery;
   - anonymous and non-administrator clients cannot open the notification stream.
+  - a new decision hash verifies successfully;
+  - direct canonical-text and sub-millisecond timestamp changes produce a mismatch;
+  - a legacy record without a hash is reported as `not-hashed`.
 - `GovernanceEvidenceControllerTests` verify the identifier-only SSE wire format and normal client-disconnect handling.
 - `AccountabilityRecordPersistenceTests` verify the model and migrations, including that the migrations match the
   current model. They also verify that AsiBackbone evidence is stored byte-for-byte with sub-millisecond timestamps and is
   never mutation-audited, while application data in the same context is still canonicalized, normalized, and audited.
-- `LedgerDecisionReceiptSinkTests` cover field mapping, request evidence, one decision per request, and failing closed on
-  both rejected and thrown persistence errors.
+- `LedgerDecisionReceiptSinkTests` cover field mapping, canonical record hashing, request evidence, one decision per
+  request, and failing closed on both rejected and thrown persistence errors.
 - `AsiBackboneAuditCompletionPublisherTests` cover delivery, duplicates, idempotency conflicts, deferral, correlation
   checks, validation, outcome mapping, and registration.
 

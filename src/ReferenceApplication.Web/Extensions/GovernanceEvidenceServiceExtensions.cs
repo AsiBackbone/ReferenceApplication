@@ -45,6 +45,7 @@ public static class GovernanceEvidenceServiceExtensions
             serviceProvider.GetRequiredService<GovernanceDecisionEvidenceAccessor>());
         services.AddScoped<IDecisionReceiptSink, LedgerDecisionReceiptSink>();
         services.AddScoped<IGovernanceEvidenceQuery, GovernanceEvidenceQuery>();
+        services.AddScoped<IGovernanceEvidenceVerifier, GovernanceEvidenceVerifier>();
         services.AddSingleton<IGovernanceEvidenceNotifier, InMemoryGovernanceEvidenceNotifier>();
         services.AddSingleton<GovernanceEvidenceNotificationPublisher>();
 
