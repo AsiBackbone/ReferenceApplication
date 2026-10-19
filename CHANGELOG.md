@@ -6,6 +6,55 @@ This project follows Semantic Versioning using the format `MAJOR.MINOR.PATCH`. R
 the [integration walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) is being written. The
 release version is independent of the NCAT version, which the `ncat-v<version>` tags record.
 
+## 0.1.0-alpha.9 - 2026-10-19
+
+Adds the interactive governance evidence explorer that brings the Step 7 observability work together in one runnable
+development experience.
+
+### Added
+
+* An authenticated, two-pane governance explorer with administrator, capability, consequential-action,
+  record-creation, and evidence-verification controls.
+* Live decision, mutation-audit, outbox, and lifecycle updates through the governance evidence Server-Sent Events
+  endpoint, with administrator-only access to the full evidence ledger.
+* Accessible status updates, keyboard focus treatment, responsive styling, walkthrough guidance, and regression
+  coverage for the explorer workflow.
+
+## 0.1.0-alpha.8 - 2026-10-19
+
+Adds live governance evidence notifications and tamper-evident decision records.
+
+### Added
+
+* A bounded in-process governance evidence notifier and administrator-only Server-Sent Events endpoint with optional
+  correlation filtering. Notifications are best effort and cannot affect governance decisions or outbox delivery.
+* Canonical payload hashes for new governance decision ledger records and an administrator-only verification endpoint
+  that reports verified, mismatched, or legacy not-hashed evidence.
+* SQLite-backed coverage for stream ordering and isolation, access control, SSE formatting, untouched and tampered
+  evidence, legacy records, and unknown correlations.
+
+### Changed
+
+* Governance decision, mutation-audit, and lifecycle persistence now publish minimized evidence notifications after
+  successful storage.
+
+## 0.1.0-alpha.7 - 2026-10-18
+
+Begins Step 7 by making the persisted governance evidence observable through an API and safe development identity.
+
+### Added
+
+* An administrator-only governance evidence query endpoint keyed by correlation identifier, returning a minimized,
+  chronological timeline across decision, application, NCAT audit, outbox, and lifecycle evidence.
+* An opt-in Development-only demo identity that issues fixed administrator and capability claims through the normal
+  cookie, authorization, antiforgery, and governance pipeline.
+* Migrated SQLite integration coverage for allowed and denied decisions, unknown correlations, access control,
+  timeline ordering, payload minimization, and enabled and disabled demo-identity environments.
+
+### Changed
+
+* The README now tracks the expanded Step 7 observability work and Step 8 governance-overhead benchmarks.
+
 ## 0.1.0-alpha.6 - 2026-10-18
 
 Completes walkthrough [Step 6: Persist and Verify Audit Evidence](https://asibackbone.github.io/ReferenceApplication/walkthrough/06-persist-and-verify-audit.html).
