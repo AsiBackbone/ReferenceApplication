@@ -55,6 +55,7 @@ The `ncat-baseline` branch is updated separately through a pull request containi
 | `src/ReferenceApplication.Web` | ASP.NET Core host: startup, middleware pipeline, authentication, controllers, Razor Pages, health checks |
 | `src/ReferenceApplication.Infrastructure` | EF Core `ApplicationDbContext`, save-changes pipeline, and NCAT mutation audit |
 | `tests/ReferenceApplication.Web.Tests` | Automated tests |
+| `tests/ReferenceApplication.Benchmarks` | On-demand host governance overhead benchmarks |
 | `docs/` | DocFX documentation site source |
 | `scripts/` | Documentation validation scripts |
 | `eng/repository-controls/` | Recorded GitHub branch rulesets |
