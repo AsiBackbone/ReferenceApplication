@@ -14,6 +14,7 @@
     <Project Path="src/ReferenceApplication.Web/ReferenceApplication.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/ReferenceApplication.Benchmarks/ReferenceApplication.Benchmarks.csproj" />
     <Project Path="tests/ReferenceApplication.Web.Tests/ReferenceApplication.Web.Tests.csproj" />
   </Folder>
 </Solution>

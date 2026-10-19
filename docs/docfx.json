@@ -18,6 +18,7 @@
         "files": [
           "index.md",
           "**/toc.yml",
+          "benchmarks/**/*.md",
           "walkthrough/**/*.md",
           "api/index.md",
           "api/**/*.yml"

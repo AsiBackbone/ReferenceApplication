@@ -2,6 +2,8 @@
   items:
     - name: Integration Walkthrough
       href: walkthrough/
+    - name: Governance Benchmarks
+      href: benchmarks/governance-overhead.md
     - name: API Reference
       href: api/
 

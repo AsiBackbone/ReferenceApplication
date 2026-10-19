@@ -31,6 +31,7 @@ updates:
           - "OpenTelemetry*"
       test-dependencies:
         patterns:
+          - "BenchmarkDotNet"
           - "Microsoft.NET.Test.Sdk"
           - "xunit*"
           - "coverlet*"
