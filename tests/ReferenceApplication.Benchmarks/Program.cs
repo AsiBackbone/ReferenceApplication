@@ -1,3 +1,4 @@
+using BenchmarkDotNet.Reports;
 using BenchmarkDotNet.Running;
 
 namespace ReferenceApplication.Benchmarks;
@@ -6,7 +7,7 @@ internal static class Program
 {
     public static int Main(string[] args)
     {
-        var summaries = BenchmarkSwitcher
+        IEnumerable<Summary> summaries = BenchmarkSwitcher
             .FromAssembly(typeof(GovernancePolicyBenchmarks).Assembly)
             .Run(args);
 
