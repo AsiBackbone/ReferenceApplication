@@ -23,6 +23,7 @@ try
 {
     WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
+    builder.UseApplicationDemoDatabase();
     builder.AddApplicationSerilog();
     Log.Information("Bootstrapping ReferenceApplication.Web application");
     // Validate antiforgery tokens on every unsafe (POST, PUT, PATCH, DELETE) MVC request by default, so consumer

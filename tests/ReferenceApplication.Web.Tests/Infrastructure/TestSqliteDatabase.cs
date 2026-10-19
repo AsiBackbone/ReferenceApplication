@@ -57,6 +57,7 @@ internal sealed class TestSqliteDatabase : IDisposable
             .UseSetting("ReferenceApplication:DataAccess:Provider", "Sqlite")
             .UseSetting("ReferenceApplication:DataAccess:ConnectionStringName", "ApplicationDatabase")
             .UseSetting("ConnectionStrings:ApplicationDatabase", ConnectionString)
+            .UseSetting("ConnectionStrings:DemonstrationDatabase", ConnectionString)
             // Tests dispatch the audit-completion outbox explicitly; keep the background loop out of the way.
             .UseSetting("ReferenceApplication:AuditCompletionOutbox:PollInterval", "01:00:00")
             .UseSetting("ReferenceApplication:AuditCompletionOutbox:MaximumCycleRetryDelay", "01:00:00"));

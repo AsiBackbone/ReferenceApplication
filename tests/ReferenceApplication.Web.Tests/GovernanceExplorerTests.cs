@@ -41,6 +41,7 @@ public sealed partial class GovernanceExplorerTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("Governance Explorer", html, StringComparison.Ordinal);
         Assert.Contains("data-can-view-evidence=\"true\"", html, StringComparison.Ordinal);
+        Assert.Contains("data-database-reset=\"false\"", html, StringComparison.Ordinal);
         Assert.Contains("data-governed-action=\"administrator\"", html, StringComparison.Ordinal);
         Assert.Contains("data-governed-action=\"capability\"", html, StringComparison.Ordinal);
         Assert.Contains("data-governed-action=\"consequential\"", html, StringComparison.Ordinal);
@@ -126,13 +127,15 @@ public sealed partial class GovernanceExplorerTests
     public async Task Index_DevelopmentDemoIdentity_ShowsSelectedFixedClaims()
     {
         const string demoEnabledKey = "ReferenceApplication:DemoIdentity:Enabled";
-        using WebApplicationFactory<Program> factory =
+        using var database = TestSqliteDatabase.Create();
+        WebApplicationFactory<Program> unconfiguredFactory =
             ApplicationWebApplicationFactory.CreateAllowingAnonymousAccess(new Dictionary<string, string?>
             {
                 [demoEnabledKey] = "true",
                 ["ReferenceApplication:AuditCompletionOutbox:Enabled"] = "false"
             }, Environments.Development)
             .WithWebHostBuilder(builder => builder.UseSetting(demoEnabledKey, "true"));
+        using WebApplicationFactory<Program> factory = await database.ApplyAsync(unconfiguredFactory);
         using HttpClient client = factory.CreateHttpsClient();
         using HttpResponseMessage tokenResponse = await client.GetAsync(
             "/test/authentication/antiforgery-token",
@@ -161,6 +164,8 @@ public sealed partial class GovernanceExplorerTests
         Assert.Contains("action=\"/Account/DemoSignIn\"", html, StringComparison.Ordinal);
         Assert.Contains("id=\"explorer-administrator\"", html, StringComparison.Ordinal);
         Assert.Contains("id=\"explorer-capability\"", html, StringComparison.Ordinal);
+        Assert.Contains("action=\"/governance-explorer/reset-database\"", html, StringComparison.Ordinal);
+        Assert.Contains("Reset demonstration database", html, StringComparison.Ordinal);
         Assert.Contains("Governance demo actor", html, StringComparison.Ordinal);
         Assert.Contains("data-can-view-evidence=\"true\"", html, StringComparison.Ordinal);
     }

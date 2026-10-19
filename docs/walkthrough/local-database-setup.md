@@ -18,6 +18,11 @@ application deliberately does not call `EnsureCreated`, `Migrate`, or their asyn
 This prevents an application instance from changing a deployed database implicitly and keeps migration execution under
 operator control.
 
+The disposable governance demonstration described in
+[Step 7](07-observe-governance.md#disposable-development-database) is the only exception. When its guarded
+Development identity is active, it selects and migrates a separate `DemonstrationDatabase`; it never migrates or resets
+the normal `ApplicationDatabase` described on this page.
+
 Until the migrations are applied, the SQLite file does not exist and the database readiness check reports the application
 as unavailable. Running the web host alone does not create the file.
 

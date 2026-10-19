@@ -5,7 +5,9 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using ReferenceApplication.Infrastructure.Data;
+using ReferenceApplication.Infrastructure.Data.Options;
 using ReferenceApplication.Web.Authentication.Demo;
 using ReferenceApplication.Web.Tests.Extensions;
 using ReferenceApplication.Web.Tests.Infrastructure;
@@ -86,6 +88,10 @@ public sealed class DemoIdentityTests : IDisposable
     {
         using WebApplicationFactory<Program> factory = await CreateFactoryAsync(environmentName, enabled);
         Assert.Null(factory.Services.GetService<IDemoIdentityService>());
+        Assert.Null(factory.Services.GetService<IDemonstrationDatabaseService>());
+        Assert.Equal(
+            "ApplicationDatabase",
+            factory.Services.GetRequiredService<IOptions<DataAccessOptions>>().Value.ConnectionStringName);
         using HttpClient client = factory.CreateHttpsClient();
 
         using HttpResponseMessage login = await client.GetAsync(
@@ -98,6 +104,16 @@ public sealed class DemoIdentityTests : IDisposable
 
         using HttpResponseMessage signIn = await SignInAsync(client, administrator: true, capability: true);
         Assert.Equal(HttpStatusCode.NotFound, signIn.StatusCode);
+
+        string resetToken = await GetAntiforgeryTokenAsync(client);
+        using HttpResponseMessage reset = await client.PostAsync(
+            DemoIdentityOptions.ResetDatabasePath,
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                [_antiforgeryFormFieldName] = resetToken
+            }),
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.NotFound, reset.StatusCode);
 
         using HttpResponseMessage governed = await PostGovernedOperationAsync(client, "administrator");
         Assert.Equal(HttpStatusCode.Unauthorized, governed.StatusCode);
@@ -123,6 +139,110 @@ public sealed class DemoIdentityTests : IDisposable
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    /// <summary>
+    /// Verifies the administrator-only Development action removes demonstration records and evidence, then reapplies
+    /// the real migration history so the explorer is immediately ready for another run.
+    /// </summary>
+    [Fact]
+    public async Task DemonstrationDatabase_DevelopmentAdministrator_ResetReturnsEmptyMigratedState()
+    {
+        using WebApplicationFactory<Program> factory = await CreateFactoryAsync(Environments.Development, enabled: true);
+        await using (AsyncServiceScope serviceScope = factory.Services.CreateAsyncScope())
+        {
+            Assert.NotNull(serviceScope.ServiceProvider.GetService<IDemonstrationDatabaseService>());
+            Assert.Equal(
+                DemoIdentityOptions.DatabaseConnectionStringName,
+                serviceScope.ServiceProvider.GetRequiredService<IOptions<DataAccessOptions>>().Value.ConnectionStringName);
+        }
+        using HttpClient client = factory.CreateHttpsClient();
+
+        using HttpResponseMessage signIn = await SignInAsync(client, administrator: true, capability: false);
+        Assert.Equal(HttpStatusCode.Redirect, signIn.StatusCode);
+
+        using HttpResponseMessage create = await PostGovernedOperationAsync(client, "records");
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+
+        await using (AsyncServiceScope populatedScope = factory.Services.CreateAsyncScope())
+        {
+            ApplicationDbContext populated = populatedScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            Assert.Equal(1, await populated.GovernedOperationRecords.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(1, await populated.AsiBackboneAuditLedgerRecords.CountAsync(TestContext.Current.CancellationToken));
+            Assert.NotEmpty(await populated.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken));
+        }
+
+        string token = await GetAntiforgeryTokenAsync(client);
+        using HttpResponseMessage reset = await client.PostAsync(
+            DemoIdentityOptions.ResetDatabasePath,
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                [_antiforgeryFormFieldName] = token
+            }),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Redirect, reset.StatusCode);
+        Assert.Equal("/governance-explorer?databaseReset=true", reset.Headers.Location?.OriginalString);
+
+        using HttpResponseMessage resetPage = await client.GetAsync(
+            reset.Headers.Location,
+            TestContext.Current.CancellationToken);
+        string resetPageHtml = await resetPage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, resetPage.StatusCode);
+        Assert.Contains("data-database-reset=\"true\"", resetPageHtml, StringComparison.Ordinal);
+        Assert.Contains("migrated evidence state is empty", resetPageHtml, StringComparison.OrdinalIgnoreCase);
+
+        await using AsyncServiceScope emptyScope = factory.Services.CreateAsyncScope();
+        ApplicationDbContext empty = emptyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.NotEmpty(await empty.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(0, await empty.GovernedOperationRecords.CountAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(0, await empty.AsiBackboneAuditLedgerRecords.CountAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(0, await empty.AuditRecords.CountAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(0, await empty.ApplicationAuditCompletionOutboxEntries.CountAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(0, await empty.AsiBackboneDecisionReceiptLifecycleEvents.CountAsync(TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>
+    /// Verifies an authenticated Development demo actor without the administrator role cannot reset the database.
+    /// </summary>
+    [Fact]
+    public async Task DemonstrationDatabase_DevelopmentNonAdministrator_ResetIsForbidden()
+    {
+        using WebApplicationFactory<Program> factory = await CreateFactoryAsync(Environments.Development, enabled: true);
+        using HttpClient client = factory.CreateHttpsClient();
+        using HttpResponseMessage signIn = await SignInAsync(client, administrator: false, capability: true);
+        Assert.Equal(HttpStatusCode.Redirect, signIn.StatusCode);
+
+        string token = await GetAntiforgeryTokenAsync(client);
+        using HttpResponseMessage reset = await client.PostAsync(
+            DemoIdentityOptions.ResetDatabasePath,
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                [_antiforgeryFormFieldName] = token
+            }),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Redirect, reset.StatusCode);
+        Assert.Equal("/Account/AccessDenied", reset.Headers.Location?.AbsolutePath);
+    }
+
+    /// <summary>
+    /// Verifies the Development reset action cannot be invoked without an antiforgery token.
+    /// </summary>
+    [Fact]
+    public async Task DemonstrationDatabase_WithoutAntiforgeryToken_ReturnsBadRequest()
+    {
+        using WebApplicationFactory<Program> factory = await CreateFactoryAsync(Environments.Development, enabled: true);
+        using HttpClient client = factory.CreateHttpsClient();
+        using HttpResponseMessage signIn = await SignInAsync(client, administrator: true, capability: false);
+        Assert.Equal(HttpStatusCode.Redirect, signIn.StatusCode);
+
+        using HttpResponseMessage reset = await client.PostAsync(
+            DemoIdentityOptions.ResetDatabasePath,
+            content: null,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, reset.StatusCode);
+    }
+
     /// <inheritdoc />
     public void Dispose()
     {
@@ -136,7 +256,8 @@ public sealed class DemoIdentityTests : IDisposable
         WebApplicationFactory<Program> factory =
             ApplicationWebApplicationFactory.CreateAllowingAnonymousAccess(new Dictionary<string, string?>
             {
-                [_demoEnabledKey] = enabled.ToString()
+                [_demoEnabledKey] = enabled.ToString(),
+                ["ReferenceApplication:AuditCompletionOutbox:Enabled"] = "false"
             }, environmentName)
             .WithWebHostBuilder(builder => builder.UseSetting(_demoEnabledKey, enabled.ToString()));
 
@@ -174,12 +295,18 @@ public sealed class DemoIdentityTests : IDisposable
     private static async Task<HttpResponseMessage> PostGovernedOperationAsync(HttpClient client, string action)
     {
         string token = await GetAntiforgeryTokenAsync(client);
+        Dictionary<string, string> form = new()
+        {
+            [_antiforgeryFormFieldName] = token
+        };
+        if (string.Equals(action, "records", StringComparison.Ordinal))
+        {
+            form["Title"] = "Resettable demonstration record";
+        }
+
         return await client.PostAsync(
             $"/api/v1/governed-operations/{action}",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                [_antiforgeryFormFieldName] = token
-            }),
+            new FormUrlEncodedContent(form),
             TestContext.Current.CancellationToken);
     }
 

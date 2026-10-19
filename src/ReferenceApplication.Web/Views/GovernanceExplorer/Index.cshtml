@@ -19,7 +19,9 @@
     <a class="secondary-link" href="/">Back to application home</a>
 </header>
 
-<div class="explorer-grid" data-can-view-evidence="@Model.CanViewEvidence.ToString().ToLowerInvariant()">
+<div class="explorer-grid"
+     data-can-view-evidence="@Model.CanViewEvidence.ToString().ToLowerInvariant()"
+     data-database-reset="@Model.DemonstrationDatabaseWasReset.ToString().ToLowerInvariant()">
     <section class="explorer-panel actions-panel" aria-labelledby="explorer-actions-heading">
         <h2 id="explorer-actions-heading">Actions</h2>
         <p>Each button calls the production endpoint with the page's antiforgery token.</p>
@@ -45,6 +47,18 @@
                     <button class="secondary-button" type="submit">Apply demo identity</button>
                 </fieldset>
             </form>
+
+            @if (Model.HasAdministratorRole)
+            {
+                <form class="demo-database-reset" method="post" action="/governance-explorer/reset-database">
+                    @Html.AntiForgeryToken()
+                    <p>
+                        The explorer uses a disposable Development-only SQLite database. Reset it to remove all demo
+                        records and evidence, then reapply the migrations.
+                    </p>
+                    <button class="secondary-button" type="submit">Reset demonstration database</button>
+                </form>
+            }
         }
 
         <form id="governance-actions" class="governance-actions">
@@ -72,7 +86,14 @@
         </form>
 
         <div id="explorer-status" class="explorer-status" role="status" aria-live="polite">
-            Ready to run a governed action.
+            @if (Model.DemonstrationDatabaseWasReset)
+            {
+                <text>Demonstration database reset. The migrated evidence state is empty.</text>
+            }
+            else
+            {
+                <text>Ready to run a governed action.</text>
+            }
         </div>
     </section>
 

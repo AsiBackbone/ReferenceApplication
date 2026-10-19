@@ -26,6 +26,11 @@ public sealed class GovernanceExplorerViewModel
     public bool HasConsequentialCapability { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the disposable Development database was just reset.
+    /// </summary>
+    public bool DemonstrationDatabaseWasReset { get; set; }
+
+    /// <summary>
     /// Gets or sets the display name of the current actor.
     /// </summary>
     public string ActorDisplayName { get; set; } = "Authenticated actor";

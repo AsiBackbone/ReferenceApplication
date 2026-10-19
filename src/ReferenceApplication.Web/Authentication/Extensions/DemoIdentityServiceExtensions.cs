@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using ReferenceApplication.Infrastructure.Data.Options;
 using ReferenceApplication.Web.Authentication.Demo;
 
 namespace ReferenceApplication.Web.Authentication.Extensions;
@@ -13,6 +14,37 @@ public static class DemoIdentityServiceExtensions
     private const string _administratorFormField = "administrator";
     private const string _capabilityFormField = "consequentialCapability";
     private const string _returnUrlFormField = "returnUrl";
+
+    /// <summary>
+    /// Selects the disposable SQLite database before data-access services are registered when the Development demo is
+    /// active. Non-Development and disabled hosts retain their configured provider and connection string.
+    /// </summary>
+    /// <param name="builder">The application builder to configure.</param>
+    /// <returns>The same builder for chaining.</returns>
+    public static WebApplicationBuilder UseApplicationDemoDatabase(this WebApplicationBuilder builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        if (!IsDemoIdentityActive(builder.Configuration, builder.Environment))
+        {
+            return builder;
+        }
+
+        string? connectionString = builder.Configuration.GetConnectionString(
+            DemoIdentityOptions.DatabaseConnectionStringName);
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                $"Connection string '{DemoIdentityOptions.DatabaseConnectionStringName}' must be configured when the Development demo identity is enabled.");
+        }
+
+        builder.Configuration[$"{DataAccessOptions.SectionName}:{nameof(DataAccessOptions.Provider)}"] =
+            DataAccessOptions.SqliteProvider;
+        builder.Configuration[$"{DataAccessOptions.SectionName}:{nameof(DataAccessOptions.ConnectionStringName)}"] =
+            DemoIdentityOptions.DatabaseConnectionStringName;
+
+        return builder;
+    }
 
     /// <summary>
     /// Adds the demo identity service only when the host is running in Development and the explicit switch is enabled.
@@ -33,6 +65,8 @@ public static class DemoIdentityServiceExtensions
         if (IsDemoIdentityActive(configuration, environment))
         {
             services.AddSingleton<IDemoIdentityService, DemoIdentityService>();
+            services.AddScoped<IDemonstrationDatabaseService, DemonstrationDatabaseService>();
+            services.AddHostedService<DemonstrationDatabaseInitializationHostedService>();
         }
 
         return services;
@@ -56,6 +90,10 @@ public static class DemoIdentityServiceExtensions
         app.MapPost(DemoIdentityOptions.SignInPath, SignInAsync)
             .AllowAnonymous()
             .WithDisplayName("Create Development demo identity");
+
+        app.MapPost(DemoIdentityOptions.ResetDatabasePath, ResetDatabaseAsync)
+            .RequireAuthorization(ApplicationAuthorizationPolicyNames.AdministratorRole)
+            .WithDisplayName("Reset Development demonstration database");
 
         return app;
     }
@@ -117,6 +155,25 @@ public static class DemoIdentityServiceExtensions
             }).ConfigureAwait(false);
 
         return Results.LocalRedirect(returnUrl);
+    }
+
+    private static async Task<IResult> ResetDatabaseAsync(
+        HttpContext httpContext,
+        IAntiforgery antiforgery,
+        IDemonstrationDatabaseService database,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await antiforgery.ValidateRequestAsync(httpContext).ConfigureAwait(false);
+        }
+        catch (AntiforgeryValidationException)
+        {
+            return Results.BadRequest();
+        }
+
+        await database.ResetAsync(cancellationToken).ConfigureAwait(false);
+        return Results.LocalRedirect("/governance-explorer?databaseReset=true");
     }
 
     private static bool IsSelected(IFormCollection form, string fieldName)
