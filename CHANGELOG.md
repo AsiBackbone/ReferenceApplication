@@ -2,11 +2,12 @@
 
 All notable changes to the AsiBackbone Reference Application are documented in this file.
 
-This project follows Semantic Versioning using the format `MAJOR.MINOR.PATCH`. Releases are `0.x` pre-releases while
-the [integration walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) is being written. The
-release version is independent of the NCAT version, which the `ncat-v<version>` tags record.
+This project follows Semantic Versioning using the format `MAJOR.MINOR.PATCH`. Completing the
+[integration walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) does not by itself declare
+a stable public contract; releases remain `0.x` pre-releases until the repository's release-readiness criteria are met.
+The release version is independent of the NCAT version, which the `ncat-v<version>` tags record.
 
-## Unreleased
+## 0.1.0-alpha.10 - 2026-10-19
 
 ### Added
 
