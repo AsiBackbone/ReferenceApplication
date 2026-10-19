@@ -1,6 +1,6 @@
 ---
 title: "NCAT Baseline and AsiBackbone Integration"
-description: API reference and step-by-step record of the in-progress integration of AsiBackbone into an NCAT-generated ASP.NET Core host.
+description: API reference and completed step-by-step record of integrating AsiBackbone into an NCAT-generated ASP.NET Core host.
 _disableAffix: true
 _disableBreadcrumb: true
 _disableToc: true
@@ -9,8 +9,8 @@ _disableToc: true
 # AsiBackbone Reference Application Documentation
 
 <div class="home-hero">
-  <p class="home-kicker">NCAT baseline with AsiBackbone governance and persisted audit evidence</p>
-  <p class="home-summary">The Reference Application is an ASP.NET Core host generated from the .NET Core Application Template (NCAT). This site records, step by step, how AsiBackbone governed decisions, runnable sample governance rules, and persisted audit evidence were added to it.</p>
+  <p class="home-kicker">NCAT baseline with observable, measurable AsiBackbone governance</p>
+  <p class="home-summary">The Reference Application is an ASP.NET Core host generated from the .NET Core Application Template (NCAT). This site records, step by step, how AsiBackbone governed decisions, runnable sample governance rules, persisted audit evidence, an operational evidence explorer, and host-overhead benchmarks were added to it.</p>
   <p class="home-why">The Reference Application exists so teams can follow the exact procedure, in order, that takes a freshly generated NCAT application to a governed AsiBackbone host, and inspect each resulting code change.</p>
   <div class="home-actions" role="group" aria-label="Start with the Reference Application">
     <a class="btn btn-primary" href="walkthrough/index.md">Follow the Walkthrough</a>
@@ -25,7 +25,7 @@ _disableToc: true
 <div class="entry-point-grid">
   <a class="entry-point" href="walkthrough/index.md">
     <strong>Walk through the integration</strong>
-    <span>The ordered procedure from <code>dotnet new netcoreapp-template</code> to a host that evaluates governance rules.</span>
+    <span>The completed procedure from <code>dotnet new netcoreapp-template</code> to an observable and measurable governed host.</span>
   </a>
   <a class="entry-point" href="walkthrough/01-scaffold-from-ncat.md">
     <strong>See the NCAT baseline</strong>
@@ -38,6 +38,14 @@ _disableToc: true
   <a class="entry-point" href="walkthrough/06-persist-and-verify-audit.md">
     <strong>Trace a governed change</strong>
     <span>How a change is linked to the decision that permitted it through the audit ledger, NCAT mutation audit, and audit completion.</span>
+  </a>
+  <a class="entry-point" href="walkthrough/07-observe-governance.md">
+    <strong>Observe governance in action</strong>
+    <span>Use the Development explorer to run governed endpoints and inspect their persisted evidence.</span>
+  </a>
+  <a class="entry-point" href="walkthrough/08-benchmarks.md">
+    <strong>Measure host overhead</strong>
+    <span>Run the repeatable BenchmarkDotNet scenarios and understand their measurement boundary.</span>
   </a>
   <a class="entry-point" href="api/index.md">
     <strong>Browse the API reference</strong>
@@ -73,7 +81,7 @@ _disableToc: true
 |:---|:---|
 | Supported platform | .NET 10.0 |
 | Host baseline | Generated with `dotnet new netcoreapp-template` (default cookie authentication, SQLite) |
-| Governance framework | [AsiBackbone](https://asibackbone.github.io/AsiBackbone/) `7.2.1`, integrated through walkthrough Step 6 |
+| Governance framework | [AsiBackbone](https://asibackbone.github.io/AsiBackbone/) `7.2.1`, integrated through walkthrough Step 8 |
 | Untouched scaffold | [`ncat-baseline` branch](https://github.com/AsiBackbone/ReferenceApplication/tree/ncat-baseline) |
 | Source | [AsiBackbone/ReferenceApplication](https://github.com/AsiBackbone/ReferenceApplication) |
 
@@ -115,7 +123,7 @@ The Reference Application consumes both related projects; neither of them depend
   <article class="project-card" aria-current="page">
     <span class="project-role">Follow the integration</span>
     <h3>AsiBackbone Reference Application <span class="current-site">Current site</span></h3>
-    <p>An NCAT-generated ASP.NET Core host with AsiBackbone governance and persisted audit evidence, a step-by-step implementation record, and a generated API reference.</p>
+    <p>An NCAT-generated ASP.NET Core host with observable governance, persisted audit evidence, host-overhead benchmarks, a completed step-by-step implementation record, and a generated API reference.</p>
     <p class="project-links">
       <a href="https://github.com/AsiBackbone/ReferenceApplication" aria-label="AsiBackbone Reference Application repository">Repository</a>
     </p>

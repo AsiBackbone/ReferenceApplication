@@ -20,3 +20,5 @@
   href: 06-persist-and-verify-audit.md
 - name: 7. Observe governance in action
   href: 07-observe-governance.md
+- name: 8. Benchmark governance overhead
+  href: 08-benchmarks.md

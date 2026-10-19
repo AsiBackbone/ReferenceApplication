@@ -53,12 +53,12 @@
       "_enableSearch": true,
       "_canonicalBaseUrl": "https://asibackbone.github.io/ReferenceApplication/",
       "_structuredDataSiteName": "AsiBackbone Reference Application",
-      "_structuredDataSiteDescription": "API reference and implementation record for the in-progress integration of AsiBackbone into an NCAT-generated host.",
+      "_structuredDataSiteDescription": "API reference and completed implementation record for integrating AsiBackbone into an NCAT-generated host.",
       "_structuredDataPublisherName": "AsiBackbone",
       "_structuredDataPublisherUrl": "https://github.com/AsiBackbone",
       "_socialImageUrl": "https://asibackbone.github.io/ReferenceApplication/images/asibackbone-social.png",
       "_socialImageType": "image/png",
-      "_socialImageAlt": "AsiBackbone Reference Application — NCAT baseline with AsiBackbone integration in progress"
+      "_socialImageAlt": "AsiBackbone Reference Application — completed NCAT and AsiBackbone integration walkthrough"
     }
   }
 }
