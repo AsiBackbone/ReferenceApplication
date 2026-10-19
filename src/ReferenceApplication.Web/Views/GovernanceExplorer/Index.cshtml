@@ -21,7 +21,8 @@
 
 <div class="explorer-grid"
      data-can-view-evidence="@Model.CanViewEvidence.ToString().ToLowerInvariant()"
-     data-database-reset="@Model.DemonstrationDatabaseWasReset.ToString().ToLowerInvariant()">
+     data-database-reset="@Model.DemonstrationDatabaseWasReset.ToString().ToLowerInvariant()"
+     data-load-demonstration="@Model.ShowGovernanceLoadDemonstration.ToString().ToLowerInvariant()">
     <section class="explorer-panel actions-panel" aria-labelledby="explorer-actions-heading">
         <h2 id="explorer-actions-heading">Actions</h2>
         <p>Each button calls the production endpoint with the page's antiforgery token.</p>
@@ -95,6 +96,50 @@
                 <text>Ready to run a governed action.</text>
             }
         </div>
+
+        @if (Model.ShowGovernanceLoadDemonstration)
+        {
+            <section class="load-demonstration" aria-labelledby="load-demonstration-heading">
+                <p class="demonstration-label">Demonstration, not a benchmark</p>
+                <h2 id="load-demonstration-heading">Bounded live governance load</h2>
+                <p>
+                    Evaluate the production governance policy composition in-process and watch transient aggregate
+                    throughput and latency. This run makes no HTTP self-requests and persists no synthetic evidence.
+                    Use the <a href="https://asibackbone.github.io/ReferenceApplication/benchmarks/governance-overhead.html">published benchmarks</a>
+                    for repeatable measurements.
+                </p>
+                <form id="load-demonstration-form">
+                    @Html.AntiForgeryToken()
+                    <label for="load-demonstration-iterations">Decisions</label>
+                    <input id="load-demonstration-iterations" name="iterations" type="number" min="1"
+                           max="@Model.LoadDemonstrationMaximumIterations"
+                           value="@Model.LoadDemonstrationDefaultIterations" />
+                    <label for="load-demonstration-duration">Duration limit (milliseconds)</label>
+                    <input id="load-demonstration-duration" name="durationMilliseconds" type="number" min="1"
+                           max="@Model.LoadDemonstrationMaximumDurationMilliseconds"
+                           value="@Model.LoadDemonstrationDefaultDurationMilliseconds" />
+                    <div class="load-demonstration-buttons">
+                        <button id="start-load-demonstration" type="submit">Start bounded run</button>
+                        <button id="cancel-load-demonstration" class="secondary-button" type="button" disabled>Cancel</button>
+                    </div>
+                </form>
+                <div id="load-demonstration-status" class="load-demonstration-status" role="status" aria-live="polite">
+                    No demonstration has run in this application process.
+                </div>
+                <dl class="load-demonstration-metrics">
+                    <dt>Progress</dt>
+                    <dd id="load-demonstration-progress">0 / 0</dd>
+                    <dt>Elapsed</dt>
+                    <dd id="load-demonstration-elapsed">0 ms</dd>
+                    <dt>Throughput</dt>
+                    <dd id="load-demonstration-throughput">0 decisions/s</dd>
+                </dl>
+                <h3>Decision latency histogram</h3>
+                <ul id="load-demonstration-histogram" class="load-demonstration-histogram">
+                    <li>No decisions observed.</li>
+                </ul>
+            </section>
+        }
     </section>
 
     <section class="explorer-panel evidence-panel" aria-labelledby="explorer-evidence-heading">

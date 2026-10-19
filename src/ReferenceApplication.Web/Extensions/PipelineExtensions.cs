@@ -64,6 +64,7 @@ public static class PipelineExtensions
         app.MapControllers();
         app.MapRazorPages();
         app.MapApplicationDemoIdentity();
+        app.MapApplicationGovernanceLoadDemonstration();
 
         return app;
     }

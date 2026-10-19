@@ -5,7 +5,9 @@ using ReferenceApplication.Web.Authentication.Claims;
 using ReferenceApplication.Web.Authentication.Demo;
 using ReferenceApplication.Web.Authentication.Extensions;
 using ReferenceApplication.Web.Authentication.Options;
+using ReferenceApplication.Web.Extensions;
 using ReferenceApplication.Web.Governance;
+using ReferenceApplication.Web.Governance.Demonstration;
 using ReferenceApplication.Web.Models;
 
 namespace ReferenceApplication.Web.Controllers;
@@ -19,7 +21,8 @@ public sealed class GovernanceExplorerController(
     IOptions<ApplicationAuthorizationOptions> authorizationOptions,
     IConfiguration configuration,
     IHostEnvironment environment,
-    IEnumerable<IDemoIdentityService> demoIdentityServices) : Controller
+    IEnumerable<IDemoIdentityService> demoIdentityServices,
+    IEnumerable<IGovernanceLoadDemonstrationService> loadDemonstrationServices) : Controller
 {
     private readonly IAuthorizationService _authorizationService =
         authorizationService ?? throw new ArgumentNullException(nameof(authorizationService));
@@ -31,6 +34,8 @@ public sealed class GovernanceExplorerController(
         environment ?? throw new ArgumentNullException(nameof(environment));
     private readonly bool _hasDemoIdentityService =
         demoIdentityServices?.Any() == true;
+    private readonly bool _hasLoadDemonstrationService =
+        loadDemonstrationServices?.Any() == true;
 
     /// <summary>
     /// Displays the explorer for an authenticated actor.
@@ -49,6 +54,9 @@ public sealed class GovernanceExplorerController(
         string actorDisplayName = User.FindFirst(ApplicationClaimTypes.Name)?.Value
             ?? User.Identity?.Name
             ?? "Authenticated actor";
+        GovernanceLoadDemonstrationOptions loadOptions = _configuration
+            .GetSection(GovernanceLoadDemonstrationOptions.SectionName)
+            .Get<GovernanceLoadDemonstrationOptions>() ?? new GovernanceLoadDemonstrationOptions();
 
         return View(new GovernanceExplorerViewModel
         {
@@ -61,7 +69,14 @@ public sealed class GovernanceExplorerController(
                 bool.TrueString,
                 StringComparison.OrdinalIgnoreCase),
             ShowDemoIdentityControls = _hasDemoIdentityService &&
-                DemoIdentityServiceExtensions.IsDemoIdentityActive(_configuration, _environment)
+                DemoIdentityServiceExtensions.IsDemoIdentityActive(_configuration, _environment),
+            ShowGovernanceLoadDemonstration = administrator.Succeeded &&
+                _hasLoadDemonstrationService &&
+                GovernanceLoadDemonstrationServiceExtensions.IsActive(_configuration, _environment),
+            LoadDemonstrationDefaultIterations = loadOptions.DefaultIterations,
+            LoadDemonstrationMaximumIterations = loadOptions.MaximumIterations,
+            LoadDemonstrationDefaultDurationMilliseconds = loadOptions.DefaultDurationMilliseconds,
+            LoadDemonstrationMaximumDurationMilliseconds = loadOptions.MaximumDurationMilliseconds
         });
     }
 }

@@ -20,7 +20,7 @@ The original six-step [Integration Walkthrough](https://asibackbone.github.io/Re
 | 4. Define governance rules | Complete |
 | 5. Govern endpoints | Complete |
 | 6. Persist and verify audit evidence | Complete |
-| 7. Observe governance in action | In progress |
+| 7. Observe governance in action | Complete |
 | 8. Benchmark governance overhead | Planned |
 
 ## Branches
@@ -131,6 +131,8 @@ Every routed endpoint requires an authenticated user unless it is deliberately m
 - `GET /api/v1/governed-operations` is the intentionally ungoverned, read-only description of the Step 5 sample.
 
 The Step 7 evidence query at `GET /api/v1/governance-evidence/{correlationId}` requires the configured administrator role. Its response is intentionally minimized: it exposes identifiers, outcomes, reason codes, policy and evidence hashes, counts, statuses, and timestamps, but never NCAT mutation values or request bodies.
+
+In Development, `ReferenceApplication:GovernanceLoadDemonstration:Enabled` adds an administrator-only bounded run to the explorer. It evaluates the production policy composition in-process, permits only one cancellable run at a time, and enforces both iteration and duration ceilings. The streamed throughput and latency histogram are transient demonstration feedback—not benchmark results—and the run persists no synthetic evidence. Use the [published BenchmarkDotNet results](https://asibackbone.github.io/ReferenceApplication/benchmarks/governance-overhead.html) for repeatable measurements.
 
 `POST /Account/Logout` and all Step 5 governed operations require an authenticated user and a valid antiforgery token. Restrict production access to the health endpoints at the ingress, firewall, or proxy layer.
 
