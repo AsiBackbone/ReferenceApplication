@@ -14,6 +14,13 @@ release version is independent of the NCAT version, which the `ncat-v<version>` 
   cancellation, single-run concurrency, and enforced iteration and duration ceilings.
 * Transient throughput and decision-latency histogram feedback, explicitly labelled as a demonstration rather than a
   benchmark and linked to the reproducible BenchmarkDotNet results.
+* Walkthrough Step 8, which records the repeatable host-governance benchmark procedure, reference results, measurement
+  boundary, and relationship to AsiBackbone's framework benchmark baseline.
+
+### Changed
+
+* The walkthrough index, README, documentation homepage, and application landing page now report all eight integration
+  steps complete and direct readers to the Step 7 explorer and Step 8 measurements.
 
 ### Security
 

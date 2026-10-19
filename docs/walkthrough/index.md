@@ -1,11 +1,13 @@
 ---
 title: Integration Walkthrough
-description: The ordered, in-progress procedure for turning an NCAT-generated ASP.NET Core application into a governed AsiBackbone host with sample governance rules.
+description: The completed, ordered procedure for turning an NCAT-generated ASP.NET Core application into an observable and measurable governed AsiBackbone host.
 ---
 
 # Integration Walkthrough
 
-This walkthrough records the procedure being used to build the Reference Application: start from an unmodified NetCoreApplicationTemplate (NCAT) scaffold, then adopt AsiBackbone one step at a time until the host evaluates sample governance rules and records audit evidence.
+This walkthrough records the procedure used to build the Reference Application: start from an unmodified
+NetCoreApplicationTemplate (NCAT) scaffold, then adopt AsiBackbone one step at a time until the host evaluates sample
+governance rules, records and exposes audit evidence, and measures its host-owned governance overhead.
 
 Each step names what changed, where it changed, and which authoritative article defines the behavior being used.
 
@@ -26,8 +28,10 @@ Each step names what changed, where it changed, and which authoritative article 
 | [5. Govern endpoints](05-govern-endpoints.md) | Consequential endpoints run through governance before executing | Complete |
 | [6. Persist and verify audit evidence](06-persist-and-verify-audit.md) | Decision evidence persisted through the host-owned `DbContext` and correlated with NCAT mutation audit | Complete |
 | [7. Observe governance in action](07-observe-governance.md) | An interactive explorer over the real governance and evidence pipeline | Complete |
+| [8. Benchmark governance overhead](08-benchmarks.md) | Repeatable measurements of host-owned policy evaluation and evidence persistence | Complete |
 
-Steps marked **Planned** describe the intended procedure. Each page is updated with the concrete code and commands when that step lands in the repository.
+All eight steps are complete. Each page records the concrete code, commands, access boundaries, and verification for
+the implementation that is present in this repository.
 
 ## Supplemental procedures
 
@@ -61,10 +65,13 @@ The Reference Application follows the one-way dependency rule that both projects
 ```text
 ReferenceApplication (host)
   -> owns the NCAT-generated code (it belongs to this repository after generation)
-  -> will reference AsiBackbone packages as the integration steps land
+  -> references AsiBackbone packages for governance and evidence persistence
 
 AsiBackbone and NCAT
   -> do not reference ReferenceApplication or each other
 ```
 
-The host owns its database provider, connection strings, migrations, authentication, and deployment. As the integration lands, AsiBackbone will contribute governance services, model configuration, and storage helpers. See [AsiBackbone Integration Boundaries](https://asibackbone.github.io/AsiBackbone/articles/integration-boundaries.html) and [NCAT Audit Accountability Integration](https://asibackbone.github.io/NetCoreApplicationTemplate/articles/audit-accountability-integration.html).
+The host owns its database provider, connection strings, migrations, authentication, and deployment. AsiBackbone
+contributes governance services, model configuration, and storage helpers without taking ownership of those host
+concerns. See [AsiBackbone Integration Boundaries](https://asibackbone.github.io/AsiBackbone/articles/integration-boundaries.html)
+and [NCAT Audit Accountability Integration](https://asibackbone.github.io/NetCoreApplicationTemplate/articles/audit-accountability-integration.html).
