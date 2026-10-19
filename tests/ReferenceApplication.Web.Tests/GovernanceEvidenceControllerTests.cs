@@ -43,7 +43,7 @@ public sealed class GovernanceEvidenceControllerTests
         Assert.Equal("text/event-stream", controller.Response.ContentType);
         Assert.Equal("no-cache, no-store", controller.Response.Headers.CacheControl);
         string payload = Encoding.UTF8.GetString(responseBody.ToArray());
-        Assert.StartsWith("event: evidence\n", payload, StringComparison.Ordinal);
+        Assert.StartsWith(": connected\n\nevent: evidence\n", payload, StringComparison.Ordinal);
         Assert.Contains(
             "data: {\"correlationId\":\"correlation-24\",\"kind\":\"decision\",\"recordId\":\"record-24\"}\n\n",
             payload,

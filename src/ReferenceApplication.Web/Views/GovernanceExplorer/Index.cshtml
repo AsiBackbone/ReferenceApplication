@@ -1,0 +1,105 @@
+@model ReferenceApplication.Web.Models.GovernanceExplorerViewModel
+
+@{
+    ViewData["Title"] = "Governance Explorer";
+    ViewData["BodyClass"] = "governance-explorer-page";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/governance-explorer.css" asp-append-version="true" />
+}
+
+<header class="explorer-heading">
+    <p class="eyebrow">Live accountability walkthrough</p>
+    <h1>Governance Explorer</h1>
+    <p>
+        Run the real governed endpoints and watch their persisted decision, mutation, outbox, and lifecycle evidence
+        arrive. Signed in as <strong>@Model.ActorDisplayName</strong>.
+    </p>
+    <a class="secondary-link" href="/">Back to application home</a>
+</header>
+
+<div class="explorer-grid" data-can-view-evidence="@Model.CanViewEvidence.ToString().ToLowerInvariant()">
+    <section class="explorer-panel actions-panel" aria-labelledby="explorer-actions-heading">
+        <h2 id="explorer-actions-heading">Actions</h2>
+        <p>Each button calls the production endpoint with the page's antiforgery token.</p>
+
+        @if (Model.ShowDemoIdentityControls)
+        {
+            <form class="identity-controls" method="post" action="/Account/DemoSignIn">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="/governance-explorer" />
+                <fieldset>
+                    <legend>Development demo actor</legend>
+                    <p>Apply a fixed claim combination, then run an action to compare outcomes.</p>
+                    <div class="toggle-row">
+                        <input id="explorer-administrator" type="checkbox" name="administrator" value="true"
+                               checked="@Model.HasAdministratorRole" />
+                        <label for="explorer-administrator">Administrator role</label>
+                    </div>
+                    <div class="toggle-row">
+                        <input id="explorer-capability" type="checkbox" name="consequentialCapability" value="true"
+                               checked="@Model.HasConsequentialCapability" />
+                        <label for="explorer-capability">Consequential capability grant</label>
+                    </div>
+                    <button class="secondary-button" type="submit">Apply demo identity</button>
+                </fieldset>
+            </form>
+        }
+
+        <form id="governance-actions" class="governance-actions">
+            @Html.AntiForgeryToken()
+            <button type="button" data-governed-action="administrator">Run administrator action</button>
+            <button type="button" data-governed-action="capability">Run capability action</button>
+
+            <div class="acknowledgment-control">
+                <div class="toggle-row">
+                    <input id="explorer-acknowledgment" type="checkbox" />
+                    <label for="explorer-acknowledgment">Acknowledge the consequential-action prompt</label>
+                </div>
+                <p>
+                    This enables the demonstration request. The endpoint still returns its host-owned acknowledgment
+                    challenge; this checkbox is not authorization and does not bypass governance.
+                </p>
+            </div>
+            <button type="button" data-governed-action="consequential" data-requires-acknowledgment="true">
+                Request consequential action
+            </button>
+
+            <label for="explorer-record-title">Sample record title</label>
+            <input id="explorer-record-title" name="Title" maxlength="160" value="Governance explorer record" />
+            <button type="button" data-governed-action="records" data-includes-title="true">Create audited record</button>
+        </form>
+
+        <div id="explorer-status" class="explorer-status" role="status" aria-live="polite">
+            Ready to run a governed action.
+        </div>
+    </section>
+
+    <section class="explorer-panel evidence-panel" aria-labelledby="explorer-evidence-heading">
+        <div class="evidence-heading-row">
+            <div>
+                <h2 id="explorer-evidence-heading">Evidence</h2>
+                <p id="explorer-correlation">No request selected.</p>
+            </div>
+            <button id="verify-evidence" class="secondary-button" type="button" disabled>Verify hashes</button>
+        </div>
+
+        @if (!Model.CanViewEvidence)
+        {
+            <div class="authorization-note" role="note">
+                The current actor can run authenticated demonstrations, but the full ledger requires an administrator
+                role. Apply the Development demo administrator role or sign in through an authorized provider.
+            </div>
+        }
+
+        <div id="verification-result" class="verification-result" aria-live="polite"></div>
+        <ol id="evidence-timeline" class="evidence-timeline" aria-live="polite" aria-busy="false">
+            <li class="empty-evidence">Run an action to populate its evidence timeline.</li>
+        </ol>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/governance-explorer.js" asp-append-version="true" defer></script>
+}

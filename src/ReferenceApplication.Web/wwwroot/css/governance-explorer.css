@@ -1,0 +1,220 @@
+.governance-explorer-page .landing-shell {
+    align-items: start;
+}
+
+.governance-explorer-page .hero-card {
+    width: min(100%, 88rem);
+    padding: clamp(1.25rem, 3vw, 3rem);
+}
+
+.explorer-heading h1 {
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+}
+
+.explorer-heading > p:not(.eyebrow) {
+    max-width: 58rem;
+    color: #57606a;
+    font-size: 1.05rem;
+    line-height: 1.6;
+}
+
+.explorer-grid {
+    display: grid;
+    grid-template-columns: minmax(18rem, 0.8fr) minmax(24rem, 1.2fr);
+    gap: 1.25rem;
+    margin-top: 2rem;
+}
+
+.explorer-panel {
+    min-width: 0;
+    padding: 1.5rem;
+    border: 1px solid #d0d7de;
+    border-radius: 1rem;
+    background: #ffffff;
+}
+
+.explorer-panel h2,
+.explorer-panel h3,
+.explorer-panel p {
+    margin-top: 0;
+}
+
+.identity-controls,
+.governance-actions {
+    display: grid;
+    gap: 0.875rem;
+    margin-top: 1.25rem;
+}
+
+.identity-controls fieldset {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 1rem;
+    border: 1px solid #afb8c1;
+    border-radius: 0.75rem;
+}
+
+.identity-controls legend {
+    padding: 0 0.35rem;
+    font-weight: 700;
+}
+
+.toggle-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+}
+
+.toggle-row input {
+    width: 1.15rem;
+    height: 1.15rem;
+    margin-top: 0.15rem;
+}
+
+.governance-actions > button,
+.secondary-button {
+    min-height: 2.75rem;
+    padding: 0.7rem 1rem;
+    border: 1px solid #0969da;
+    border-radius: 0.65rem;
+    background: #0969da;
+    color: #ffffff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.secondary-button {
+    border-color: #afb8c1;
+    background: #ffffff;
+    color: #24292f;
+}
+
+.governance-actions > button:hover,
+.governance-actions > button:focus-visible,
+.secondary-button:hover,
+.secondary-button:focus-visible,
+.governance-actions input:focus-visible,
+.identity-controls input:focus-visible,
+#explorer-record-title:focus-visible {
+    outline: 3px solid rgba(9, 105, 218, 0.35);
+    outline-offset: 3px;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+}
+
+#explorer-record-title {
+    min-height: 2.75rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #8c959f;
+    border-radius: 0.5rem;
+    font: inherit;
+}
+
+.acknowledgment-control,
+.authorization-note,
+.explorer-status,
+.verification-result:not(:empty) {
+    padding: 0.9rem;
+    border-radius: 0.65rem;
+    background: #fff8c5;
+    color: #3b3200;
+}
+
+.acknowledgment-control p {
+    margin: 0.65rem 0 0 1.8rem;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.explorer-status {
+    margin-top: 1.25rem;
+    background: #ddf4ff;
+    color: #0550ae;
+}
+
+.evidence-heading-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+#explorer-correlation {
+    overflow-wrap: anywhere;
+    color: #57606a;
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    font-size: 0.85rem;
+}
+
+.authorization-note {
+    margin-bottom: 1rem;
+    border-left: 0.3rem solid #bf8700;
+}
+
+.verification-result {
+    margin-bottom: 1rem;
+}
+
+.verification-result ul {
+    margin-bottom: 0;
+}
+
+.evidence-timeline {
+    display: grid;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.evidence-entry,
+.empty-evidence {
+    padding: 1rem;
+    border: 1px solid #d0d7de;
+    border-left: 0.35rem solid #0969da;
+    border-radius: 0.75rem;
+    background: #f6f8fa;
+}
+
+.evidence-entry h3 {
+    margin-bottom: 0.75rem;
+    font-size: 1.05rem;
+    text-transform: capitalize;
+}
+
+.evidence-entry dl {
+    display: grid;
+    grid-template-columns: minmax(7rem, 0.35fr) minmax(0, 1fr);
+    gap: 0.4rem 0.8rem;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.evidence-entry dt {
+    font-weight: 700;
+}
+
+.evidence-entry dd {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 820px) {
+    .explorer-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+    }
+}
