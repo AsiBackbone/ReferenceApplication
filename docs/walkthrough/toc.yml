@@ -18,3 +18,5 @@
   href: development-demo-identity.md
 - name: 6. Persist and verify audit evidence
   href: 06-persist-and-verify-audit.md
+- name: 7. Observe governance in action
+  href: 07-observe-governance.md

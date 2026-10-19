@@ -11,7 +11,8 @@ It is a walkthrough aid, not an authentication provider and not a supported depl
 
 ## Safety boundary
 
-The control is off by default. Its service and sign-in endpoint are registered only when both conditions are true:
+The checked-in reference configuration enables the control for local Development runs. Its service, sign-in endpoint,
+disposable database, and reset endpoint are registered only when both conditions are true:
 
 1. the host environment is exactly `Development`; and
 2. `ReferenceApplication:DemoIdentity:Enabled` is explicitly set to `true`.
@@ -19,15 +20,17 @@ The control is off by default. Its service and sign-in endpoint are registered o
 Setting the switch in `Staging`, `Production`, or another environment does not register the service or endpoint. The
 application also writes a prominent startup warning whenever the control is active.
 
-## Enable it locally
+## Configure it locally
 
-Store the switch in .NET user secrets so it remains local and does not change the checked-in safe default:
+The checked-in setting is suitable for a local walkthrough. Override it with .NET user secrets when you want to turn
+the demonstration off without changing the file:
 
 ```powershell
-dotnet user-secrets set "ReferenceApplication:DemoIdentity:Enabled" true `
+dotnet user-secrets set "ReferenceApplication:DemoIdentity:Enabled" false `
   --project src/ReferenceApplication.Web
-dotnet run --project src/ReferenceApplication.Web
 ```
+
+Remove that override or set it to `true`, then run the application, to use the demonstration controls.
 
 Open `/Account/Login`. The development panel can add either or both of these fixed claims to a temporary application
 cookie:
@@ -37,6 +40,11 @@ cookie:
 
 It never accepts arbitrary claim types or values. Clear the demo identity with the normal sign-out action, or remove
 the user-secret switch to remove the control on the next startup.
+
+The active demonstration uses `ConnectionStrings:DemonstrationDatabase`, a separate SQLite file. Open the governance
+explorer as the demo administrator and select **Reset demonstration database** to delete that disposable file and
+reapply the migrations. The reset route is not registered outside Development or when the demo switch is false. The
+normal application database has no evidence-deletion path.
 
 ## Exercise the real governance pipeline
 

@@ -144,7 +144,7 @@ Outside Development, startup fails when forwarded client-IP processing and rate 
 
 ### Data access
 
-The host uses SQLite through `ConnectionStrings:ApplicationDatabase` and keeps NCAT's checked-in SQLite migration history. Migrations never run automatically at startup; apply them deliberately during setup or deployment. Walkthrough Step 6 added AsiBackbone's model configuration and a host-owned migration to `ApplicationDbContext`; the host retains ownership of the provider, connection strings, and migrations.
+The host uses SQLite through `ConnectionStrings:ApplicationDatabase` and keeps NCAT's checked-in SQLite migration history. Normal application databases never migrate automatically at startup; apply migrations deliberately during setup or deployment. The disposable Development governance demonstration is the sole exception: while its guarded demo identity is active, it selects `ConnectionStrings:DemonstrationDatabase`, applies migrations to that separate SQLite file, and exposes an administrator-only reset control. Walkthrough Step 6 added AsiBackbone's model configuration and a host-owned migration to `ApplicationDbContext`; the host retains ownership of the provider, connection strings, and migrations.
 
 ## Documentation site
 

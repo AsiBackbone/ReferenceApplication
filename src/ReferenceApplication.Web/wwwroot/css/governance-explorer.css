@@ -40,10 +40,25 @@
 }
 
 .identity-controls,
+.demo-database-reset,
 .governance-actions {
     display: grid;
     gap: 0.875rem;
     margin-top: 1.25rem;
+}
+
+.demo-database-reset {
+    padding: 1rem;
+    border: 1px solid #afb8c1;
+    border-radius: 0.75rem;
+    background: #f6f8fa;
+}
+
+.demo-database-reset p {
+    margin-bottom: 0;
+    color: #57606a;
+    font-size: 0.9rem;
+    line-height: 1.45;
 }
 
 .identity-controls fieldset {

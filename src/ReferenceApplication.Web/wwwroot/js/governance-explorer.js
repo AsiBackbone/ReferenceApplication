@@ -15,6 +15,7 @@
     }
 
     const canViewEvidence = explorer.dataset.canViewEvidence === "true";
+    const databaseWasReset = explorer.dataset.databaseReset === "true";
     const actionButtons = Array.from(actionsForm.querySelectorAll("[data-governed-action]"));
     const requestToken = actionsForm.querySelector("input[name='__RequestVerificationToken']");
     const acknowledgment = document.getElementById("explorer-acknowledgment");
@@ -205,7 +206,9 @@
         const notifications = new EventSource("/api/v1/governance-evidence/notifications");
         notifications.addEventListener("open", () => {
             setActionsDisabled(false);
-            setStatus("Evidence stream connected. Ready to run a governed action.");
+            setStatus(databaseWasReset
+                ? "Demonstration database reset. The migrated evidence state is empty."
+                : "Evidence stream connected. Ready to run a governed action.");
         });
         notifications.addEventListener("evidence", (event) => {
             const notification = JSON.parse(event.data);

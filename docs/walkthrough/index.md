@@ -25,6 +25,7 @@ Each step names what changed, where it changed, and which authoritative article 
 | [4. Define governance rules](04-define-governance-rules.md) | Sample governance rules the host evaluates | Complete |
 | [5. Govern endpoints](05-govern-endpoints.md) | Consequential endpoints run through governance before executing | Complete |
 | [6. Persist and verify audit evidence](06-persist-and-verify-audit.md) | Decision evidence persisted through the host-owned `DbContext` and correlated with NCAT mutation audit | Complete |
+| [7. Observe governance in action](07-observe-governance.md) | An interactive explorer over the real governance and evidence pipeline | In progress |
 
 Steps marked **Planned** describe the intended procedure. Each page is updated with the concrete code and commands when that step lands in the repository.
 
@@ -39,8 +40,8 @@ These procedures support the walkthrough without adding new AsiBackbone integrat
   [Create the development database](local-database-setup.md). It applies the inherited NCAT migration history because
   the application deliberately does not create or migrate databases at startup.
 - After Step 5, use the [Development-only demo identity controls](development-demo-identity.md) to exercise allowed,
-  denied, and acknowledgment-required outcomes without an external identity provider. The control is off by default
-  and cannot be registered outside the `Development` environment.
+  denied, and acknowledgment-required outcomes without an external identity provider. The reference configuration
+  enables the control only in `Development`; it cannot be registered in another environment.
 
 ## Test inheritance rule used throughout
 

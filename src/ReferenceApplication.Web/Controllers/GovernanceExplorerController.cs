@@ -56,6 +56,10 @@ public sealed class GovernanceExplorerController(
             CanViewEvidence = administrator.Succeeded,
             HasAdministratorRole = administrator.Succeeded,
             HasConsequentialCapability = hasCapability,
+            DemonstrationDatabaseWasReset = string.Equals(
+                Request.Query["databaseReset"].ToString(),
+                bool.TrueString,
+                StringComparison.OrdinalIgnoreCase),
             ShowDemoIdentityControls = _hasDemoIdentityService &&
                 DemoIdentityServiceExtensions.IsDemoIdentityActive(_configuration, _environment)
         });
