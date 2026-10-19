@@ -31,6 +31,31 @@ public sealed class GovernanceExplorerViewModel
     public bool DemonstrationDatabaseWasReset { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the administrator may use the Development-only load demonstration.
+    /// </summary>
+    public bool ShowGovernanceLoadDemonstration { get; set; }
+
+    /// <summary>
+    /// Gets or sets the default decision count for the bounded load demonstration.
+    /// </summary>
+    public int LoadDemonstrationDefaultIterations { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum decision count accepted by the bounded load demonstration.
+    /// </summary>
+    public int LoadDemonstrationMaximumIterations { get; set; }
+
+    /// <summary>
+    /// Gets or sets the default duration bound in milliseconds.
+    /// </summary>
+    public int LoadDemonstrationDefaultDurationMilliseconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum duration bound in milliseconds.
+    /// </summary>
+    public int LoadDemonstrationMaximumDurationMilliseconds { get; set; }
+
+    /// <summary>
     /// Gets or sets the display name of the current actor.
     /// </summary>
     public string ActorDisplayName { get; set; } = "Authenticated actor";

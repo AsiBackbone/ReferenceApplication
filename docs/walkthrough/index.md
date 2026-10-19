@@ -25,7 +25,7 @@ Each step names what changed, where it changed, and which authoritative article 
 | [4. Define governance rules](04-define-governance-rules.md) | Sample governance rules the host evaluates | Complete |
 | [5. Govern endpoints](05-govern-endpoints.md) | Consequential endpoints run through governance before executing | Complete |
 | [6. Persist and verify audit evidence](06-persist-and-verify-audit.md) | Decision evidence persisted through the host-owned `DbContext` and correlated with NCAT mutation audit | Complete |
-| [7. Observe governance in action](07-observe-governance.md) | An interactive explorer over the real governance and evidence pipeline | In progress |
+| [7. Observe governance in action](07-observe-governance.md) | An interactive explorer over the real governance and evidence pipeline | Complete |
 
 Steps marked **Planned** describe the intended procedure. Each page is updated with the concrete code and commands when that step lands in the repository.
 

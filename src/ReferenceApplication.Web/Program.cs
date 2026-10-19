@@ -46,6 +46,7 @@ try
     builder.Services.AddApplicationDataAccess(builder.Configuration);
     builder.Services.AddApplicationAsiBackbone();
     builder.Services.AddApplicationGovernanceEvidence();
+    builder.Services.AddApplicationGovernanceLoadDemonstration(builder.Configuration, builder.Environment);
 
     Log.Information("Starting ReferenceApplication.Web application");
     WebApplication app = builder.Build();

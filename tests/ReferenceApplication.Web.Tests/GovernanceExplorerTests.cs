@@ -93,6 +93,8 @@ public sealed partial class GovernanceExplorerTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-can-view-evidence=\"false\"", html, StringComparison.Ordinal);
+        Assert.Contains("data-load-demonstration=\"false\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Demonstration, not a benchmark", html, StringComparison.Ordinal);
         Assert.Contains("full ledger requires an administrator", html, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("data-governed-action=\"administrator\"", html, StringComparison.Ordinal);
     }
@@ -166,6 +168,10 @@ public sealed partial class GovernanceExplorerTests
         Assert.Contains("id=\"explorer-capability\"", html, StringComparison.Ordinal);
         Assert.Contains("action=\"/governance-explorer/reset-database\"", html, StringComparison.Ordinal);
         Assert.Contains("Reset demonstration database", html, StringComparison.Ordinal);
+        Assert.Contains("data-load-demonstration=\"true\"", html, StringComparison.Ordinal);
+        Assert.Contains("Demonstration, not a benchmark", html, StringComparison.Ordinal);
+        Assert.Contains("id=\"start-load-demonstration\"", html, StringComparison.Ordinal);
+        Assert.Contains("id=\"cancel-load-demonstration\"", html, StringComparison.Ordinal);
         Assert.Contains("Governance demo actor", html, StringComparison.Ordinal);
         Assert.Contains("data-can-view-evidence=\"true\"", html, StringComparison.Ordinal);
     }

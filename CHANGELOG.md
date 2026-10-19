@@ -6,6 +6,20 @@ This project follows Semantic Versioning using the format `MAJOR.MINOR.PATCH`. R
 the [integration walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) is being written. The
 release version is independent of the NCAT version, which the `ncat-v<version>` tags record.
 
+## Unreleased
+
+### Added
+
+* An administrator-only, Development-only bounded governance load demonstration with live Server-Sent Events updates,
+  cancellation, single-run concurrency, and enforced iteration and duration ceilings.
+* Transient throughput and decision-latency histogram feedback, explicitly labelled as a demonstration rather than a
+  benchmark and linked to the reproducible BenchmarkDotNet results.
+
+### Security
+
+* The load demonstration makes no HTTP self-requests, is absent outside Development, requires antiforgery protection,
+  and persists no synthetic governance evidence.
+
 ## 0.1.0-alpha.9 - 2026-10-19
 
 Adds the interactive governance evidence explorer that brings the Step 7 observability work together in one runnable

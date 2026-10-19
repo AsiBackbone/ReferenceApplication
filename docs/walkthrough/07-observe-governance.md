@@ -5,8 +5,8 @@ description: Use the Development governance explorer to run the real governed en
 
 # Step 7: Observe governance in action
 
-**Status:** In progress. The explorer, evidence query, live notifications, verification, and resettable demonstration
-database are implemented. The bounded live-load demonstration remains tracked separately.
+**Status:** Complete. The explorer combines evidence query, live notifications, verification, a resettable demonstration
+database, and a bounded in-process load demonstration.
 
 Step 6 established the durable evidence chain. Step 7 presents that same production-shaped governance path as an
 interactive walkthrough: one panel calls the governed endpoints, and the other queries and verifies the decision,
@@ -52,6 +52,43 @@ migrations. It removes demonstration records, ledger evidence, mutation audit, o
 together, without creating a selective delete path. The reset service and route are not registered outside the guarded
 Development configuration, so evidence retention for normal application use is unchanged.
 
+## Bounded live-load demonstration
+
+The administrator-only **Bounded live governance load** control evaluates the production composed policy evaluator in
+a background task. It does not call the application's HTTP endpoints, so it cannot recursively load the server or turn
+the rate limiter into the thing being measured. Only one run can be active in the process, and an administrator can
+cancel it at any time.
+
+The checked-in Development configuration enables the control with conservative defaults and hard configured ceilings:
+
+```json
+{
+  "ReferenceApplication": {
+    "GovernanceLoadDemonstration": {
+      "Enabled": true,
+      "DefaultIterations": 2000,
+      "MaximumIterations": 5000,
+      "DefaultDurationMilliseconds": 5000,
+      "MaximumDurationMilliseconds": 10000
+    }
+  }
+}
+```
+
+Configuration itself cannot raise the ceiling above 10,000 decisions or 30 seconds. Start and cancel requests require
+the administrator policy and an antiforgery token. The services and routes are registered only when the environment is
+exactly `Development` and the switch is enabled.
+
+The browser receives aggregate progress, decisions per second, and a decision-latency histogram through a dedicated
+Server-Sent Events stream. These process-local values are labelled **Demonstration, not a benchmark**. Scheduling,
+diagnostics, browser timing, and concurrent development activity can all affect them. Use the reproducible
+[governance-overhead benchmarks](../benchmarks/governance-overhead.md) for measured host costs.
+
+Demonstration evaluations do **not** invoke the decision-receipt sink and persist no synthetic evidence. The normal
+explorer actions still use the real endpoint pipeline and write their evidence to the disposable demonstration
+database. This separation keeps the evidence timeline meaningful while the load control exercises the same composed
+policy evaluator used by the host.
+
 ## Run the walkthrough
 
 1. Start the web project in Development and open `/Account/Login`.
@@ -59,6 +96,8 @@ Development configuration, so evidence retention for normal application use is u
 3. Open `/governance-explorer`, run the sample actions, and watch the persisted timeline update.
 4. Use **Verify hashes** to compare stored decision evidence with its canonical hash.
 5. Use **Reset demonstration database** when you want a fresh walkthrough state.
+6. As the administrator, start a bounded live run, watch its transient metrics, and cancel it before completion to
+   observe both terminal paths.
 
 See [Development-only demo identity controls](development-demo-identity.md) for the fixed claims and safety boundary.
 Real performance measurements are documented under [Governance benchmarks](../benchmarks/governance-overhead.md); the
@@ -68,5 +107,6 @@ interactive explorer is a demonstration, not a benchmark.
 
 The integration tests use temporary SQLite files and the real migration history. They prove that the Development
 administrator reset clears all demonstration records and evidence, leaves a migrated empty schema, and requires an
-antiforgery token. The same tests verify that both the reset service and route are absent when the switch is disabled or
-the environment is Staging or Production.
+antiforgery token. Load-demonstration tests prove single-run concurrency, administrator authorization, cancellation,
+iteration and duration enforcement, aggregate metric publication, and complete service and route absence in Staging
+and Production.

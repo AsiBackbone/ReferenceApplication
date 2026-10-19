@@ -16,6 +16,7 @@
 
     const canViewEvidence = explorer.dataset.canViewEvidence === "true";
     const databaseWasReset = explorer.dataset.databaseReset === "true";
+    const hasLoadDemonstration = explorer.dataset.loadDemonstration === "true";
     const actionButtons = Array.from(actionsForm.querySelectorAll("[data-governed-action]"));
     const requestToken = actionsForm.querySelector("input[name='__RequestVerificationToken']");
     const acknowledgment = document.getElementById("explorer-acknowledgment");
@@ -199,6 +200,79 @@
             verifyButton.disabled = false;
         }
     });
+
+    if (hasLoadDemonstration) {
+        const form = document.getElementById("load-demonstration-form");
+        const startButton = document.getElementById("start-load-demonstration");
+        const cancelButton = document.getElementById("cancel-load-demonstration");
+        const loadStatus = document.getElementById("load-demonstration-status");
+        const progress = document.getElementById("load-demonstration-progress");
+        const elapsed = document.getElementById("load-demonstration-elapsed");
+        const throughput = document.getElementById("load-demonstration-throughput");
+        const histogram = document.getElementById("load-demonstration-histogram");
+
+        if (form && startButton && cancelButton && loadStatus && progress && elapsed && throughput && histogram) {
+            const renderLoadSnapshot = (snapshot) => {
+                const running = snapshot.state === "running";
+                startButton.disabled = running;
+                cancelButton.disabled = !running;
+                loadStatus.textContent = snapshot.message;
+                progress.textContent = `${snapshot.completedIterations} / ${snapshot.targetIterations}`;
+                elapsed.textContent = `${snapshot.elapsedMilliseconds.toFixed(1)} ms`;
+                throughput.textContent = `${snapshot.throughputPerSecond.toFixed(1)} decisions/s`;
+                const buckets = snapshot.latencyHistogram.map((bucket) => {
+                    const item = document.createElement("li");
+                    item.textContent = `${bucket.label}: ${bucket.count}`;
+                    return item;
+                });
+                histogram.replaceChildren(...buckets);
+            };
+
+            const postLoadAction = async (path, body) => {
+                try {
+                    const response = await fetch(path, {
+                        method: "POST",
+                        body,
+                        headers: { "Accept": "application/json" },
+                        credentials: "same-origin"
+                    });
+                    const payload = await response.json();
+                    if (!response.ok) {
+                        loadStatus.textContent = payload.message || `Request returned HTTP ${response.status}.`;
+                    }
+                } catch {
+                    loadStatus.textContent = "The demonstration request could not be completed.";
+                }
+            };
+
+            form.addEventListener("submit", (event) => {
+                event.preventDefault();
+                startButton.disabled = true;
+                void postLoadAction(
+                    "/api/v1/governance-load-demonstration/start",
+                    new FormData(form));
+            });
+            cancelButton.addEventListener("click", () => {
+                const body = new FormData();
+                const token = form.querySelector("input[name='__RequestVerificationToken']");
+                if (token) {
+                    body.append("__RequestVerificationToken", token.value);
+                }
+                void postLoadAction("/api/v1/governance-load-demonstration/cancel", body);
+            });
+
+            const loadNotifications = new EventSource(
+                "/api/v1/governance-load-demonstration/notifications");
+            loadNotifications.addEventListener("load-demonstration", (event) => {
+                renderLoadSnapshot(JSON.parse(event.data));
+            });
+            loadNotifications.addEventListener("error", () => {
+                startButton.disabled = true;
+                cancelButton.disabled = true;
+                loadStatus.textContent = "The live demonstration metrics stream is reconnecting.";
+            });
+        }
+    }
 
     if (canViewEvidence) {
         setActionsDisabled(true);
