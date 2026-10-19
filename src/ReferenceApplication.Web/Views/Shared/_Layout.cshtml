@@ -8,12 +8,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@title - ReferenceApplication</title>
     <link rel="stylesheet" href="~/css/landing.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
-<body>
+<body class="@(ViewData["BodyClass"] as string)">
     <main class="landing-shell">
         <div class="hero-card">
             @RenderBody()
         </div>
     </main>
+    @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

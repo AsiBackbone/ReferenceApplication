@@ -55,6 +55,8 @@ public sealed class GovernanceEvidenceController(
         Response.Headers.Append("X-Accel-Buffering", "no");
         await using IGovernanceEvidenceSubscription subscription = _evidenceNotifier.Subscribe();
         await Response.StartAsync(cancellationToken).ConfigureAwait(false);
+        await Response.WriteAsync(": connected\n\n", cancellationToken).ConfigureAwait(false);
+        await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {

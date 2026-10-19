@@ -238,6 +238,41 @@ slow client can miss a hint, so the database-backed evidence API remains authori
 only after the corresponding evidence is persisted. A notifier failure is logged and cannot fail or delay the governed
 request or audit-completion outbox delivery.
 
+## Explore the evidence in a browser
+
+After applying the Step 6 migration, sign in and open `/governance-explorer` (also linked from the application home
+page). The two-pane explorer calls the real governed endpoints with antiforgery protection and renders the persisted
+timeline returned by the evidence API. An administrator sees decision receipts, application and mutation records,
+audit-completion state, and lifecycle events. The Server-Sent Events stream re-queries that timeline after each
+identifier-only notification, so the delivered lifecycle event appears without a page reload when the outbox processes
+the record.
+
+Authenticated non-administrators can run the governed operations and see their HTTP outcomes, including denials, but
+the full ledger and hash verification remain administrator-only. The **Verify hashes** action calls the verification
+API described above and reports each decision record as `verified`, `mismatch`, or `not-hashed`.
+
+For local walkthroughs, enable the existing Development-only demo identity control:
+
+```json
+{
+  "ReferenceApplication": {
+    "DemoIdentity": {
+      "Enabled": true
+    }
+  }
+}
+```
+
+The explorer then shows fixed administrator-role and consequential-capability toggles. Applying them replaces only the
+temporary demo cookie; the route remains unavailable outside Development or when the switch is false. The
+consequential-action checkbox is an explicit UI gate for requesting the demonstration challenge. It does not bypass
+governance or turn acknowledgment into authorization—the sample endpoint still returns `428 Precondition Required`,
+and a production continuation workflow remains host-owned.
+
+The page keeps the existing Content Security Policy: its JavaScript and CSS are static files under `wwwroot`, with no
+inline scripts or styles. Every control is keyboard operable, focus is visible, action and connection status use a
+polite live region, and the evidence timeline announces persisted updates.
+
 ## Verification
 
 The walkthrough Step 6 tests use real SQLite databases created from the application's migrations.
@@ -262,6 +297,8 @@ The walkthrough Step 6 tests use real SQLite databases created from the applicat
   - direct canonical-text and sub-millisecond timestamp changes produce a mismatch;
   - a legacy record without a hash is reported as `not-hashed`.
 - `GovernanceEvidenceControllerTests` verify the identifier-only SSE wire format and normal client-disconnect handling.
+- `GovernanceExplorerTests` verify authorized and anonymous page access, the administrator evidence boundary,
+  antiforgery and accessible-live-region markup, external-only scripts and styles, and the static assets.
 - `AccountabilityRecordPersistenceTests` verify the model and migrations, including that the migrations match the
   current model. They also verify that AsiBackbone evidence is stored byte-for-byte with sub-millisecond timestamps and is
   never mutation-audited, while application data in the same context is still canonicalized, normalized, and audited.
