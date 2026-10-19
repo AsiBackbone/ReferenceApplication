@@ -31,6 +31,7 @@ public sealed partial class LedgerDecisionReceiptSink : IDecisionReceiptSink
 
     private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
     private readonly GovernanceDecisionEvidenceAccessor _evidenceAccessor;
+    private readonly GovernanceEvidenceNotificationPublisher _notificationPublisher;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<LedgerDecisionReceiptSink> _logger;
 
@@ -40,18 +41,22 @@ public sealed partial class LedgerDecisionReceiptSink : IDecisionReceiptSink
     /// <param name="dbContextFactory">The factory for short-lived application database contexts.</param>
     /// <param name="evidenceAccessor">The request-scoped evidence holder.</param>
     /// <param name="loggerFactory">The logger factory used for the AsiBackbone EF Core store.</param>
+    /// <param name="notificationPublisher">The isolated best-effort evidence notification publisher.</param>
     public LedgerDecisionReceiptSink(
         IDbContextFactory<ApplicationDbContext> dbContextFactory,
         GovernanceDecisionEvidenceAccessor evidenceAccessor,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        GovernanceEvidenceNotificationPublisher notificationPublisher)
     {
         ArgumentNullException.ThrowIfNull(dbContextFactory);
         ArgumentNullException.ThrowIfNull(evidenceAccessor);
         ArgumentNullException.ThrowIfNull(loggerFactory);
+        ArgumentNullException.ThrowIfNull(notificationPublisher);
 
         _dbContextFactory = dbContextFactory;
         _evidenceAccessor = evidenceAccessor;
         _loggerFactory = loggerFactory;
+        _notificationPublisher = notificationPublisher;
         _logger = loggerFactory.CreateLogger<LedgerDecisionReceiptSink>();
     }
 
@@ -107,6 +112,13 @@ public sealed partial class LedgerDecisionReceiptSink : IDecisionReceiptSink
             TraceId: record.TraceId));
 
         LogEvidencePersisted(_logger, record.OperationName, record.Outcome, record.RecordId);
+        if (!string.IsNullOrWhiteSpace(record.CorrelationId))
+        {
+            _notificationPublisher.Publish(new GovernanceEvidenceNotification(
+                record.CorrelationId,
+                GovernanceEvidenceNotificationKinds.Decision,
+                record.RecordId));
+        }
     }
 
     [LoggerMessage(

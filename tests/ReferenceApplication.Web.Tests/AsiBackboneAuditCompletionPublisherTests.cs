@@ -260,11 +260,29 @@ public sealed class AsiBackboneAuditCompletionPublisherTests
         IDbContextFactory<ApplicationDbContext> factory =
             scope.ServiceProvider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
 
-        Assert.Equal("asibackbone", new AsiBackboneAuditCompletionPublisher(factory, NullLoggerFactory.Instance).Destination);
-        _ = Assert.Throws<ArgumentNullException>(() => new AsiBackboneAuditCompletionPublisher(null!, NullLoggerFactory.Instance));
-        _ = Assert.Throws<ArgumentNullException>(() => new AsiBackboneAuditCompletionPublisher(factory, null!));
+        Assert.Equal(
+            "asibackbone",
+            new AsiBackboneAuditCompletionPublisher(
+                factory,
+                NullLoggerFactory.Instance,
+                CreateNotificationPublisher()).Destination);
+        _ = Assert.Throws<ArgumentNullException>(() => new AsiBackboneAuditCompletionPublisher(
+            null!,
+            NullLoggerFactory.Instance,
+            CreateNotificationPublisher()));
+        _ = Assert.Throws<ArgumentNullException>(() => new AsiBackboneAuditCompletionPublisher(
+            factory,
+            null!,
+            CreateNotificationPublisher()));
+        _ = Assert.Throws<ArgumentNullException>(() => new AsiBackboneAuditCompletionPublisher(
+            factory,
+            NullLoggerFactory.Instance,
+            null!));
         _ = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await new AsiBackboneAuditCompletionPublisher(factory, NullLoggerFactory.Instance)
+            await new AsiBackboneAuditCompletionPublisher(
+                    factory,
+                    NullLoggerFactory.Instance,
+                    CreateNotificationPublisher())
                 .PublishAsync(null!, TestContext.Current.CancellationToken));
     }
 
@@ -343,5 +361,24 @@ public sealed class AsiBackboneAuditCompletionPublisherTests
         return await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>()
             .AsiBackboneDecisionReceiptLifecycleEvents
             .CountAsync(TestContext.Current.CancellationToken);
+    }
+
+    private static GovernanceEvidenceNotificationPublisher CreateNotificationPublisher()
+    {
+        return new GovernanceEvidenceNotificationPublisher(
+            new NoopGovernanceEvidenceNotifier(),
+            NullLogger<GovernanceEvidenceNotificationPublisher>.Instance);
+    }
+
+    private sealed class NoopGovernanceEvidenceNotifier : IGovernanceEvidenceNotifier
+    {
+        public void Publish(GovernanceEvidenceNotification notification)
+        {
+        }
+
+        public IGovernanceEvidenceSubscription Subscribe()
+        {
+            throw new NotSupportedException();
+        }
     }
 }

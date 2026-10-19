@@ -123,7 +123,11 @@ public sealed class LedgerDecisionReceiptSinkTests
     public async Task WriteAsync_PersistenceThrows_FailsClosedWithSanitizedException()
     {
         var accessor = new GovernanceDecisionEvidenceAccessor();
-        var sink = new LedgerDecisionReceiptSink(new ThrowingDbContextFactory(), accessor, NullLoggerFactory.Instance);
+        var sink = new LedgerDecisionReceiptSink(
+            new ThrowingDbContextFactory(),
+            accessor,
+            NullLoggerFactory.Instance,
+            CreateNotificationPublisher());
 
         GovernanceEvidencePersistenceException exception = await Assert.ThrowsAsync<GovernanceEvidencePersistenceException>(
             async () => await sink.WriteAsync(CreateReceipt(GovernanceDecision.Allow()), TestContext.Current.CancellationToken));
@@ -143,7 +147,8 @@ public sealed class LedgerDecisionReceiptSinkTests
         var sink = new LedgerDecisionReceiptSink(
             new ThrowingDbContextFactory(),
             new GovernanceDecisionEvidenceAccessor(),
-            NullLoggerFactory.Instance);
+            NullLoggerFactory.Instance,
+            CreateNotificationPublisher());
         using var cancelled = new CancellationTokenSource();
         await cancelled.CancelAsync();
 
@@ -178,11 +183,13 @@ public sealed class LedgerDecisionReceiptSinkTests
         GovernanceDecisionEvidenceAccessor accessor = new();
 
         _ = Assert.Throws<ArgumentNullException>(() =>
-            new LedgerDecisionReceiptSink(null!, accessor, NullLoggerFactory.Instance));
+            new LedgerDecisionReceiptSink(null!, accessor, NullLoggerFactory.Instance, CreateNotificationPublisher()));
         _ = Assert.Throws<ArgumentNullException>(() =>
-            new LedgerDecisionReceiptSink(factory, null!, NullLoggerFactory.Instance));
+            new LedgerDecisionReceiptSink(factory, null!, NullLoggerFactory.Instance, CreateNotificationPublisher()));
         _ = Assert.Throws<ArgumentNullException>(() =>
-            new LedgerDecisionReceiptSink(factory, accessor, null!));
+            new LedgerDecisionReceiptSink(factory, accessor, null!, CreateNotificationPublisher()));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            new LedgerDecisionReceiptSink(factory, accessor, NullLoggerFactory.Instance, null!));
     }
 
     /// <summary>
@@ -257,5 +264,24 @@ public sealed class LedgerDecisionReceiptSinkTests
         return await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>()
             .AsiBackboneAuditLedgerRecords
             .CountAsync(TestContext.Current.CancellationToken);
+    }
+
+    private static GovernanceEvidenceNotificationPublisher CreateNotificationPublisher()
+    {
+        return new GovernanceEvidenceNotificationPublisher(
+            new NoopGovernanceEvidenceNotifier(),
+            NullLogger<GovernanceEvidenceNotificationPublisher>.Instance);
+    }
+
+    private sealed class NoopGovernanceEvidenceNotifier : IGovernanceEvidenceNotifier
+    {
+        public void Publish(GovernanceEvidenceNotification notification)
+        {
+        }
+
+        public IGovernanceEvidenceSubscription Subscribe()
+        {
+            throw new NotSupportedException();
+        }
     }
 }

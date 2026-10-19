@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -237,6 +238,110 @@ public sealed class GovernedAuditEvidenceTests : IDisposable
     }
 
     /// <summary>
+    /// Verifies that a subscriber receives identifier-only decision, mutation-audit, and lifecycle-event hints in
+    /// persistence order, then can re-query the complete persisted timeline.
+    /// </summary>
+    [Fact]
+    public async Task GovernanceEvidenceNotifications_Subscriber_ReceivesPersistedEvidenceInOrder()
+    {
+        using WebApplicationFactory<Program> factory = await CreateFactoryAsync();
+        using HttpClient client = factory.CreateHttpsClient();
+        using var disconnected = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        IGovernanceEvidenceNotifier notifier = factory.Services.GetRequiredService<IGovernanceEvidenceNotifier>();
+        await using IGovernanceEvidenceSubscription subscription = notifier.Subscribe();
+        Task<IReadOnlyList<GovernanceEvidenceNotification>> notificationsTask = ReadNotificationsAsync(
+            subscription,
+            count: 3,
+            disconnected.Token);
+
+        using HttpResponseMessage createResponse = await PostAsync(
+            client,
+            "records",
+            role: "administrator",
+            form: new Dictionary<string, string> { ["Title"] = "Live evidence" });
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        Assert.Equal(1, (await DispatchAsync(factory)).DeliveredCount);
+
+        IReadOnlyList<GovernanceEvidenceNotification> notifications = await notificationsTask;
+        Assert.Equal(
+            [
+                GovernanceEvidenceNotificationKinds.Decision,
+                GovernanceEvidenceNotificationKinds.MutationAudit,
+                GovernanceEvidenceNotificationKinds.LifecycleEvent
+            ],
+            notifications.Select(notification => notification.Kind));
+        Assert.Single(notifications.Select(notification => notification.CorrelationId).Distinct(StringComparer.Ordinal));
+        Assert.All(notifications, notification => Assert.False(string.IsNullOrWhiteSpace(notification.RecordId)));
+
+        using HttpResponseMessage evidenceResponse = await GetEvidenceAsync(
+            client,
+            notifications[0].CorrelationId);
+        Assert.Equal(HttpStatusCode.OK, evidenceResponse.StatusCode);
+
+        await disconnected.CancelAsync();
+    }
+
+    /// <summary>
+    /// Verifies that the notification stream has the same administrator-only access boundary as the evidence query.
+    /// </summary>
+    [Fact]
+    public async Task GovernanceEvidenceNotifications_AccessControl_RejectsAnonymousAndNonAdministrator()
+    {
+        using WebApplicationFactory<Program> factory = await CreateFactoryAsync();
+        using HttpClient client = factory.CreateHttpsClient();
+        using HttpRequestMessage anonymousRequest = new(
+            HttpMethod.Get,
+            "/api/v1/governance-evidence/notifications");
+        using HttpRequestMessage readerRequest = CreateRequest(
+            HttpMethod.Get,
+            "/api/v1/governance-evidence/notifications",
+            "test-reader",
+            "reader",
+            permission: null);
+
+        using HttpResponseMessage anonymous = await client.SendAsync(
+            anonymousRequest,
+            HttpCompletionOption.ResponseHeadersRead,
+            TestContext.Current.CancellationToken);
+        using HttpResponseMessage reader = await client.SendAsync(
+            readerRequest,
+            HttpCompletionOption.ResponseHeadersRead,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, reader.StatusCode);
+    }
+
+    /// <summary>
+    /// Verifies that notifier failures cannot fail or delay the governed request or audit-completion delivery.
+    /// </summary>
+    [Fact]
+    public async Task GovernanceEvidenceNotifications_ThrowingNotifier_DoesNotAffectGovernanceOrOutbox()
+    {
+        using WebApplicationFactory<Program> factory = await CreateFactoryAsync(
+            configureServices: services =>
+            {
+                services.RemoveAll<IGovernanceEvidenceNotifier>();
+                services.AddSingleton<IGovernanceEvidenceNotifier, ThrowingGovernanceEvidenceNotifier>();
+            });
+        using HttpClient client = factory.CreateHttpsClient();
+
+        using HttpResponseMessage response = await PostAsync(
+            client,
+            "records",
+            role: "administrator",
+            form: new Dictionary<string, string> { ["Title"] = "Notifier failure" });
+        ApplicationAuditCompletionDispatchSummary summary = await DispatchAsync(factory);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal(1, summary.DeliveredCount);
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.Equal(1, await dbContext.GovernedOperationRecords.CountAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(1, await dbContext.AsiBackboneDecisionReceiptLifecycleEvents.CountAsync(TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>
     /// Verifies that every governed operation persists exactly one decision per request with its outcome, including
     /// denials and acknowledgment challenges.
     /// </summary>
@@ -417,7 +522,9 @@ public sealed class GovernedAuditEvidenceTests : IDisposable
         return await client.SendAsync(request, TestContext.Current.CancellationToken);
     }
 
-    private Task<WebApplicationFactory<Program>> CreateFactoryAsync(bool migrate = true)
+    private Task<WebApplicationFactory<Program>> CreateFactoryAsync(
+        bool migrate = true,
+        Action<IServiceCollection>? configureServices = null)
     {
         return _database.ApplyAsync(
             ApplicationWebApplicationFactory.CreateAllowingAnonymousAccess(new Dictionary<string, string?>
@@ -432,10 +539,48 @@ public sealed class GovernedAuditEvidenceTests : IDisposable
                 ["ReferenceApplication:Authorization:PermissionClaimType"] = ApplicationClaimTypes.Permission,
                 ["ReferenceApplication:Authorization:AdministratorRoles:0"] = "administrator"
             })
-            .WithWebHostBuilder(builder => builder.ConfigureServices(services => services
-                .AddAuthentication()
-                .AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>(_testAuthenticationScheme, _ => { }))),
+            .WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+            {
+                _ = services
+                    .AddAuthentication()
+                    .AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>(
+                        _testAuthenticationScheme,
+                        _ => { });
+                configureServices?.Invoke(services);
+            })),
             migrate);
+    }
+
+    private static async Task<IReadOnlyList<GovernanceEvidenceNotification>> ReadNotificationsAsync(
+        IGovernanceEvidenceSubscription subscription,
+        int count,
+        CancellationToken cancellationToken)
+    {
+        var notifications = new List<GovernanceEvidenceNotification>(count);
+        await foreach (GovernanceEvidenceNotification notification in subscription
+            .ReadAllAsync(cancellationToken))
+        {
+            notifications.Add(notification);
+            if (notifications.Count == count)
+            {
+                break;
+            }
+        }
+
+        return notifications;
+    }
+
+    private sealed class ThrowingGovernanceEvidenceNotifier : IGovernanceEvidenceNotifier
+    {
+        public void Publish(GovernanceEvidenceNotification notification)
+        {
+            throw new InvalidOperationException("Notification transport failed.");
+        }
+
+        public IGovernanceEvidenceSubscription Subscribe()
+        {
+            throw new InvalidOperationException("Notification transport failed.");
+        }
     }
 
     private sealed class HeaderAuthenticationHandler(
