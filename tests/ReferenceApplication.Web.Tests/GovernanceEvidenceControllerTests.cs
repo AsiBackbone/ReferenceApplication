@@ -26,6 +26,7 @@ public sealed class GovernanceEvidenceControllerTests
             "record-24");
         var controller = new GovernanceEvidenceController(
             new StubEvidenceQuery(),
+            new StubEvidenceVerifier(),
             new SingleNotificationNotifier(notification));
         var responseBody = new MemoryStream();
         controller.ControllerContext = new ControllerContext
@@ -58,6 +59,16 @@ public sealed class GovernanceEvidenceControllerTests
             CancellationToken cancellationToken = default)
         {
             return ValueTask.FromResult<GovernanceEvidenceTimelineResponse?>(null);
+        }
+    }
+
+    private sealed class StubEvidenceVerifier : IGovernanceEvidenceVerifier
+    {
+        public ValueTask<GovernanceEvidenceVerificationResponse?> VerifyAsync(
+            string correlationId,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult<GovernanceEvidenceVerificationResponse?>(null);
         }
     }
 

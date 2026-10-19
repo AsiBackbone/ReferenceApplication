@@ -202,8 +202,133 @@ public sealed class GovernedAuditEvidenceTests : IDisposable
         using HttpClient client = factory.CreateHttpsClient();
 
         using HttpResponseMessage response = await GetEvidenceAsync(client, "unknown-correlation");
+        using HttpResponseMessage verification = await GetVerificationAsync(client, "unknown-correlation");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, verification.StatusCode);
+    }
+
+    /// <summary>
+    /// Verifies that a newly persisted decision carries a canonical hash and that the evidence API can recompute it.
+    /// </summary>
+    [Fact]
+    public async Task GovernanceEvidenceVerification_UntouchedRecord_IsVerified()
+    {
+        using WebApplicationFactory<Program> factory = await CreateFactoryAsync();
+        using HttpClient client = factory.CreateHttpsClient();
+        using HttpResponseMessage createResponse = await PostAsync(
+            client,
+            "records",
+            role: "administrator",
+            form: new Dictionary<string, string> { ["Title"] = "Verified evidence" });
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        AuditLedgerRecordEntity decision = await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>()
+            .AsiBackboneAuditLedgerRecords
+            .SingleAsync(TestContext.Current.CancellationToken);
+
+        using HttpResponseMessage response = await GetVerificationAsync(client, decision.CorrelationId!);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        GovernanceEvidenceVerificationResponse verification = Assert.IsType<GovernanceEvidenceVerificationResponse>(
+            await response.Content.ReadFromJsonAsync<GovernanceEvidenceVerificationResponse>(
+                TestContext.Current.CancellationToken));
+        GovernanceEvidenceRecordVerification result = Assert.Single(verification.Records);
+
+        Assert.Equal(decision.RecordId, result.RecordId);
+        Assert.Equal(GovernanceEvidenceVerificationStatuses.Verified, result.Status);
+        Assert.Equal(decision.RecordHash, result.StoredHash);
+        Assert.Equal(result.StoredHash, result.ComputedHash);
+        Assert.Equal("SHA-256", result.HashAlgorithm);
+        Assert.Null(decision.PreviousRecordHash);
+    }
+
+    /// <summary>
+    /// Verifies that directly changing a stored canonical string, including HTML-entity and Unicode content, causes
+    /// verification to report a mismatch.
+    /// </summary>
+    [Fact]
+    public async Task GovernanceEvidenceVerification_AlteredCanonicalText_IsMismatch()
+    {
+        using WebApplicationFactory<Program> factory = await CreateFactoryAsync();
+        using HttpClient client = factory.CreateHttpsClient();
+        using HttpResponseMessage createResponse = await PostAsync(client, "administrator", role: "administrator");
+        Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
+
+        string correlationId;
+        await using (AsyncServiceScope scope = factory.Services.CreateAsyncScope())
+        {
+            ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            AuditLedgerRecordEntity decision = await dbContext.AsiBackboneAuditLedgerRecords
+                .SingleAsync(TestContext.Current.CancellationToken);
+            correlationId = decision.CorrelationId!;
+            decision.OperationName = $"{decision.OperationName} &amp; caf\u00e9 \u03a9";
+            _ = await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        GovernanceEvidenceRecordVerification result = await GetSingleVerificationAsync(client, correlationId);
+
+        Assert.Equal(GovernanceEvidenceVerificationStatuses.Mismatch, result.Status);
+        Assert.NotEqual(result.StoredHash, result.ComputedHash);
+    }
+
+    /// <summary>
+    /// Verifies that directly changing a stored timestamp below millisecond precision causes verification to report
+    /// a mismatch.
+    /// </summary>
+    [Fact]
+    public async Task GovernanceEvidenceVerification_AlteredSubMillisecondTimestamp_IsMismatch()
+    {
+        using WebApplicationFactory<Program> factory = await CreateFactoryAsync();
+        using HttpClient client = factory.CreateHttpsClient();
+        using HttpResponseMessage createResponse = await PostAsync(client, "administrator", role: "administrator");
+        Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
+
+        string correlationId;
+        await using (AsyncServiceScope scope = factory.Services.CreateAsyncScope())
+        {
+            ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            AuditLedgerRecordEntity decision = await dbContext.AsiBackboneAuditLedgerRecords
+                .SingleAsync(TestContext.Current.CancellationToken);
+            correlationId = decision.CorrelationId!;
+            decision.RecordedUtc = decision.RecordedUtc.AddTicks(1);
+            _ = await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        GovernanceEvidenceRecordVerification result = await GetSingleVerificationAsync(client, correlationId);
+
+        Assert.Equal(GovernanceEvidenceVerificationStatuses.Mismatch, result.Status);
+        Assert.NotEqual(result.StoredHash, result.ComputedHash);
+    }
+
+    /// <summary>
+    /// Verifies that a legacy record without a stored hash is identified without treating it as a failed hash check.
+    /// </summary>
+    [Fact]
+    public async Task GovernanceEvidenceVerification_LegacyRecord_IsNotHashed()
+    {
+        using WebApplicationFactory<Program> factory = await CreateFactoryAsync();
+        using HttpClient client = factory.CreateHttpsClient();
+        using HttpResponseMessage createResponse = await PostAsync(client, "administrator", role: "administrator");
+        Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
+
+        string correlationId;
+        await using (AsyncServiceScope scope = factory.Services.CreateAsyncScope())
+        {
+            ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            AuditLedgerRecordEntity decision = await dbContext.AsiBackboneAuditLedgerRecords
+                .SingleAsync(TestContext.Current.CancellationToken);
+            correlationId = decision.CorrelationId!;
+            decision.RecordHash = null;
+            _ = await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        GovernanceEvidenceRecordVerification result = await GetSingleVerificationAsync(client, correlationId);
+
+        Assert.Equal(GovernanceEvidenceVerificationStatuses.NotHashed, result.Status);
+        Assert.Null(result.StoredHash);
+        Assert.Null(result.ComputedHash);
+        Assert.Null(result.HashAlgorithm);
     }
 
     /// <summary>
@@ -232,9 +357,21 @@ public sealed class GovernedAuditEvidenceTests : IDisposable
             correlationId,
             user: "test-reader",
             role: "reader");
+        using HttpResponseMessage anonymousVerification = await GetVerificationAsync(
+            client,
+            correlationId,
+            user: null,
+            role: null);
+        using HttpResponseMessage nonAdministratorVerification = await GetVerificationAsync(
+            client,
+            correlationId,
+            user: "test-reader",
+            role: "reader");
 
         Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, nonAdministrator.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymousVerification.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, nonAdministratorVerification.StatusCode);
     }
 
     /// <summary>
@@ -520,6 +657,43 @@ public sealed class GovernedAuditEvidenceTests : IDisposable
         }
 
         return await client.SendAsync(request, TestContext.Current.CancellationToken);
+    }
+
+    private static async Task<HttpResponseMessage> GetVerificationAsync(
+        HttpClient client,
+        string correlationId,
+        string? user = "test-admin",
+        string? role = "administrator")
+    {
+        using HttpRequestMessage request = new(
+            HttpMethod.Get,
+            $"/api/v1/governance-evidence/{Uri.EscapeDataString(correlationId)}/verification");
+        request.Headers.Accept.ParseAdd("application/json");
+
+        if (user is not null)
+        {
+            request.Headers.Add(_testUserHeaderName, user);
+        }
+
+        if (role is not null)
+        {
+            request.Headers.Add(_testRoleHeaderName, role);
+        }
+
+        return await client.SendAsync(request, TestContext.Current.CancellationToken);
+    }
+
+    private static async Task<GovernanceEvidenceRecordVerification> GetSingleVerificationAsync(
+        HttpClient client,
+        string correlationId)
+    {
+        using HttpResponseMessage response = await GetVerificationAsync(client, correlationId);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        GovernanceEvidenceVerificationResponse verification = Assert.IsType<GovernanceEvidenceVerificationResponse>(
+            await response.Content.ReadFromJsonAsync<GovernanceEvidenceVerificationResponse>(
+                TestContext.Current.CancellationToken));
+
+        return Assert.Single(verification.Records);
     }
 
     private Task<WebApplicationFactory<Program>> CreateFactoryAsync(
