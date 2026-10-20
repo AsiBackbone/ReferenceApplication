@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using ReferenceApplication.Web.Tests.Infrastructure;
 
 namespace ReferenceApplication.Web.Tests;
 
@@ -22,7 +23,7 @@ public sealed partial class ContainerConfigurationTests
     [Fact]
     public void Dockerfile_MigrationsTarget_IsSeparateFromRuntimeImage()
     {
-        string dockerfile = ReadRepositoryFile("Dockerfile");
+        string dockerfile = RepositoryFiles.ReadAllText("Dockerfile");
         string[] stages = [.. StageRegex().Matches(dockerfile).Select(match => match.Groups["name"].Value)];
         Dictionary<string, string> stageBodies = SplitStages(dockerfile);
 
@@ -42,7 +43,7 @@ public sealed partial class ContainerConfigurationTests
     [Fact]
     public void Compose_WebService_WaitsForSuccessfulMigrationOfApplicationDatabase()
     {
-        string compose = ReadRepositoryFile("docker-compose.yml");
+        string compose = RepositoryFiles.ReadAllText("docker-compose.yml");
         string migrations = GetServiceBlock(compose, _migrationsService);
         string web = GetServiceBlock(compose, _webService);
 
@@ -61,19 +62,6 @@ public sealed partial class ContainerConfigurationTests
 
         // Both services must resolve the same connection string, so it is defined once in the shared environment.
         Assert.Single(ApplicationDatabaseRegex().Matches(compose));
-    }
-
-    private static string ReadRepositoryFile(string relativePath)
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "ReferenceApplication.slnx")))
-        {
-            directory = directory.Parent;
-        }
-
-        Assert.NotNull(directory);
-        return File.ReadAllText(Path.Combine(directory.FullName, relativePath)).ReplaceLineEndings("\n");
     }
 
     private static Dictionary<string, string> SplitStages(string dockerfile)

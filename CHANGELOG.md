@@ -30,6 +30,13 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
   * builds both images;
   * proves readiness against the migrated `ApplicationDatabase` and against the demonstration database;
   * re-applies migrations to confirm they are idempotent.
+* The container smoke test also inspects both images (#46):
+  * the runtime image runs as a non-root user and contains no .NET SDK or migration bundle;
+  * the migrations image runs as a non-root user and contains an executable bundle.
+* The versioned `main` ruleset now requires the container smoke test (#46), so a change that breaks the Dockerfile,
+  Compose file, project files, or lock files cannot merge.
+* A repository controls test that fails when any CI job is not a required status check in the versioned `main`
+  ruleset, or when a required check is duplicated or not bound to GitHub Actions.
 
 ### Changed
 
