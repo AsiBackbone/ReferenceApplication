@@ -20,6 +20,9 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
   * The application still never migrates `ApplicationDatabase` at startup.
   * The demonstration database now lives on the data volume, and `REFERENCEAPPLICATION_DEMOIDENTITY_ENABLED` selects
     between the two databases.
+* Development now writes its rolling log to `Logs/application-web-.log`, the same name as the base settings, instead
+  of the `Logs/template-web-.log` name inherited from the NCAT 2.11.5 scaffold (#48). A settings test now requires
+  every Serilog file sink in the web project to use the application log name.
 
 ### Added
 
