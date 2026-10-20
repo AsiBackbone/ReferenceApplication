@@ -23,6 +23,37 @@ RUN dotnet publish "src/ReferenceApplication.Web/ReferenceApplication.Web.csproj
     /p:UseAppHost=false \
     /p:ContinuousIntegrationBuild=true
 
+# Package the checked-in EF Core migrations as a self-contained executable. The pinned dotnet-ef version comes from the
+# repository tool manifest, and --no-build reuses the Release output produced by publish above.
+FROM build AS migrations-build
+RUN dotnet tool restore \
+    && dotnet tool run dotnet-ef migrations bundle \
+        --project src/ReferenceApplication.Infrastructure \
+        --startup-project src/ReferenceApplication.Web \
+        --context ApplicationDbContext \
+        --configuration $BUILD_CONFIGURATION \
+        --no-build \
+        --output /app/efbundle
+
+# Opt-in, one-shot image that applies migrations to the configured ApplicationDatabase and exits. The application never
+# migrates at startup; Docker Compose runs this image before the web service. Build it with --target migrations.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:d5633778c754e89a386882eddf8dbee6942447a8a4b8267c19cf1e1158d0b0ac AS migrations
+WORKDIR /app
+
+ENV DOTNET_RUNNING_IN_CONTAINER=true
+
+# The bundle builds the application's own host to resolve ApplicationDbContext, so it reads the same appsettings and
+# environment variables as the web service.
+COPY --from=build /app/publish .
+COPY --from=migrations-build /app/efbundle ./efbundle
+
+RUN mkdir -p /app/Logs /app/data && chown -R $APP_UID:$APP_UID /app
+
+USER $APP_UID
+
+ENTRYPOINT ["./efbundle"]
+
+# The runtime image stays last so a plain `docker build .` produces it.
 FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:d5633778c754e89a386882eddf8dbee6942447a8a4b8267c19cf1e1158d0b0ac AS final
 WORKDIR /app
 

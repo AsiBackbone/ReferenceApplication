@@ -1,10 +1,59 @@
+# Configuration shared by the migration and web services, so the migration bundle always targets the database the
+# application will use.
+x-application-environment: &application-environment
+  ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+  DOTNET_RUNNING_IN_CONTAINER: "true"
+
+  ConnectionStrings__ApplicationDatabase: ${CONNECTIONSTRINGS_APPLICATIONDATABASE:-Data Source=/app/data/application-dev.db}
+  # Used only while the Development demo identity is active; kept on the data volume so demo evidence survives
+  # container re-creation until it is reset from the explorer.
+  ConnectionStrings__DemonstrationDatabase: ${CONNECTIONSTRINGS_DEMONSTRATIONDATABASE:-Data Source=/app/data/application-demo.db;Pooling=False}
+
+  ReferenceApplication__DataProtection__ApplicationName: ReferenceApplication.Web
+  ReferenceApplication__DataProtection__KeyRingPath: /app/data-protection-keys
+
+  ReferenceApplication__ForwardedHeaders__Enabled: ${REFERENCEAPPLICATION_FORWARDEDHEADERS_ENABLED:-true}
+  ReferenceApplication__ForwardedHeaders__Headers__0: XForwardedFor
+  ReferenceApplication__ForwardedHeaders__Headers__1: XForwardedProto
+  ReferenceApplication__ForwardedHeaders__ForwardLimit: ${REFERENCEAPPLICATION_FORWARDEDHEADERS_FORWARDLIMIT:-1}
+  ReferenceApplication__ForwardedHeaders__RequireHeaderSymmetry: ${REFERENCEAPPLICATION_FORWARDEDHEADERS_REQUIREHEADERSYMMETRY:-false}
+
+  # Local Docker development only.
+  # Production deployments should prefer explicit KnownProxies or KnownNetworks.
+  ReferenceApplication__ForwardedHeaders__ClearKnownNetworksAndProxies: ${REFERENCEAPPLICATION_FORWARDEDHEADERS_CLEARKNOWNNETWORKSANDPROXIES:-true}
+
 services:
+  # Applies the checked-in EF Core migrations to ApplicationDatabase, then exits. The application itself never migrates
+  # the normal database at startup; this explicit step is the container equivalent of `dotnet ef database update`.
+  referenceapplication.migrations:
+    image: referenceapplication-migrations:dev
+    container_name: referenceapplication-migrations
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrations
+    env_file:
+      - path: ./.env
+        required: false
+    environment:
+      <<: *application-environment
+      # Keep the demo identity off here: when active it redirects data access to the disposable
+      # DemonstrationDatabase, which the web service migrates and resets itself.
+      ReferenceApplication__DemoIdentity__Enabled: "false"
+    volumes:
+      - referenceapplication-data:/app/data
+      - referenceapplication-logs:/app/Logs
+    restart: "no"
+
   referenceapplication.web:
     image: referenceapplication-web:dev
     container_name: referenceapplication-web
     build:
       context: .
       dockerfile: Dockerfile
+    depends_on:
+      referenceapplication.migrations:
+        condition: service_completed_successfully
     ports:
       # Publish on the loopback interface only. Forwarded headers below trust any proxy for local development, so
       # exposing the port on all interfaces would let other machines on the network spoof client addresses.
@@ -13,24 +62,10 @@ services:
       - path: ./.env
         required: false
     environment:
-      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      <<: *application-environment
       ASPNETCORE_URLS: http://+:8080
-      DOTNET_RUNNING_IN_CONTAINER: "true"
-
-      ConnectionStrings__ApplicationDatabase: ${CONNECTIONSTRINGS_APPLICATIONDATABASE:-Data Source=/app/data/application-dev.db}
-
-      ReferenceApplication__DataProtection__ApplicationName: ReferenceApplication.Web
-      ReferenceApplication__DataProtection__KeyRingPath: /app/data-protection-keys
-
-      ReferenceApplication__ForwardedHeaders__Enabled: ${REFERENCEAPPLICATION_FORWARDEDHEADERS_ENABLED:-true}
-      ReferenceApplication__ForwardedHeaders__Headers__0: XForwardedFor
-      ReferenceApplication__ForwardedHeaders__Headers__1: XForwardedProto
-      ReferenceApplication__ForwardedHeaders__ForwardLimit: ${REFERENCEAPPLICATION_FORWARDEDHEADERS_FORWARDLIMIT:-1}
-      ReferenceApplication__ForwardedHeaders__RequireHeaderSymmetry: ${REFERENCEAPPLICATION_FORWARDEDHEADERS_REQUIREHEADERSYMMETRY:-false}
-
-      # Local Docker development only.
-      # Production deployments should prefer explicit KnownProxies or KnownNetworks.
-      ReferenceApplication__ForwardedHeaders__ClearKnownNetworksAndProxies: ${REFERENCEAPPLICATION_FORWARDEDHEADERS_CLEARKNOWNNETWORKSANDPROXIES:-true}
+      # Development only: the governance explorer's fixed demo identity. Set to false to use ApplicationDatabase.
+      ReferenceApplication__DemoIdentity__Enabled: ${REFERENCEAPPLICATION_DEMOIDENTITY_ENABLED:-true}
     volumes:
       - referenceapplication-data:/app/data
       - referenceapplication-data-protection-keys:/app/data-protection-keys

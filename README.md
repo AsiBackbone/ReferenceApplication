@@ -109,6 +109,24 @@ docker compose up --build
 
 The application is then available at `http://localhost:8080`, with health endpoints at `/health`, `/health/ready`, and `/health/live`.
 
+Compose runs two services. They share one configuration, so migrations always target the database the application uses:
+
+| Service | Role |
+|:---|:---|
+| `referenceapplication.migrations` | One-shot. Built from the Dockerfile's `migrations` target, an EF Core migration bundle applies the checked-in migrations to `ApplicationDatabase` on the `referenceapplication-data` volume, then exits. Running it again applies only pending migrations. |
+| `referenceapplication.web` | Starts only after the migrations service completes successfully. The application itself still never migrates `ApplicationDatabase` at startup. |
+
+Compose defaults to `Development` with the governance explorer's demo identity enabled. In that mode the web service
+uses the disposable `DemonstrationDatabase`, which it migrates and resets itself and which Compose also keeps on the
+data volume. Set `REFERENCEAPPLICATION_DEMOIDENTITY_ENABLED=false` to serve `ApplicationDatabase` instead. To apply
+migrations again without restarting the application:
+
+```powershell
+docker compose run --rm referenceapplication.migrations
+```
+
+`docker compose down --volumes` deletes both databases, the Data Protection key ring, and the logs.
+
 Optional local overrides go in a `.env` file copied from `.env.example`:
 
 ```powershell
