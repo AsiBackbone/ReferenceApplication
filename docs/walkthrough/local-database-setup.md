@@ -74,6 +74,23 @@ Test-Path src/ReferenceApplication.Web/application-dev.db
 After starting the application, `/health/ready` should report healthy when the database is reachable and the other
 readiness dependencies are available.
 
+## In Docker Compose
+
+The runtime image contains no SDK or EF tooling, so the commands above cannot run inside it. Docker Compose provides
+the same explicit step through a one-shot `referenceapplication.migrations` service instead:
+
+- The Dockerfile's `migrations` target packages the checked-in migrations as an EF Core migration bundle.
+- The service applies the bundle to `ApplicationDatabase` on the `referenceapplication-data` volume, then exits.
+- The web service starts only after that service completes successfully.
+- The application still never migrates `ApplicationDatabase` at startup.
+
+To apply migrations again, for example after pulling a new migration:
+
+```powershell
+docker compose build referenceapplication.migrations
+docker compose run --rm referenceapplication.migrations
+```
+
 ## Relationship to Step 6
 
 The repository's migration history also includes the Step 6 migration, `AddGovernedAuditEvidence`, which adds the

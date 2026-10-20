@@ -9,6 +9,25 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
 
 ## Unreleased
 
+### Fixed
+
+* Docker Compose now creates and migrates `ApplicationDatabase` (#45). Before this, the default Compose run worked only
+  because the Development demo identity redirected data access to a demonstration database inside the container's
+  writable layer. Disabling the demo, or running outside Development, left the host unready, and governed operations
+  failed closed.
+  * A new `migrations` Dockerfile target packages the checked-in migrations as an EF Core migration bundle.
+  * A one-shot `referenceapplication.migrations` Compose service applies it before the web service starts.
+  * The application still never migrates `ApplicationDatabase` at startup.
+  * The demonstration database now lives on the data volume, and `REFERENCEAPPLICATION_DEMOIDENTITY_ENABLED` selects
+    between the two databases.
+
+### Added
+
+* A CI container smoke test that, on every pull request:
+  * builds both images;
+  * proves readiness against the migrated `ApplicationDatabase` and against the demonstration database;
+  * re-applies migrations to confirm they are idempotent.
+
 ### Changed
 
 * The governance evidence notification stream now writes a `: keep-alive` comment every 15 seconds while idle, so

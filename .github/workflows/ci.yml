@@ -78,6 +78,47 @@ jobs:
       - name: Test
         run: dotnet test ${{ env.SOLUTION_FILE }} --configuration ${{ env.CONFIGURATION }} --no-build /p:ContinuousIntegrationBuild=true
 
+  container-smoke-test:
+    name: Container smoke test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build images
+        run: docker compose build
+
+      - name: Migrate and serve ApplicationDatabase
+        env:
+          REFERENCEAPPLICATION_DEMOIDENTITY_ENABLED: 'false'
+        run: |
+          docker compose up --detach
+          test "$(docker inspect --format '{{.State.ExitCode}}' referenceapplication-migrations)" = "0"
+          curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors http://127.0.0.1:8080/health/ready
+
+      - name: Re-apply migrations idempotently
+        run: docker compose run --rm referenceapplication.migrations
+
+      - name: Serve the Development demonstration database
+        run: |
+          docker compose up --detach --force-recreate --no-deps referenceapplication.web
+          curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors http://127.0.0.1:8080/health/ready
+
+      - name: Show container logs
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Remove containers and volumes
+        if: always()
+        run: docker compose down --volumes
+
   codeql-actions:
     name: CodeQL analysis (actions, none)
     runs-on: ubuntu-24.04
