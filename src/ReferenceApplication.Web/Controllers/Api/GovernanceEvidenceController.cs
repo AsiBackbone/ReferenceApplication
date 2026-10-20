@@ -18,8 +18,18 @@ namespace ReferenceApplication.Web.Controllers.Api;
 public sealed class GovernanceEvidenceController(
     IGovernanceEvidenceQuery evidenceQuery,
     IGovernanceEvidenceVerifier evidenceVerifier,
-    IGovernanceEvidenceNotifier evidenceNotifier) : ControllerBase
+    IGovernanceEvidenceNotifier evidenceNotifier,
+    TimeProvider timeProvider) : ControllerBase
 {
+    /// <summary>
+    /// The interval between SSE comment heartbeats on an otherwise idle notification stream.
+    /// </summary>
+    /// <remarks>
+    /// Proxies and load balancers commonly close responses that send nothing for 60 seconds or more. A comment line
+    /// keeps the connection observably alive without producing an event for the client.
+    /// </remarks>
+    public static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(15);
+
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
     private readonly IGovernanceEvidenceQuery _evidenceQuery =
         evidenceQuery ?? throw new ArgumentNullException(nameof(evidenceQuery));
@@ -27,6 +37,8 @@ public sealed class GovernanceEvidenceController(
         evidenceNotifier ?? throw new ArgumentNullException(nameof(evidenceNotifier));
     private readonly IGovernanceEvidenceVerifier _evidenceVerifier =
         evidenceVerifier ?? throw new ArgumentNullException(nameof(evidenceVerifier));
+    private readonly TimeProvider _timeProvider =
+        timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
 
     /// <summary>
     /// Streams identifier-only hints whenever persisted governance evidence changes.
@@ -35,7 +47,8 @@ public sealed class GovernanceEvidenceController(
     /// <param name="cancellationToken">The request-aborted token that ends the subscription.</param>
     /// <remarks>
     /// This administrator-only endpoint deliberately sends no evidence payload. Clients re-query the evidence API by
-    /// correlation identifier so the displayed timeline always comes from persisted state.
+    /// correlation identifier so the displayed timeline always comes from persisted state. A <c>: keep-alive</c>
+    /// comment is written every <see cref="HeartbeatInterval" /> so intermediaries do not close an idle stream.
     /// </remarks>
     [HttpGet("notifications")]
     [Produces("text/event-stream")]
@@ -58,6 +71,11 @@ public sealed class GovernanceEvidenceController(
         await Response.WriteAsync(": connected\n\n", cancellationToken).ConfigureAwait(false);
         await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
 
+        // Events and heartbeats are written from two loops; the lock keeps each SSE frame contiguous.
+        using var writeLock = new SemaphoreSlim(1, 1);
+        using var heartbeatCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        Task heartbeats = WriteHeartbeatsAsync(writeLock, heartbeatCancellation.Token);
+
         try
         {
             await foreach (GovernanceEvidenceNotification notification in subscription
@@ -70,16 +88,20 @@ public sealed class GovernanceEvidenceController(
                     continue;
                 }
 
-                await Response.WriteAsync("event: evidence\n", cancellationToken).ConfigureAwait(false);
-                await Response.WriteAsync(
-                    $"data: {JsonSerializer.Serialize(notification, _jsonOptions)}\n\n",
+                await WriteFrameAsync(
+                    writeLock,
+                    $"event: evidence\ndata: {JsonSerializer.Serialize(notification, _jsonOptions)}\n\n",
                     cancellationToken).ConfigureAwait(false);
-                await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             // Client disconnects are the normal way an SSE subscription ends.
+        }
+        finally
+        {
+            await heartbeatCancellation.CancelAsync().ConfigureAwait(false);
+            await heartbeats.ConfigureAwait(false);
         }
     }
 
@@ -125,5 +147,37 @@ public sealed class GovernanceEvidenceController(
             .ConfigureAwait(false);
 
         return verification is null ? NotFound() : Ok(verification);
+    }
+
+    private async Task WriteHeartbeatsAsync(SemaphoreSlim writeLock, CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(HeartbeatInterval, _timeProvider);
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
+            {
+                await WriteFrameAsync(writeLock, ": keep-alive\n\n", cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // The stream ended or the client disconnected.
+        }
+    }
+
+    private async Task WriteFrameAsync(SemaphoreSlim writeLock, string frame, CancellationToken cancellationToken)
+    {
+        await writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            await Response.WriteAsync(frame, cancellationToken).ConfigureAwait(false);
+            await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _ = writeLock.Release();
+        }
     }
 }

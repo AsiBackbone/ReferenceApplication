@@ -7,6 +7,23 @@ This project follows Semantic Versioning using the format `MAJOR.MINOR.PATCH`. C
 a stable public contract; releases remain `0.x` pre-releases until the repository's release-readiness criteria are met.
 The release version is independent of the NCAT version, which the `ncat-v<version>` tags record.
 
+## Unreleased
+
+### Changed
+
+* The governance evidence notification stream now writes a `: keep-alive` comment every 15 seconds while idle, so
+  proxies and load balancers do not close an open explorer's stream. Heartbeats and events share one writer lock, so
+  SSE frames never interleave.
+
+### Tests
+
+* Unit tests for the in-memory evidence notifier: fan-out to every subscriber in order, drop-oldest at the 32-hint
+  capacity, removal on disposal, and repeated disposal.
+* Unit tests for the notification publisher: a failing notifier is contained and logged with identifiers only.
+* Controller tests for exact, case-sensitive correlation filtering, the unfiltered stream, heartbeat cadence, and
+  whole-frame output under concurrent writes.
+* Host tests proving every evidence endpoint rejects a correlation identifier longer than 128 characters.
+
 ## 0.1.0-alpha.10 - 2026-10-19
 
 ### Added

@@ -1,6 +1,7 @@
 using AsiBackbone.Core.Audit;
 using AsiBackbone.DependencyInjection;
 using AsiBackbone.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using ReferenceApplication.Infrastructure.Data;
 using ReferenceApplication.Infrastructure.Data.Auditing;
 using ReferenceApplication.Web.Governance;
@@ -46,6 +47,7 @@ public static class GovernanceEvidenceServiceExtensions
         services.AddScoped<IDecisionReceiptSink, LedgerDecisionReceiptSink>();
         services.AddScoped<IGovernanceEvidenceQuery, GovernanceEvidenceQuery>();
         services.AddScoped<IGovernanceEvidenceVerifier, GovernanceEvidenceVerifier>();
+        services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IGovernanceEvidenceNotifier, InMemoryGovernanceEvidenceNotifier>();
         services.AddSingleton<GovernanceEvidenceNotificationPublisher>();
 
