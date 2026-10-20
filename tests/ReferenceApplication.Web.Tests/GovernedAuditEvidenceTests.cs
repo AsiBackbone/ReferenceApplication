@@ -450,6 +450,38 @@ public sealed class GovernedAuditEvidenceTests : IDisposable
     }
 
     /// <summary>
+    /// Verifies that every evidence endpoint rejects a correlation identifier longer than the recorded maximum before
+    /// querying the ledger or opening a notification stream.
+    /// </summary>
+    [Fact]
+    public async Task GovernanceEvidence_OverlongCorrelationId_ReturnsBadRequest()
+    {
+        using WebApplicationFactory<Program> factory = await CreateFactoryAsync();
+        using HttpClient client = factory.CreateHttpsClient();
+        string overlong = new('c', 129);
+        using HttpRequestMessage notificationsRequest = CreateRequest(
+            HttpMethod.Get,
+            $"/api/v1/governance-evidence/notifications?correlationId={overlong}",
+            "test-admin",
+            "administrator",
+            permission: null);
+
+        using HttpResponseMessage evidence = await GetEvidenceAsync(client, overlong);
+        using HttpResponseMessage verification = await GetVerificationAsync(client, overlong);
+        using HttpResponseMessage notifications = await client.SendAsync(
+            notificationsRequest,
+            HttpCompletionOption.ResponseHeadersRead,
+            TestContext.Current.CancellationToken);
+        using HttpResponseMessage boundary = await GetEvidenceAsync(client, new string('c', 128));
+
+        Assert.Equal(HttpStatusCode.BadRequest, evidence.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, verification.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, notifications.StatusCode);
+        Assert.NotEqual("text/event-stream", notifications.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(HttpStatusCode.NotFound, boundary.StatusCode);
+    }
+
+    /// <summary>
     /// Verifies that notifier failures cannot fail or delay the governed request or audit-completion delivery.
     /// </summary>
     [Fact]

@@ -20,7 +20,9 @@ interfaces:
 
 - the governance evidence query API returns the persisted timeline for one correlation identifier; and
 - the Server-Sent Events endpoint carries identifier-only freshness notifications that cause the browser to re-query
-  that authoritative timeline.
+  that authoritative timeline. While no evidence changes, the stream writes a `: keep-alive` comment every 15 seconds
+  so proxies and load balancers do not close it as idle. Each subscriber keeps at most 32 pending hints and drops the
+  oldest first, so a slow browser can miss a hint but never delays a governed request; it recovers by re-querying.
 
 Authentication is required to open the explorer. Any authenticated actor can exercise the governed endpoints and see
 the resulting HTTP outcome. Full evidence, hash verification, the unfiltered notification stream, and database reset
