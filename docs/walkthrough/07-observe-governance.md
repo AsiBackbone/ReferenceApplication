@@ -24,6 +24,15 @@ interfaces:
   so proxies and load balancers do not close it as idle. Each subscriber keeps at most 32 pending hints and drops the
   oldest first, so a slow browser can miss a hint but never delays a governed request; it recovers by re-querying.
 
+These notifications are intentionally best-effort and process-local. The built-in
+`InMemoryGovernanceEvidenceNotifier` does not deliver across replicas. Each subscriber buffers at most 32 hints and
+drops the oldest first when full; the persisted ledger, not the stream, remains authoritative. In a multi-replica
+deployment, sticky sessions can keep the explorer and the governed requests it initiates on one replica. If evidence
+may be written by other replicas, place a shared backplane (for example, Redis pub/sub) behind
+`IGovernanceEvidenceNotifier` so freshness hints cross process boundaries. Sticky sessions alone do not relay hints
+created by another process. The explorer must still re-query persisted evidence after a hint because notification
+delivery is never the source of truth.
+
 Authentication is required to open the explorer. Any authenticated actor can exercise the governed endpoints and see
 the resulting HTTP outcome. Full evidence, hash verification, the unfiltered notification stream, and database reset
 require the configured administrator policy. The Development demo identity supplies only the two fixed claims needed

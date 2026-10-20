@@ -169,6 +169,17 @@ Every routed endpoint requires an authenticated user unless it is deliberately m
 
 The Step 7 evidence query at `GET /api/v1/governance-evidence/{correlationId}` requires the configured administrator role. Its response is intentionally minimized: it exposes identifiers, outcomes, reason codes, policy and evidence hashes, counts, statuses, and timestamps, but never NCAT mutation values or request bodies.
 
+The Step 7 Server-Sent Events stream at `GET /api/v1/governance-evidence/notifications` is a best-effort freshness
+hint, not an authoritative event log. The built-in `InMemoryGovernanceEvidenceNotifier` is process-local: each
+subscriber buffers at most 32 hints and drops the oldest first when full. Persisted evidence remains the source of
+truth, and the explorer re-queries it after each hint.
+
+For multiple replicas, sticky sessions can keep the explorer and the governed requests it initiates on one replica.
+If evidence can be written by other replicas, place a shared backplane (for example, Redis pub/sub) behind
+`IGovernanceEvidenceNotifier` so freshness hints can cross process boundaries. Sticky sessions alone do not relay
+notifications produced by another process. A missed hint never invalidates the ledger; the next re-query returns the
+authoritative persisted timeline.
+
 In Development, `ReferenceApplication:GovernanceLoadDemonstration:Enabled` adds an administrator-only bounded run to the explorer. It evaluates the production policy composition in-process, permits only one cancellable run at a time, and enforces both iteration and duration ceilings. The streamed throughput and latency histogram are transient demonstration feedback—not benchmark results—and the run persists no synthetic evidence. Use the [published BenchmarkDotNet results](https://asibackbone.github.io/ReferenceApplication/benchmarks/governance-overhead.html) for repeatable measurements.
 
 `POST /Account/Logout` and all Step 5 governed operations require an authenticated user and a valid antiforgery token. Restrict production access to the health endpoints at the ingress, firewall, or proxy layer.
