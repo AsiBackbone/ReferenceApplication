@@ -23,6 +23,12 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
 * Development now writes its rolling log to `Logs/application-web-.log`, the same name as the base settings, instead
   of the `Logs/template-web-.log` name inherited from the NCAT 2.11.5 scaffold (#48). A settings test now requires
   every Serilog file sink in the web project to use the application log name.
+* The README and documentation now state the current NCAT baseline, 2.11.5 (#47).
+  * The README still described the application only as generated from NCAT 2.11.4.
+  * The documentation homepage's "Host baseline" row now names the version.
+  * Step 1 calls 2.11.4 the original generation and points to the refresh guide, and its "current baseline tag" is
+    now `ncat-v2.11.5`.
+  * A documentation test requires the README, homepage, and Step 1 to match the refresh guide's target version.
 
 ### Added
 

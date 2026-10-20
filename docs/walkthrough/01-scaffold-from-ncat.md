@@ -15,7 +15,7 @@ An unmodified NCAT-generated ASP.NET Core application named `ReferenceApplicatio
 
 Run every command from PowerShell. Do not open the generated folder in Visual Studio until step 3 is complete: creating, saving, or cleaning up files in Visual Studio can change the scaffold before it is committed.
 
-1. Install the exact template version. [NCAT Template Packaging](https://asibackbone.github.io/NetCoreApplicationTemplate/articles/template-packaging.html) has the authoritative install instructions. The Reference Application was generated from NCAT 2.11.4:
+1. Install the exact template version. [NCAT Template Packaging](https://asibackbone.github.io/NetCoreApplicationTemplate/articles/template-packaging.html) has the authoritative install instructions. The Reference Application was generated from NCAT 2.11.4, and this step records that original generation. The baseline has since been refreshed to NCAT 2.11.5 with [Refresh the NCAT Baseline](refresh-ncat-baseline.md):
 
    ```powershell
    dotnet new uninstall NetCoreApplicationTemplate
@@ -132,7 +132,7 @@ a ReferenceApplication decision. Do not regenerate the application in place with
 `dotnet new --force`: it can overwrite intentional changes and leaves no clear record of what the
 release actually changed.
 
-Before starting, have the current baseline tag (for example `ncat-v2.11.4`) and the target release
+Before starting, have the current baseline tag (currently `ncat-v2.11.5`) and the target release
 number to hand.
 
 ## Next

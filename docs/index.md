@@ -80,7 +80,7 @@ _disableToc: true
 | Area | Current reference |
 |:---|:---|
 | Supported platform | .NET 10.0 |
-| Host baseline | Generated with `dotnet new netcoreapp-template` (default cookie authentication, SQLite) |
+| Host baseline | [NCAT](https://asibackbone.github.io/NetCoreApplicationTemplate/) `2.11.5`, generated with `dotnet new netcoreapp-template` (default cookie authentication, SQLite) |
 | Governance framework | [AsiBackbone](https://asibackbone.github.io/AsiBackbone/) `7.2.1`, integrated through walkthrough Step 8 |
 | Untouched scaffold | [`ncat-baseline` branch](https://github.com/AsiBackbone/ReferenceApplication/tree/ncat-baseline) |
 | Source | [AsiBackbone/ReferenceApplication](https://github.com/AsiBackbone/ReferenceApplication) |
