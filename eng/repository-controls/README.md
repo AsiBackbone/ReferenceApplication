@@ -8,8 +8,11 @@ IDs, timestamps, source metadata, and links are intentionally omitted.
 ## Branch roles
 
 - `main-branch-ruleset.json` protects the ongoing development and integration
-  branch. It requires the repository's build, test, documentation, workflow
-  security, dependency-review, OWASP Dependency-Check, and CodeQL checks.
+  branch. It requires the repository's build, test, container smoke test,
+  documentation, workflow security, dependency-review, OWASP Dependency-Check,
+  and CodeQL checks. The container smoke test builds the runtime and migration
+  images, so a change that breaks the Dockerfile, Compose file, project files,
+  or lock files cannot merge.
 - `ncat-baseline-branch-ruleset.json` protects the raw NCAT comparison branch.
   It deliberately does not require ReferenceApplication integration checks.
 

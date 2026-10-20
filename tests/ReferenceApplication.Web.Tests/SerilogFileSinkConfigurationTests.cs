@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ReferenceApplication.Web.Tests.Infrastructure;
 
 namespace ReferenceApplication.Web.Tests;
 
@@ -61,14 +62,6 @@ public sealed class SerilogFileSinkConfigurationTests
 
     private static string GetWebProjectDirectory()
     {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "ReferenceApplication.slnx")))
-        {
-            directory = directory.Parent;
-        }
-
-        Assert.NotNull(directory);
-        return Path.Combine(directory.FullName, "src", "ReferenceApplication.Web");
+        return RepositoryFiles.GetPath("src/ReferenceApplication.Web");
     }
 }

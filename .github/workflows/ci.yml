@@ -95,6 +95,18 @@ jobs:
       - name: Build images
         run: docker compose build
 
+      # The runtime image must stay minimal: a non-root user, no SDK, and no migration bundle, which ships only in the
+      # opt-in migrations image.
+      - name: Inspect runtime image
+        run: |
+          user="$(docker image inspect --format '{{.Config.User}}' referenceapplication-web:dev)"
+          echo "Runtime image user: ${user:-<unset>}"
+          test -n "$user" && test "$user" != "root" && test "$user" != "0"
+          docker run --rm --entrypoint /bin/sh referenceapplication-web:dev -c \
+            'test "$(id -u)" != "0" && test ! -e /usr/share/dotnet/sdk && test ! -e /app/efbundle && test -f /app/ReferenceApplication.Web.dll'
+          docker run --rm --entrypoint /bin/sh referenceapplication-migrations:dev -c \
+            'test "$(id -u)" != "0" && test -x /app/efbundle'
+
       - name: Migrate and serve ApplicationDatabase
         env:
           REFERENCEAPPLICATION_DEMOIDENTITY_ENABLED: 'false'
