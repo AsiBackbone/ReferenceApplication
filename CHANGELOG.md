@@ -37,6 +37,11 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
   Compose file, project files, or lock files cannot merge.
 * A repository controls test that fails when any CI job is not a required status check in the versioned `main`
   ruleset, or when a required check is duplicated or not bound to GitHub Actions.
+* Code coverage reporting in CI (#49). The `Build and test` job now uses the previously unused `coverlet.MTP`
+  extension to collect Cobertura coverage, excluding generated EF Core migrations. It writes line and branch totals
+  per assembly to the job summary with `scripts/Write-CoverageSummary.ps1` and uploads the `coverage-report`
+  artifact. Coverage is reported, not gated; at introduction it is 94.9% of lines and 79.7% of branches.
+* A repository controls test that fails if CI stops collecting, summarizing, or publishing coverage.
 
 ### Changed
 

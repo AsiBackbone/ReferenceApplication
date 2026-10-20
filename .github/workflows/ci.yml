@@ -75,8 +75,28 @@ jobs:
       - name: Verify formatting
         run: dotnet format ${{ env.SOLUTION_FILE }} --verify-no-changes --no-restore --verbosity minimal
 
-      - name: Test
-        run: dotnet test ${{ env.SOLUTION_FILE }} --configuration ${{ env.CONFIGURATION }} --no-build /p:ContinuousIntegrationBuild=true
+      # Coverage is reported, not gated. Generated EF Core migrations are excluded; coverlet's defaults exclude the
+      # test assembly and compiler-generated code.
+      - name: Test with coverage
+        run: >-
+          dotnet test ${{ env.SOLUTION_FILE }} --configuration ${{ env.CONFIGURATION }} --no-build
+          --results-directory TestResults/coverage
+          --coverlet
+          --coverlet-output-format cobertura
+          --coverlet-exclude-by-file "**/Migrations/*.cs"
+          /p:ContinuousIntegrationBuild=true
+
+      - name: Summarize coverage
+        shell: pwsh
+        run: ./scripts/Write-CoverageSummary.ps1 -ReportDirectory TestResults/coverage
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-report
+          path: TestResults/coverage/coverage.cobertura*.xml
+          if-no-files-found: error
+          retention-days: 14
 
   container-smoke-test:
     name: Container smoke test

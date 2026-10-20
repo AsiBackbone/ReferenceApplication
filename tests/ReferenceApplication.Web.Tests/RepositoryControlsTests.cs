@@ -45,6 +45,31 @@ public sealed partial class RepositoryControlsTests
         Assert.All(checks, check => Assert.Equal(_gitHubActionsIntegrationId, check.IntegrationId));
     }
 
+    /// <summary>
+    /// Verifies that the required build-and-test job collects coverage with the referenced coverlet.MTP extension,
+    /// excludes generated migrations, and publishes the report, so the package reference is never left unused.
+    /// </summary>
+    [Fact]
+    public void Ci_BuildAndTest_CollectsSummarizesAndPublishesCoverage()
+    {
+        string workflow = RepositoryFiles.ReadAllText(_ciWorkflowPath);
+        string testProject = RepositoryFiles.ReadAllText(
+            "tests/ReferenceApplication.Web.Tests/ReferenceApplication.Web.Tests.csproj");
+
+        Assert.Contains("<PackageReference Include=\"coverlet.MTP\">", testProject, StringComparison.Ordinal);
+        Assert.Contains("--coverlet\n", workflow, StringComparison.Ordinal);
+        Assert.Contains("--coverlet-output-format cobertura", workflow, StringComparison.Ordinal);
+        Assert.Contains("--coverlet-exclude-by-file \"**/Migrations/*.cs\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("--results-directory TestResults/coverage", workflow, StringComparison.Ordinal);
+        Assert.Contains(
+            "./scripts/Write-CoverageSummary.ps1 -ReportDirectory TestResults/coverage",
+            workflow,
+            StringComparison.Ordinal);
+        Assert.Contains("name: coverage-report", workflow, StringComparison.Ordinal);
+        Assert.Contains("if-no-files-found: error", workflow, StringComparison.Ordinal);
+        Assert.True(File.Exists(RepositoryFiles.GetPath("scripts/Write-CoverageSummary.ps1")));
+    }
+
     private static List<(string Context, int? IntegrationId)> ReadRequiredChecks()
     {
         using var ruleset = JsonDocument.Parse(RepositoryFiles.ReadAllText(_mainRulesetPath));

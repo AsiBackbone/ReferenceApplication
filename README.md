@@ -91,6 +91,17 @@ dotnet build --configuration Release
 dotnet test --configuration Release
 ```
 
+To collect code coverage the same way CI does, with the test project's `coverlet.MTP` extension, and summarize it:
+
+```powershell
+dotnet test --configuration Release --results-directory TestResults/coverage --coverlet --coverlet-output-format cobertura --coverlet-exclude-by-file "**/Migrations/*.cs"
+./scripts/Write-CoverageSummary.ps1 -ReportDirectory TestResults/coverage
+```
+
+CI reports coverage on every run without a threshold gate. It adds the summary to the job and publishes the Cobertura
+report as the `coverage-report` artifact. Generated EF Core migrations and the test assembly are excluded. Remove
+`TestResults/coverage` before running the command again, because the summary expects a single report.
+
 Each project has a checked-in `packages.lock.json`. Locked mode restores the exact recorded dependency graph and fails if the projects and lock files disagree. After an intentional dependency change, run `dotnet restore --force-evaluate`, review the lock-file changes, and commit them with the change.
 
 ## Run locally
