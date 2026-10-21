@@ -18,6 +18,7 @@
     const databaseWasReset = explorer.dataset.databaseReset === "true";
     const hasLoadDemonstration = explorer.dataset.loadDemonstration === "true";
     const hasPolicySimulator = explorer.dataset.policySimulator === "true";
+    const hasDecisionReplay = explorer.dataset.decisionReplay === "true";
     const actionButtons = Array.from(actionsForm.querySelectorAll("[data-governed-action]"));
     const requestToken = actionsForm.querySelector("input[name='__RequestVerificationToken']");
     const acknowledgment = document.getElementById("explorer-acknowledgment");
@@ -354,6 +355,154 @@
         }
     }
 
+    // Stage renderers shared by the policy simulator and decision replay, whose branches carry the same stages.
+    const capabilityModels = {
+        "claims": "Permission claims",
+        "signed-token": "Signed capability token",
+        "recorded-grant": "Signed capability token, outcome taken from the record and not verified again"
+    };
+
+    const formatCodes = (codes) => (codes && codes.length > 0 ? codes.join(", ") : "none");
+    const formatTime = (value) => (value ? new Date(value).toLocaleString() : null);
+
+    const createStage = (number, title) => {
+        const item = document.createElement("li");
+        item.className = "simulation-stage";
+        const heading = document.createElement("h3");
+        heading.textContent = `${number}. ${title}`;
+        item.append(heading);
+        return item;
+    };
+
+    const createDetails = (rows) => {
+        const details = document.createElement("dl");
+        rows.forEach(([label, value]) => appendDetail(details, label, value));
+        return details;
+    };
+
+    const renderConstraints = (result) => {
+        const stage = createStage(1, "Constraints, in evaluation order");
+        const list = document.createElement("ol");
+        list.className = "simulation-constraints";
+        result.constraints.forEach((constraint) => {
+            const item = document.createElement("li");
+            const outcome = constraint.disabled
+                ? "left out of the simulated policy"
+                : constraint.evaluated ? constraint.outcome : "not evaluated";
+            const reasons = constraint.reasonCodes.length > 0 ? ` (${constraint.reasonCodes.join(", ")})` : "";
+            item.textContent = `${constraint.name}: ${outcome}${reasons}`;
+            if (constraint.disabled) {
+                item.className = "disabled-constraint";
+            }
+            list.append(item);
+        });
+        stage.append(list);
+        return stage;
+    };
+
+    const renderDecisionPolicy = (result) => {
+        const stage = createStage(2, "Composed decision and decision policy");
+        const policy = result.decisionPolicy;
+        stage.append(createDetails([
+            ["Composed", policy.composedOutcome],
+            ["Composed reasons", formatCodes(policy.composedReasonCodes)],
+            ["After the decision policy", policy.outcome],
+            ["Reasons", formatCodes(policy.reasonCodes)],
+            ["Changed by the policy", policy.changed ? "yes" : "no"]
+        ]));
+        return stage;
+    };
+
+    const renderCapability = (result) => {
+        const stage = createStage(3, "Capability grant");
+        const capability = result.capability;
+        if (!capability.applies) {
+            const note = document.createElement("p");
+            note.textContent = "The endpoint declares no capability scopes, so this stage does not apply.";
+            stage.append(note);
+            return stage;
+        }
+
+        stage.append(createDetails([
+            ["Model", capabilityModels[capability.model] || capability.model],
+            ["Required scopes", capability.requiredScopes],
+            ["Validated", capability.evaluated ? "yes" : "no: the decision was already denied"],
+            ["Before", capability.inputOutcome],
+            ["After", capability.outcome],
+            ["Reasons", capability.evaluated ? formatCodes(capability.reasonCodes) : null]
+        ]));
+
+        const token = capability.token;
+        if (token) {
+            const heading = document.createElement("h4");
+            heading.textContent = token.wouldBeIssued
+                ? "Token that would be issued (never signed, no use consumed)"
+                : "No token would be issued: the actor lacks the capability claim";
+            stage.append(heading, createDetails([
+                ["Token", token.tokenId],
+                ["Issuer", token.issuer],
+                ["Audience", token.audience],
+                ["Subject", token.subjectId],
+                ["Operation", token.operationName],
+                ["Scopes", token.scopes],
+                ["Payload binding", token.resourceBinding],
+                ["Issued", formatTime(token.issuedUtc)],
+                ["Not before", formatTime(token.notBeforeUtc)],
+                ["Expires", formatTime(token.expiresUtc)],
+                ["Use limit", token.maxUseCount],
+                ["Policy version", token.policyVersion],
+                ["Policy hash", token.policyHash],
+                ["Signing key", token.keyId ? `${token.keyId} version ${token.keyVersion} (key not shown)` : null],
+                ["Signature algorithm", token.signatureAlgorithm]
+            ]));
+        }
+
+        return stage;
+    };
+
+    const renderReceipt = (result) => {
+        const stage = createStage(4, "Decision receipt that would be appended");
+        const receipt = result.receipt;
+        if (!receipt) {
+            const note = document.createElement("p");
+            note.textContent = "No decision receipt would be written for this request.";
+            stage.append(note);
+            return stage;
+        }
+
+        stage.append(createDetails([
+            ["Receipt", receipt.decisionReceiptId],
+            ["Operation", receipt.operationName],
+            ["Outcome", receipt.outcome],
+            ["Reasons", formatCodes(receipt.reasonCodes)],
+            ["Actor", receipt.actorDisplayName ? `${receipt.actorDisplayName} (${receipt.actorId})` : receipt.actorId],
+            ["Actor type", receipt.actorType],
+            ["Policy version", receipt.policyVersion],
+            ["Policy hash", receipt.policyHash],
+            ["Decision stage", receipt.decisionStage],
+            ["Capability grant", receipt.capabilityGrantId],
+            ["Correlation", receipt.correlationId]
+        ]));
+        return stage;
+    };
+
+    const renderEndpointResult = (result) => {
+        const endpointResult = result.endpointResult;
+        const summary = document.createElement("p");
+        summary.className = `simulation-endpoint-result simulation-${endpointResult.kind}`;
+        const status = endpointResult.statusCode ? ` (HTTP ${endpointResult.statusCode})` : "";
+        summary.textContent = `${endpointResult.description}${status}`;
+        const elements = [summary];
+        if (endpointResult.requiredAcknowledgmentCode) {
+            elements.push(createDetails([
+                ["Acknowledgment code", endpointResult.requiredAcknowledgmentCode],
+                ["Acknowledgment text", endpointResult.requiredAcknowledgmentText]
+            ]));
+        }
+
+        return elements;
+    };
+
     if (hasPolicySimulator) {
         const simulatorForm = document.getElementById("policy-simulator-form");
         const evaluateButton = document.getElementById("evaluate-policy-simulation");
@@ -364,147 +513,6 @@
 
         if (simulatorForm && evaluateButton && sendButton && simulatorStatus && simulatorResult) {
             let lastSimulation = null;
-
-            const formatCodes = (codes) => (codes && codes.length > 0 ? codes.join(", ") : "none");
-            const formatTime = (value) => (value ? new Date(value).toLocaleString() : null);
-
-            const createStage = (number, title) => {
-                const item = document.createElement("li");
-                item.className = "simulation-stage";
-                const heading = document.createElement("h3");
-                heading.textContent = `${number}. ${title}`;
-                item.append(heading);
-                return item;
-            };
-
-            const createDetails = (rows) => {
-                const details = document.createElement("dl");
-                rows.forEach(([label, value]) => appendDetail(details, label, value));
-                return details;
-            };
-
-            const renderConstraints = (result) => {
-                const stage = createStage(1, "Constraints, in evaluation order");
-                const list = document.createElement("ol");
-                list.className = "simulation-constraints";
-                result.constraints.forEach((constraint) => {
-                    const item = document.createElement("li");
-                    const outcome = constraint.disabled
-                        ? "left out of the simulated policy"
-                        : constraint.evaluated ? constraint.outcome : "not evaluated";
-                    const reasons = constraint.reasonCodes.length > 0 ? ` (${constraint.reasonCodes.join(", ")})` : "";
-                    item.textContent = `${constraint.name}: ${outcome}${reasons}`;
-                    if (constraint.disabled) {
-                        item.className = "disabled-constraint";
-                    }
-                    list.append(item);
-                });
-                stage.append(list);
-                return stage;
-            };
-
-            const renderDecisionPolicy = (result) => {
-                const stage = createStage(2, "Composed decision and decision policy");
-                const policy = result.decisionPolicy;
-                stage.append(createDetails([
-                    ["Composed", policy.composedOutcome],
-                    ["Composed reasons", formatCodes(policy.composedReasonCodes)],
-                    ["After the decision policy", policy.outcome],
-                    ["Reasons", formatCodes(policy.reasonCodes)],
-                    ["Changed by the policy", policy.changed ? "yes" : "no"]
-                ]));
-                return stage;
-            };
-
-            const renderCapability = (result) => {
-                const stage = createStage(3, "Capability grant");
-                const capability = result.capability;
-                if (!capability.applies) {
-                    const note = document.createElement("p");
-                    note.textContent = "The endpoint declares no capability scopes, so this stage does not apply.";
-                    stage.append(note);
-                    return stage;
-                }
-
-                stage.append(createDetails([
-                    ["Model", capability.model === "signed-token" ? "Signed capability token" : "Permission claims"],
-                    ["Required scopes", capability.requiredScopes],
-                    ["Validated", capability.evaluated ? "yes" : "no: the decision was already denied"],
-                    ["Before", capability.inputOutcome],
-                    ["After", capability.outcome],
-                    ["Reasons", capability.evaluated ? formatCodes(capability.reasonCodes) : null]
-                ]));
-
-                const token = capability.token;
-                if (token) {
-                    const heading = document.createElement("h4");
-                    heading.textContent = token.wouldBeIssued
-                        ? "Token that would be issued (never signed, no use consumed)"
-                        : "No token would be issued: the actor lacks the capability claim";
-                    stage.append(heading, createDetails([
-                        ["Token", token.tokenId],
-                        ["Issuer", token.issuer],
-                        ["Audience", token.audience],
-                        ["Subject", token.subjectId],
-                        ["Operation", token.operationName],
-                        ["Scopes", token.scopes],
-                        ["Payload binding", token.resourceBinding],
-                        ["Issued", formatTime(token.issuedUtc)],
-                        ["Not before", formatTime(token.notBeforeUtc)],
-                        ["Expires", formatTime(token.expiresUtc)],
-                        ["Use limit", token.maxUseCount],
-                        ["Policy version", token.policyVersion],
-                        ["Policy hash", token.policyHash],
-                        ["Signing key", token.keyId ? `${token.keyId} version ${token.keyVersion} (key not shown)` : null],
-                        ["Signature algorithm", token.signatureAlgorithm]
-                    ]));
-                }
-
-                return stage;
-            };
-
-            const renderReceipt = (result) => {
-                const stage = createStage(4, "Decision receipt that would be appended");
-                const receipt = result.receipt;
-                if (!receipt) {
-                    const note = document.createElement("p");
-                    note.textContent = "No decision receipt would be written for this request.";
-                    stage.append(note);
-                    return stage;
-                }
-
-                stage.append(createDetails([
-                    ["Receipt", receipt.decisionReceiptId],
-                    ["Operation", receipt.operationName],
-                    ["Outcome", receipt.outcome],
-                    ["Reasons", formatCodes(receipt.reasonCodes)],
-                    ["Actor", receipt.actorDisplayName ? `${receipt.actorDisplayName} (${receipt.actorId})` : receipt.actorId],
-                    ["Actor type", receipt.actorType],
-                    ["Policy version", receipt.policyVersion],
-                    ["Policy hash", receipt.policyHash],
-                    ["Decision stage", receipt.decisionStage],
-                    ["Capability grant", receipt.capabilityGrantId],
-                    ["Correlation", receipt.correlationId]
-                ]));
-                return stage;
-            };
-
-            const renderEndpointResult = (result) => {
-                const endpointResult = result.endpointResult;
-                const summary = document.createElement("p");
-                summary.className = `simulation-endpoint-result simulation-${endpointResult.kind}`;
-                const status = endpointResult.statusCode ? ` (HTTP ${endpointResult.statusCode})` : "";
-                summary.textContent = `${endpointResult.description}${status}`;
-                const elements = [summary];
-                if (endpointResult.requiredAcknowledgmentCode) {
-                    elements.push(createDetails([
-                        ["Acknowledgment code", endpointResult.requiredAcknowledgmentCode],
-                        ["Acknowledgment text", endpointResult.requiredAcknowledgmentText]
-                    ]));
-                }
-
-                return elements;
-            };
 
             const renderSimulation = (result) => {
                 const children = [];
@@ -605,6 +613,449 @@
                 };
                 void sendGovernedAction(simulation.operation, simulation.payload, reportSend);
             });
+        }
+    }
+
+    if (hasDecisionReplay) {
+        const replayPanel = document.getElementById("explorer-panel-replay");
+        const replayTab = document.getElementById("explorer-tab-replay");
+        const lookupForm = document.getElementById("decision-replay-lookup");
+        const receiptInput = document.getElementById("decision-replay-receipt");
+        const recentList = document.getElementById("decision-replay-recent");
+        const refreshButton = document.getElementById("decision-replay-refresh");
+        const olderButton = document.getElementById("decision-replay-older");
+        const replayForm = document.getElementById("decision-replay-form");
+        const replayButton = document.getElementById("replay-decision");
+        const replayStatus = document.getElementById("decision-replay-status");
+        const replayEmpty = document.getElementById("decision-replay-empty");
+        const replayDetails = document.getElementById("decision-replay-details");
+        const replayResult = document.getElementById("decision-replay-result");
+
+        if (replayPanel && lookupForm && receiptInput && recentList && refreshButton && olderButton && replayForm &&
+            replayButton && replayStatus && replayDetails && replayResult) {
+            const decisionsPath = "/api/v1/decision-replay/decisions";
+            const factNames = { administrator: "Administrator role", capabilityGrant: "Capability grant" };
+            const inputStatusLabels = { recorded: "Recorded", inferred: "Inferred", unrecoverable: "Not recorded" };
+            let selectedReceiptId = null;
+            let nextCursor = null;
+            let recentLoaded = false;
+
+            const shortHash = (hash) => (hash && hash.length > 20 ? `${hash.slice(0, 19)}…` : hash || "(no hash)");
+
+            const shortOperation = (name) => {
+                const withoutAssembly = name.replace(/\s*\([^)]*\)$/, "");
+                return withoutAssembly.slice(withoutAssembly.lastIndexOf(".") + 1) || name;
+            };
+
+            const getJson = async (url) => {
+                const response = await fetch(url, { headers: { "Accept": "application/json" }, credentials: "same-origin" });
+                const contentType = response.headers.get("content-type") || "";
+                return { response, payload: contentType.includes("json") ? await response.json() : null };
+            };
+
+            const markSelected = () => {
+                recentList.querySelectorAll("button[data-receipt-id]").forEach((button) => {
+                    if (button.dataset.receiptId === selectedReceiptId) {
+                        button.setAttribute("aria-current", "true");
+                    } else {
+                        button.removeAttribute("aria-current");
+                    }
+                });
+            };
+
+            const renderRecent = (decisions, append) => {
+                if (!append) {
+                    recentList.replaceChildren();
+                }
+
+                if (!append && decisions.length === 0) {
+                    const empty = document.createElement("li");
+                    empty.className = "output-note";
+                    empty.textContent = "No decisions are persisted yet. Run a governed action first.";
+                    recentList.append(empty);
+                    return;
+                }
+
+                decisions.forEach((decision) => {
+                    const item = document.createElement("li");
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className = "decision-replay-pick";
+                    button.dataset.receiptId = decision.decisionReceiptId;
+                    const title = document.createElement("span");
+                    title.className = "decision-replay-pick-title";
+                    title.textContent = `${shortOperation(decision.operationName)}: ${decision.outcome}`;
+                    const meta = document.createElement("span");
+                    meta.className = "decision-replay-pick-meta";
+                    meta.textContent = `${new Date(decision.occurredUtc).toLocaleString()} · ${decision.actorId}` +
+                        (decision.policyMatchesCurrent ? "" : " · different policy");
+                    button.append(title, meta);
+                    button.addEventListener("click", () => void selectDecision(decision.decisionReceiptId));
+                    item.append(button);
+                    recentList.append(item);
+                });
+                markSelected();
+            };
+
+            const loadRecent = async (append) => {
+                const url = append && nextCursor
+                    ? `${decisionsPath}?before=${encodeURIComponent(nextCursor)}`
+                    : decisionsPath;
+                recentList.setAttribute("aria-busy", "true");
+                try {
+                    const { response, payload } = await getJson(url);
+                    if (!response.ok || !payload) {
+                        replayStatus.textContent = payload?.message || `The decision list returned HTTP ${response.status}.`;
+                        return;
+                    }
+
+                    recentLoaded = true;
+                    renderRecent(payload.decisions, append);
+                    nextCursor = payload.nextCursor;
+                    olderButton.hidden = !nextCursor;
+                } catch {
+                    replayStatus.textContent = "The decision list could not be loaded.";
+                } finally {
+                    recentList.setAttribute("aria-busy", "false");
+                }
+            };
+
+            const createNote = (className, text) => {
+                const note = document.createElement("p");
+                note.className = className;
+                note.setAttribute("role", "note");
+                note.textContent = text;
+                return note;
+            };
+
+            const renderDetails = (details) => {
+                const children = details.policy.notices.map((notice) => createNote("modified-policy-label", notice));
+
+                const card = document.createElement("section");
+                card.className = "replay-card";
+                const heading = document.createElement("h3");
+                heading.textContent = "Selected decision";
+                const evidence = details.evidence;
+                card.append(heading, createDetails([
+                    ["Receipt", details.decisionReceiptId],
+                    ["Occurred", formatTime(details.occurredUtc)],
+                    ["Operation", details.operationName],
+                    ["Actor", details.actorDisplayName ? `${details.actorDisplayName} (${details.actorId})` : details.actorId],
+                    ["Outcome", details.outcome],
+                    ["Reasons", formatCodes(details.reasonCodes)],
+                    ["Recorded policy", `${details.policy.recordedVersion || "unversioned"} ${details.policy.recordedHash || "(no hash)"}`],
+                    ["Current policy", `${details.policy.currentVersion} ${details.policy.currentHash}`],
+                    ["Evidence hash", evidence.storedHash ? `${evidence.status}: ${evidence.storedHash}` : evidence.status],
+                    ["Capability grant", details.capabilityGrantId]
+                ]));
+                if (evidence.status === "mismatch") {
+                    card.append(createNote(
+                        "modified-policy-label",
+                        "The stored evidence hash does not match the record. Treat this decision's fields as unverified."));
+                }
+
+                const inputsCard = document.createElement("section");
+                inputsCard.className = "replay-card";
+                const inputsHeading = document.createElement("h3");
+                inputsHeading.textContent = "What the ledger can reconstruct";
+                const inputs = document.createElement("ul");
+                inputs.className = "replay-inputs";
+                details.inputs.forEach((input) => {
+                    const item = document.createElement("li");
+                    const name = document.createElement("strong");
+                    name.textContent = input.name;
+                    const badge = document.createElement("span");
+                    badge.className = `replay-input-status replay-input-${input.status}`;
+                    badge.textContent = inputStatusLabels[input.status] || input.status;
+                    item.append(name, badge);
+                    if (input.value) {
+                        const value = document.createElement("code");
+                        value.textContent = input.value;
+                        item.append(value);
+                    }
+
+                    const explanation = document.createElement("p");
+                    explanation.textContent = input.explanation;
+                    item.append(explanation);
+                    inputs.append(item);
+                });
+                inputsCard.append(inputsHeading, inputs);
+
+                children.push(card, inputsCard);
+                if (!details.replayable) {
+                    children.push(createNote("replay-partial", details.notReplayableReason));
+                }
+
+                replayDetails.replaceChildren(...children);
+                if (replayEmpty) {
+                    replayEmpty.hidden = true;
+                }
+            };
+
+            const createReasonList = (codes, added, removed) => {
+                const list = document.createElement("ul");
+                list.className = "replay-reasons";
+                codes.forEach((code) => {
+                    const item = document.createElement("li");
+                    item.textContent = code;
+                    if (added.includes(code)) {
+                        item.className = "reason-added";
+                        item.title = "Not in the recorded decision";
+                    }
+
+                    list.append(item);
+                });
+                removed.forEach((code) => {
+                    const item = document.createElement("li");
+                    item.className = "reason-removed";
+                    item.title = "In the recorded decision, not in the replay";
+                    item.textContent = code;
+                    list.append(item);
+                });
+                if (list.children.length === 0) {
+                    const item = document.createElement("li");
+                    item.textContent = "none";
+                    list.append(item);
+                }
+
+                return list;
+            };
+
+            const createOutcomeRow = (outcome, changed) => {
+                const row = document.createElement("p");
+                row.className = changed ? "replay-outcome replay-changed" : "replay-outcome";
+                row.textContent = outcome;
+                return row;
+            };
+
+            const renderBranch = (branch) => {
+                const container = document.createElement("div");
+                container.className = "replay-branch";
+                const assumptions = Object.entries(branch.assumptions);
+                if (assumptions.length > 0) {
+                    const heading = document.createElement("h4");
+                    heading.textContent = `If ${assumptions
+                        .map(([key, value]) => `${(factNames[key] || key).toLowerCase()}: ${value ? "yes" : "no"}`)
+                        .join(", ")}`;
+                    container.append(heading);
+                }
+
+                const verdict = document.createElement("p");
+                verdict.className = branch.difference.matches ? "replay-verdict replay-matches" : "replay-verdict replay-differs";
+                verdict.textContent = branch.difference.matches
+                    ? "Matches the recorded decision."
+                    : "Differs from the recorded decision.";
+                container.append(
+                    verdict,
+                    createOutcomeRow(branch.outcome, branch.difference.outcomeChanged),
+                    createReasonList(branch.reasonCodes, branch.difference.addedReasonCodes, branch.difference.removedReasonCodes),
+                    ...renderEndpointResult(branch));
+
+                const stagesDetails = document.createElement("details");
+                const summary = document.createElement("summary");
+                summary.textContent = "Evaluation stages";
+                const stages = document.createElement("ol");
+                stages.className = "simulation-stages";
+                stages.append(
+                    renderConstraints(branch),
+                    renderDecisionPolicy(branch),
+                    renderCapability(branch),
+                    renderReceipt(branch));
+                stagesDetails.append(summary, stages);
+                container.append(stagesDetails);
+                return container;
+            };
+
+            const renderEvaluation = (evaluation) => {
+                const column = document.createElement("section");
+                column.className = evaluation.hypothetical ? "replay-column replay-hypothetical" : "replay-column";
+                const heading = document.createElement("h3");
+                heading.textContent = evaluation.label;
+                const kind = document.createElement("p");
+                kind.className = "replay-kind";
+                kind.textContent = evaluation.hypothetical ? "What-if" : "Re-verification";
+                column.append(heading, kind);
+                if (evaluation.hypotheticalReason) {
+                    column.append(createNote("output-note", evaluation.hypotheticalReason));
+                }
+
+                const policy = createDetails([
+                    ["Policy", `${evaluation.policyVersion} ${shortHash(evaluation.policyHash)}`],
+                    ["Left out", evaluation.disabledConstraints]
+                ]);
+                policy.title = evaluation.policyHash;
+                column.append(policy);
+                if (evaluation.policyChanges.length > 0) {
+                    const changes = document.createElement("ul");
+                    changes.className = "candidate-policy-changes";
+                    evaluation.policyChanges.forEach((change) => {
+                        const item = document.createElement("li");
+                        item.textContent = change;
+                        changes.append(item);
+                    });
+                    column.append(changes);
+                }
+
+                const names = (keys) => keys.map((key) => (factNames[key] || key).toLowerCase()).join(" and ");
+                if (evaluation.partial) {
+                    column.append(createNote(
+                        "replay-partial",
+                        `Partial replay: the result depends on the ${names(evaluation.decisiveUnknownInputs)}, ` +
+                        "which the ledger does not record. Each possibility is shown."));
+                } else if (evaluation.ignoredUnknownInputs.length > 0) {
+                    column.append(createNote(
+                        "output-note",
+                        `The ${names(evaluation.ignoredUnknownInputs)} is not recorded, and made no difference to this result.`));
+                }
+
+                evaluation.branches.forEach((branch) => column.append(renderBranch(branch)));
+                return column;
+            };
+
+            const renderResult = (result) => {
+                const original = document.createElement("section");
+                original.className = "replay-card replay-original";
+                const heading = document.createElement("h3");
+                heading.textContent = "Recorded decision";
+                const kind = document.createElement("p");
+                kind.className = "replay-kind";
+                kind.textContent = "As persisted";
+                const recordedPolicy = result.decision.policy;
+                original.append(
+                    heading,
+                    kind,
+                    createOutcomeRow(result.decision.outcome, false),
+                    createReasonList(result.decision.reasonCodes, [], []),
+                    createDetails([[
+                        "Policy",
+                        `${recordedPolicy.recordedVersion || "unversioned"} ${shortHash(recordedPolicy.recordedHash)}`
+                    ]]));
+
+                const columns = document.createElement("div");
+                columns.className = "replay-columns";
+                columns.append(renderEvaluation(result.current));
+                if (result.candidate) {
+                    columns.append(renderEvaluation(result.candidate));
+                }
+
+                const title = document.createElement("h3");
+                title.textContent = "Side by side";
+                replayResult.replaceChildren(title, original, columns);
+            };
+
+            const selectDecision = async (receiptId) => {
+                selectedReceiptId = null;
+                replayButton.disabled = true;
+                replayResult.replaceChildren();
+                showOutput("replay");
+                replayStatus.textContent = "Finding the decision…";
+                try {
+                    const { response, payload } = await getJson(`${decisionsPath}/${encodeURIComponent(receiptId)}`);
+                    if (response.status === 404) {
+                        replayDetails.replaceChildren();
+                        if (replayEmpty) {
+                            replayEmpty.hidden = false;
+                        }
+
+                        replayStatus.textContent = "No decision has that receipt identifier.";
+                        markSelected();
+                        return;
+                    }
+
+                    if (!response.ok || !payload) {
+                        replayStatus.textContent = payload?.message || `The lookup returned HTTP ${response.status}.`;
+                        return;
+                    }
+
+                    selectedReceiptId = payload.decisionReceiptId;
+                    receiptInput.value = selectedReceiptId;
+                    renderDetails(payload);
+                    markSelected();
+                    replayButton.disabled = !payload.replayable;
+                    replayStatus.textContent = !payload.replayable
+                        ? payload.notReplayableReason
+                        : payload.policy.matches
+                        ? "Decision found. Replay it to check whether it still holds."
+                        : "Decision found. It was recorded under a different policy, so a replay is a what-if.";
+                } catch {
+                    replayStatus.textContent = "The decision could not be looked up.";
+                }
+            };
+
+            lookupForm.addEventListener("submit", (event) => {
+                event.preventDefault();
+                const receiptId = receiptInput.value.trim();
+                if (!receiptId) {
+                    replayStatus.textContent = "Enter a decision receipt identifier.";
+                    receiptInput.focus();
+                    return;
+                }
+
+                void selectDecision(receiptId);
+            });
+
+            refreshButton.addEventListener("click", () => void loadRecent(false));
+            olderButton.addEventListener("click", () => void loadRecent(true));
+
+            // A result describes the options it was replayed with, so changing them clears it rather than leaving a
+            // stale comparison on screen.
+            const clearStaleResult = () => {
+                if (replayResult.children.length > 0) {
+                    replayResult.replaceChildren();
+                    replayStatus.textContent = "Options changed. Replay again to compare.";
+                }
+            };
+            replayForm.addEventListener("change", clearStaleResult);
+
+            replayForm.addEventListener("submit", async (event) => {
+                event.preventDefault();
+                if (!selectedReceiptId) {
+                    return;
+                }
+
+                const body = new FormData(replayForm);
+                replayForm.querySelectorAll("input[data-constraint-name]").forEach((input) => {
+                    if (!input.checked) {
+                        body.append("disabledConstraints", input.dataset.constraintName);
+                    }
+                });
+
+                showOutput("replay");
+                replayButton.disabled = true;
+                replayStatus.textContent = "Replaying the decision…";
+                try {
+                    const response = await fetch(`${decisionsPath}/${encodeURIComponent(selectedReceiptId)}/replay`, {
+                        method: "POST",
+                        body,
+                        headers: { "Accept": "application/json" },
+                        credentials: "same-origin"
+                    });
+                    const contentType = response.headers.get("content-type") || "";
+                    const payload = contentType.includes("json") ? await response.json() : null;
+                    if (!response.ok || !payload) {
+                        replayResult.replaceChildren();
+                        replayStatus.textContent = payload?.message || `The replay returned HTTP ${response.status}.`;
+                        return;
+                    }
+
+                    renderDetails(payload.decision);
+                    renderResult(payload);
+                    replayStatus.textContent = "Replayed; nothing was persisted and the stored evidence is unchanged.";
+                } catch {
+                    replayStatus.textContent = "The replay could not be requested.";
+                } finally {
+                    replayButton.disabled = !selectedReceiptId;
+                }
+            });
+
+            replayTab?.addEventListener("click", () => {
+                if (!recentLoaded) {
+                    void loadRecent(false);
+                }
+            });
+            if (!replayPanel.hidden) {
+                void loadRecent(false);
+            }
         }
     }
 

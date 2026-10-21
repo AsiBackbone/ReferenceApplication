@@ -49,6 +49,7 @@ try
     builder.Services.AddApplicationCapabilityTokens(builder.Configuration, builder.Environment);
     builder.Services.AddApplicationGovernanceLoadDemonstration(builder.Configuration, builder.Environment);
     builder.Services.AddApplicationPolicySimulator(builder.Configuration, builder.Environment);
+    builder.Services.AddApplicationDecisionReplay(builder.Configuration, builder.Environment);
 
     Log.Information("Starting ReferenceApplication.Web application");
     WebApplication app = builder.Build();

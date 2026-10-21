@@ -181,7 +181,9 @@ While tokens are enabled, the governance explorer's capability and consequential
 explorer does not request tokens yet. The explorer's
 [policy simulator](07-observe-governance.md#policy-simulator)
 ([#59](https://github.com/AsiBackbone/ReferenceApplication/issues/59)) shows the token issuance would sign for a
-simulated request, without signing it or consuming a use. The tampering and replay scenarios
+simulated request, without signing it or consuming a use. [Decision replay](07-observe-governance.md#decision-replay)
+([#60](https://github.com/AsiBackbone/ReferenceApplication/issues/60)) never verifies a token again: the ledger stores
+only the accepted grant's identifier, so a replay uses the recorded grant outcome. The tampering and replay scenarios
 ([#62](https://github.com/AsiBackbone/ReferenceApplication/issues/62)) build on this page.
 
 ### Rotate the key
