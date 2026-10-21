@@ -138,7 +138,7 @@ public sealed class DecisionReplayTests : IDisposable
             client,
             $"{DecisionReplayServiceExtensions.DecisionsPath}/{record.DecisionReceiptId}",
             _administratorRole);
-        using JsonDocument details = JsonDocument.Parse(await found.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        using var details = JsonDocument.Parse(await found.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
 
         Assert.Equal(HttpStatusCode.OK, found.StatusCode);
         JsonElement root = details.RootElement;
@@ -285,7 +285,7 @@ public sealed class DecisionReplayTests : IDisposable
         AuditLedgerRecord older = await AppendRecordUnderOlderPolicyAsync(factory, current);
 
         using HttpResponseMessage list = await GetAsync(client, DecisionReplayServiceExtensions.DecisionsPath, _administratorRole);
-        using JsonDocument page = JsonDocument.Parse(await list.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        using var page = JsonDocument.Parse(await list.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         JsonElement olderSummary = page.RootElement.GetProperty("decisions").EnumerateArray()
             .Single(summary => summary.GetProperty("decisionReceiptId").GetString() == older.DecisionReceiptId);
         Assert.False(olderSummary.GetProperty("policyMatchesCurrent").GetBoolean());
@@ -294,7 +294,7 @@ public sealed class DecisionReplayTests : IDisposable
             client,
             $"{DecisionReplayServiceExtensions.DecisionsPath}/{older.DecisionReceiptId}",
             _administratorRole);
-        using JsonDocument details = JsonDocument.Parse(await found.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        using var details = JsonDocument.Parse(await found.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         JsonElement policy = details.RootElement.GetProperty("policy");
         Assert.False(policy.GetProperty("matches").GetBoolean());
         Assert.Equal("0.9.0", policy.GetProperty("recordedVersion").GetString());
@@ -322,7 +322,7 @@ public sealed class DecisionReplayTests : IDisposable
         }
 
         using HttpResponseMessage first = await GetAsync(client, DecisionReplayServiceExtensions.DecisionsPath, _administratorRole);
-        using JsonDocument firstPage = JsonDocument.Parse(await first.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        using var firstPage = JsonDocument.Parse(await first.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         DateTimeOffset[] firstTimes = [.. firstPage.RootElement.GetProperty("decisions").EnumerateArray()
             .Select(static summary => summary.GetProperty("occurredUtc").GetDateTimeOffset())];
         string cursor = firstPage.RootElement.GetProperty("nextCursor").GetString()!;
@@ -331,7 +331,7 @@ public sealed class DecisionReplayTests : IDisposable
             client,
             $"{DecisionReplayServiceExtensions.DecisionsPath}?before={Uri.EscapeDataString(cursor)}",
             _administratorRole);
-        using JsonDocument secondPage = JsonDocument.Parse(await second.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        using var secondPage = JsonDocument.Parse(await second.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         using HttpResponseMessage invalid = await GetAsync(
             client,
             $"{DecisionReplayServiceExtensions.DecisionsPath}?before=not-a-record",
