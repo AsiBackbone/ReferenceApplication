@@ -1,22 +1,16 @@
 using System.Security.Claims;
-using AsiBackbone.AspNetCore.Acknowledgments;
 using AsiBackbone.AspNetCore.Actors;
 using AsiBackbone.AspNetCore.CapabilityGrants;
-using AsiBackbone.AspNetCore.Correlation;
 using AsiBackbone.AspNetCore.Endpoints;
-using AsiBackbone.AspNetCore.Results;
 using AsiBackbone.Core.Actors;
-using AsiBackbone.Core.Audit;
 using AsiBackbone.Core.CapabilityGrants;
 using AsiBackbone.Core.Constraints;
 using AsiBackbone.Core.Decisions;
 using AsiBackbone.Core.Evaluation;
-using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using ReferenceApplication.Web.Authentication.Options;
 using ReferenceApplication.Web.Controllers.Api;
-using ReferenceApplication.Web.Extensions;
 
 namespace ReferenceApplication.Web.Governance.Simulation;
 
@@ -48,24 +42,28 @@ public interface IPolicySimulator
 /// </summary>
 /// <remarks>
 /// <para>
-/// The simulation does not reimplement governance. It resolves the real governed endpoint, builds a simulated request
-/// for it with the chosen actor and payload, and runs AsiBackbone's <see cref="DefaultEndpointGovernanceService" />,
-/// the same service the endpoint governance middleware runs. The policy evaluator is composed through
-/// <see cref="AsiBackboneServiceExtensions.CreatePolicyEvaluator" />, exactly as the registered evaluator is. Each
-/// constraint, the decision policy, and the capability validator are wrapped only to record what they return.
+/// The simulation does not reimplement governance. It resolves the real governed endpoint and runs it through
+/// <see cref="GovernancePipelineHarness" />, which evaluates a simulated request with AsiBackbone's
+/// <see cref="DefaultEndpointGovernanceService" />, the same service the endpoint governance middleware runs, and the
+/// policy evaluator composed exactly as the registered one.
 /// </para>
 /// <para>
-/// Nothing is persisted. The decision receipt sink is replaced with one that captures the receipt instead of writing
-/// it, and while capability tokens are enabled, the signed-grant validator, which would consume a use, is replaced
-/// with a preview of the token issuance would sign. The simulated request runs on an isolated asynchronous flow, so
-/// the services that read the current request through <see cref="IHttpContextAccessor" /> see the simulated request
-/// and never the real one.
+/// Nothing is persisted. The harness captures the decision receipt instead of writing it, and while capability tokens
+/// are enabled, the signed-grant validator, which would consume a use, is replaced with a preview of the token
+/// issuance would sign.
 /// </para>
 /// </remarks>
-public sealed class PolicySimulator : IPolicySimulator
+internal sealed class PolicySimulator : IPolicySimulator
 {
-    private const string _claimsModel = "claims";
-    private const string _signedTokenModel = "signed-token";
+    /// <summary>
+    /// Gets the capability stage model reported when grants come from permission claims.
+    /// </summary>
+    public const string ClaimsModel = "claims";
+
+    /// <summary>
+    /// Gets the capability stage model reported when grants are signed capability tokens.
+    /// </summary>
+    public const string SignedTokenModel = "signed-token";
 
     private static readonly PolicySimulatorOperation[] _operations =
     [
@@ -78,16 +76,9 @@ public sealed class PolicySimulator : IPolicySimulator
     private readonly IGovernanceConstraint<GovernanceEvaluationContext>[] _constraints;
     private readonly IGovernanceDecisionPolicy<GovernanceEvaluationContext> _decisionPolicy;
     private readonly ClaimEndpointCapabilityGrantValidator _claimValidator;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IHttpGovernanceActorContextResolver _actorContextResolver;
-    private readonly IHttpGovernanceRequestCorrelationResolver _correlationResolver;
-    private readonly IAcknowledgmentChallengeService _acknowledgmentChallengeService;
-    private readonly IOptions<EndpointGovernanceOptions> _endpointOptions;
-    private readonly IOptions<GovernanceHttpResultMappingOptions> _resultOptions;
+    private readonly GovernancePipelineHarness _harness;
     private readonly IOptions<ApplicationAuthorizationOptions> _authorizationOptions;
     private readonly IOptions<CapabilityTokenOptions> _tokenOptions;
-    private readonly EndpointDataSource _endpointDataSource;
-    private readonly ILogger<DefaultGovernancePolicyEvaluator<GovernanceEvaluationContext>>? _evaluatorLogger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PolicySimulator" /> class.
@@ -95,47 +86,25 @@ public sealed class PolicySimulator : IPolicySimulator
     /// <param name="constraints">The registered constraints, in evaluation order.</param>
     /// <param name="decisionPolicy">The registered decision policy.</param>
     /// <param name="claimValidator">The claim-backed capability validator, which also decides token entitlement.</param>
-    /// <param name="httpContextAccessor">The accessor the governance services read the current request through.</param>
-    /// <param name="actorContextResolver">AsiBackbone's actor resolver.</param>
-    /// <param name="correlationResolver">AsiBackbone's request correlation resolver.</param>
-    /// <param name="acknowledgmentChallengeService">AsiBackbone's acknowledgment challenge service.</param>
-    /// <param name="endpointOptions">The endpoint governance options.</param>
-    /// <param name="resultOptions">The governance HTTP result mapping options.</param>
+    /// <param name="harness">The pipeline harness that runs the simulated request.</param>
     /// <param name="authorizationOptions">The application authorization options.</param>
     /// <param name="tokenOptions">The capability token options.</param>
-    /// <param name="endpointDataSource">The application's endpoints.</param>
-    /// <param name="evaluatorLogger">The optional evaluator logger.</param>
     public PolicySimulator(
         IEnumerable<IGovernanceConstraint<GovernanceEvaluationContext>> constraints,
         IGovernanceDecisionPolicy<GovernanceEvaluationContext> decisionPolicy,
         ClaimEndpointCapabilityGrantValidator claimValidator,
-        IHttpContextAccessor httpContextAccessor,
-        IHttpGovernanceActorContextResolver actorContextResolver,
-        IHttpGovernanceRequestCorrelationResolver correlationResolver,
-        IAcknowledgmentChallengeService acknowledgmentChallengeService,
-        IOptions<EndpointGovernanceOptions> endpointOptions,
-        IOptions<GovernanceHttpResultMappingOptions> resultOptions,
+        GovernancePipelineHarness harness,
         IOptions<ApplicationAuthorizationOptions> authorizationOptions,
-        IOptions<CapabilityTokenOptions> tokenOptions,
-        EndpointDataSource endpointDataSource,
-        ILogger<DefaultGovernancePolicyEvaluator<GovernanceEvaluationContext>>? evaluatorLogger = null)
+        IOptions<CapabilityTokenOptions> tokenOptions)
     {
         ArgumentNullException.ThrowIfNull(constraints);
 
         _constraints = [.. constraints];
         _decisionPolicy = decisionPolicy ?? throw new ArgumentNullException(nameof(decisionPolicy));
         _claimValidator = claimValidator ?? throw new ArgumentNullException(nameof(claimValidator));
-        _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
-        _actorContextResolver = actorContextResolver ?? throw new ArgumentNullException(nameof(actorContextResolver));
-        _correlationResolver = correlationResolver ?? throw new ArgumentNullException(nameof(correlationResolver));
-        _acknowledgmentChallengeService = acknowledgmentChallengeService
-            ?? throw new ArgumentNullException(nameof(acknowledgmentChallengeService));
-        _endpointOptions = endpointOptions ?? throw new ArgumentNullException(nameof(endpointOptions));
-        _resultOptions = resultOptions ?? throw new ArgumentNullException(nameof(resultOptions));
+        _harness = harness ?? throw new ArgumentNullException(nameof(harness));
         _authorizationOptions = authorizationOptions ?? throw new ArgumentNullException(nameof(authorizationOptions));
         _tokenOptions = tokenOptions ?? throw new ArgumentNullException(nameof(tokenOptions));
-        _endpointDataSource = endpointDataSource ?? throw new ArgumentNullException(nameof(endpointDataSource));
-        _evaluatorLogger = evaluatorLogger;
         ConstraintNames = [.. _constraints.Select(static constraint => constraint.Name)];
     }
 
@@ -143,6 +112,12 @@ public sealed class PolicySimulator : IPolicySimulator
     /// Gets the keys of the sample governed operations the simulator accepts.
     /// </summary>
     public static IReadOnlyList<string> OperationKeys { get; } = [.. _operations.Select(static operation => operation.Key)];
+
+    /// <summary>
+    /// Gets each sample governed operation's key and its <see cref="GovernedOperationsController" /> action name.
+    /// </summary>
+    internal static IEnumerable<(string Key, string ActionName)> GovernedOperations =>
+        _operations.Select(static operation => (operation.Key, operation.ActionName));
 
     /// <inheritdoc />
     public IReadOnlyList<string> ConstraintNames { get; }
@@ -195,9 +170,8 @@ public sealed class PolicySimulator : IPolicySimulator
             _ = disabled.Add(trimmed);
         }
 
-        Endpoint endpoint = FindGovernedEndpoint(operation.ActionName)
+        Endpoint endpoint = _harness.FindGovernedEndpoint(operation.ActionName)
             ?? throw new InvalidOperationException($"The governed operation endpoint '{operation.ActionName}' is not mapped.");
-        var descriptor = EndpointGovernanceDescriptor.FromEndpoint(endpoint);
 
         Dictionary<string, StringValues> fields = new(StringComparer.Ordinal);
         if (payload.Length > 0)
@@ -206,50 +180,33 @@ public sealed class PolicySimulator : IPolicySimulator
         }
 
         bool tokensEnabled = _tokenOptions.Value.Enabled;
-        var recorder = new SimulationRecorder(ConstraintNames);
-        IGovernancePolicyEvaluator<GovernanceEvaluationContext> evaluator = AsiBackboneServiceExtensions.CreatePolicyEvaluator(
-            _constraints
-                .Select(static (constraint, index) => (constraint, index))
-                .Where(entry => !disabled.Contains(entry.constraint.Name))
-                .Select(entry => new RecordingConstraint(entry.constraint, entry.index, recorder)),
-            new RecordingDecisionPolicy(_decisionPolicy, recorder),
-            _evaluatorLogger);
-        IEndpointCapabilityGrantValidator capabilityValidator = tokensEnabled
-            ? new TokenPreviewCapabilityValidator(
-                _claimValidator,
-                _actorContextResolver,
-                requestContext.RequestServices.GetRequiredService<CapabilityTokenIssuer>(),
-                requestContext.RequestServices.GetRequiredService<CapabilityTokenSigningKey>(),
-                fields,
-                recorder)
-            : new RecordingCapabilityValidator(_claimValidator, recorder);
-        var receiptSink = new CapturingDecisionReceiptSink();
-        var services = new SimulationServiceProvider(
-            requestContext.RequestServices,
-            evaluator,
-            capabilityValidator,
-            receiptSink);
-
         ClaimsPrincipal actor = CreateSimulatedActor(
             requestContext.User,
             request.Administrator,
             request.ConsequentialCapability);
-        HttpContext simulated = CreateSimulatedRequest(requestContext, services, actor, endpoint, operation, fields);
 
-        // A new instance, so the receipt sink it resolves is the capturing one; every other dependency is the
-        // application's own.
-        var governance = new DefaultEndpointGovernanceService(
-            services,
-            _actorContextResolver,
-            _correlationResolver,
-            _acknowledgmentChallengeService,
-            _endpointOptions,
-            _resultOptions);
-
-        EndpointGovernanceResult result = await RunOnSimulatedRequestAsync(
-            simulated,
-            () => governance.EvaluateAsync(simulated, descriptor, cancellationToken).AsTask())
-            .ConfigureAwait(false);
+        GovernancePipelineRun run = await _harness.RunAsync(
+            new GovernancePipelineRequest(
+                RequestContext: requestContext,
+                Endpoint: endpoint,
+                RequestPath: $"/api/v1/governed-operations/{operation.Key}",
+                Actor: actor,
+                Fields: fields,
+                Constraints: _constraints,
+                DisabledConstraints: disabled,
+                DecisionPolicy: _decisionPolicy,
+                CreateCapabilityValidator: recorder => tokensEnabled
+                    ? new TokenPreviewCapabilityValidator(
+                        _claimValidator,
+                        _harness.ActorContextResolver,
+                        requestContext.RequestServices.GetRequiredService<CapabilityTokenIssuer>(),
+                        requestContext.RequestServices.GetRequiredService<CapabilityTokenSigningKey>(),
+                        fields,
+                        recorder)
+                    : GovernancePipelineHarness.Record(_claimValidator, recorder),
+                TraceIdentifierPrefix: "policy-simulator"),
+            cancellationToken).ConfigureAwait(false);
+        EndpointGovernanceDescriptor descriptor = run.Descriptor;
 
         bool matchesSignedInActor =
             IsAdministrator(requestContext.User) == request.Administrator &&
@@ -262,8 +219,8 @@ public sealed class PolicySimulator : IPolicySimulator
                 SimulatedWithModifiedPolicy: disabled.Count > 0,
                 DisabledConstraints: [.. ConstraintNames.Where(disabled.Contains)],
                 Actor: new PolicySimulationActor(
-                    ActorId: receiptSink.Receipt?.ActorId ?? string.Empty,
-                    DisplayName: receiptSink.Receipt?.ActorDisplayName,
+                    ActorId: run.Receipt?.ActorId ?? string.Empty,
+                    DisplayName: run.Receipt?.ActorDisplayName,
                     Administrator: request.Administrator,
                     ConsequentialCapability: request.ConsequentialCapability,
                     MatchesSignedInActor: matchesSignedInActor),
@@ -271,11 +228,14 @@ public sealed class PolicySimulator : IPolicySimulator
                     static field => field.Key,
                     static field => field.Value.ToString(),
                     StringComparer.Ordinal),
-                Constraints: CreateConstraintStages(recorder, disabled),
-                DecisionPolicy: CreateDecisionPolicyStage(recorder),
-                Capability: CreateCapabilityStage(descriptor, recorder, tokensEnabled),
-                Receipt: CreateReceipt(receiptSink.Receipt),
-                EndpointResult: CreateEndpointResult(result),
+                Constraints: GovernancePipelineHarness.CreateConstraintStages(run.Recorder, disabled),
+                DecisionPolicy: GovernancePipelineHarness.CreateDecisionPolicyStage(run.Recorder),
+                Capability: GovernancePipelineHarness.CreateCapabilityStage(
+                    descriptor,
+                    run.Recorder,
+                    tokensEnabled ? SignedTokenModel : ClaimsModel),
+                Receipt: GovernancePipelineHarness.CreateReceipt(run.Receipt),
+                EndpointResult: _harness.CreateEndpointResult(run.Result),
                 SendForReal: CreateSendForReal(disabled.Count > 0, matchesSignedInActor, tokensEnabled, descriptor)),
             Error: null);
     }
@@ -299,157 +259,6 @@ public sealed class PolicySimulator : IPolicySimulator
                 Available: false,
                 Reason: "Capability tokens are enabled, and the explorer does not request a token for this operation yet.")
             : new PolicySimulationSendForReal(Available: true, Reason: null);
-    }
-
-    private static List<PolicySimulationConstraintStage> CreateConstraintStages(
-        SimulationRecorder recorder,
-        HashSet<string> disabled)
-    {
-        List<PolicySimulationConstraintStage> stages = [];
-        for (int index = 0; index < recorder.ConstraintNames.Count; index++)
-        {
-            ConstraintEvaluationResult? result = recorder.ConstraintResults[index];
-            string name = recorder.ConstraintNames[index];
-            stages.Add(new PolicySimulationConstraintStage(
-                Order: index + 1,
-                Name: name,
-                Disabled: disabled.Contains(name),
-                Evaluated: result is not null,
-                Outcome: result?.Outcome.ToString(),
-                ReasonCodes: result?.ReasonCodes ?? []));
-        }
-
-        return stages;
-    }
-
-    private static PolicySimulationDecisionPolicyStage CreateDecisionPolicyStage(SimulationRecorder recorder)
-    {
-        GovernanceDecision? composed = recorder.ComposedDecision;
-        GovernanceDecision? final = recorder.PolicyDecision;
-
-        return new PolicySimulationDecisionPolicyStage(
-            Evaluated: final is not null,
-            ComposedOutcome: composed?.Outcome.ToString(),
-            ComposedReasonCodes: composed?.ReasonCodes ?? [],
-            Outcome: final?.Outcome.ToString(),
-            ReasonCodes: final?.ReasonCodes ?? [],
-            Changed: composed is not null && final is not null && !ReferenceEquals(composed, final));
-    }
-
-    private static PolicySimulationCapabilityStage CreateCapabilityStage(
-        EndpointGovernanceDescriptor descriptor,
-        SimulationRecorder recorder,
-        bool tokensEnabled)
-    {
-        return new PolicySimulationCapabilityStage(
-            Applies: descriptor.CapabilityScopes.Count > 0,
-            Model: tokensEnabled ? _signedTokenModel : _claimsModel,
-            Evaluated: recorder.CapabilityOutput is not null,
-            RequiredScopes: descriptor.CapabilityScopes,
-            InputOutcome: recorder.CapabilityInput?.Outcome.ToString(),
-            Outcome: recorder.CapabilityOutput?.Outcome.ToString(),
-            ReasonCodes: recorder.CapabilityOutput?.ReasonCodes ?? [],
-            Token: recorder.TokenPreview);
-    }
-
-    private static PolicySimulationReceipt? CreateReceipt(IDecisionReceipt? receipt)
-    {
-        return receipt is null
-            ? null
-            : new PolicySimulationReceipt(
-                DecisionReceiptId: receipt.DecisionReceiptId ?? receipt.EventId,
-                EventId: receipt.EventId,
-                SchemaVersion: receipt.SchemaVersion,
-                OccurredUtc: receipt.OccurredUtc,
-                ActorId: receipt.ActorId,
-                ActorType: receipt.ActorType.ToString(),
-                ActorDisplayName: receipt.ActorDisplayName,
-                OperationName: receipt.OperationName,
-                Outcome: receipt.Outcome,
-                ReasonCodes: receipt.ReasonCodes,
-                CorrelationId: receipt.CorrelationId,
-                DecisionStage: receipt.DecisionStage,
-                PolicyVersion: receipt.PolicyVersion,
-                PolicyHash: receipt.PolicyHash,
-                CapabilityGrantId: receipt.CapabilityGrantId,
-                Metadata: receipt.Metadata);
-    }
-
-    private PolicySimulationEndpointResult CreateEndpointResult(EndpointGovernanceResult result)
-    {
-        return result.AcknowledgmentChallenge is { } challenge
-            ? new PolicySimulationEndpointResult(
-                Kind: "acknowledgment-challenge",
-                StatusCode: _endpointOptions.Value.AcknowledgmentChallengeStatusCode,
-                Description: "The endpoint would answer with an acknowledgment challenge; the action would not run.",
-                RequiredAcknowledgmentCode: challenge.RequiredAcknowledgmentCode,
-                RequiredAcknowledgmentText: challenge.RequiredAcknowledgmentText)
-            : result.CanExecute
-            ? new PolicySimulationEndpointResult(
-                Kind: "allowed",
-                StatusCode: null,
-                Description: "Governance would allow the request, and the action would run.",
-                RequiredAcknowledgmentCode: null,
-                RequiredAcknowledgmentText: null)
-            : new PolicySimulationEndpointResult(
-                Kind: "blocked",
-                StatusCode: (result.FailureResult as IStatusCodeHttpResult)?.StatusCode
-                    ?? StatusCodes.Status403Forbidden,
-                Description: "Governance would block the request; the action would not run.",
-                RequiredAcknowledgmentCode: null,
-                RequiredAcknowledgmentText: null);
-    }
-
-    private static DefaultHttpContext CreateSimulatedRequest(
-        HttpContext requestContext,
-        IServiceProvider services,
-        ClaimsPrincipal actor,
-        Endpoint endpoint,
-        PolicySimulatorOperation operation,
-        Dictionary<string, StringValues> fields)
-    {
-        var simulated = new DefaultHttpContext
-        {
-            RequestServices = services,
-            User = actor,
-            TraceIdentifier = $"policy-simulator-{Guid.NewGuid():N}"
-        };
-        simulated.Request.Method = HttpMethods.Post;
-        simulated.Request.Scheme = requestContext.Request.Scheme;
-        simulated.Request.Host = requestContext.Request.Host;
-        simulated.Request.Path = $"/api/v1/governed-operations/{operation.Key}";
-        simulated.Request.ContentType = "application/x-www-form-urlencoded";
-        simulated.Request.Form = new FormCollection(fields);
-        simulated.SetEndpoint(endpoint);
-
-        return simulated;
-    }
-
-    private async Task<EndpointGovernanceResult> RunOnSimulatedRequestAsync(
-        HttpContext simulated,
-        Func<Task<EndpointGovernanceResult>> evaluate)
-    {
-        // The governance services read the current request through IHttpContextAccessor, which flows with the
-        // asynchronous execution context. Suppressing that flow gives the evaluation a context of its own, so setting
-        // the accessor there never replaces, or clears, the real request's.
-        Task<EndpointGovernanceResult> evaluation;
-        using (ExecutionContext.SuppressFlow())
-        {
-            evaluation = Task.Run(async () =>
-            {
-                _httpContextAccessor.HttpContext = simulated;
-                try
-                {
-                    return await evaluate().ConfigureAwait(false);
-                }
-                finally
-                {
-                    _httpContextAccessor.HttpContext = null;
-                }
-            });
-        }
-
-        return await evaluation.ConfigureAwait(false);
     }
 
     private ClaimsPrincipal CreateSimulatedActor(ClaimsPrincipal signedInActor, bool administrator, bool capability)
@@ -510,93 +319,11 @@ public sealed class PolicySimulator : IPolicySimulator
             && string.Equals(claim.Value, ReferenceApplicationGovernancePolicySet.ConsequentialExecutionScope, StringComparison.Ordinal);
     }
 
-    private Endpoint? FindGovernedEndpoint(string actionName)
-    {
-        return _endpointDataSource.Endpoints.FirstOrDefault(endpoint =>
-            endpoint.Metadata.GetMetadata<ControllerActionDescriptor>() is { } action &&
-            action.ControllerTypeInfo.AsType() == typeof(GovernedOperationsController) &&
-            string.Equals(action.ActionName, actionName, StringComparison.Ordinal));
-    }
-
     private sealed record PolicySimulatorOperation(
         string Key,
         string ActionName,
         string PayloadField,
         bool RequiresAcknowledgmentFlag);
-
-    private sealed class SimulationRecorder(IReadOnlyList<string> constraintNames)
-    {
-        public IReadOnlyList<string> ConstraintNames { get; } = constraintNames;
-
-        public ConstraintEvaluationResult?[] ConstraintResults { get; } = new ConstraintEvaluationResult?[constraintNames.Count];
-
-        public GovernanceDecision? ComposedDecision { get; set; }
-
-        public GovernanceDecision? PolicyDecision { get; set; }
-
-        public GovernanceDecision? CapabilityInput { get; set; }
-
-        public GovernanceDecision? CapabilityOutput { get; set; }
-
-        public PolicySimulationTokenPreview? TokenPreview { get; set; }
-    }
-
-    private sealed class RecordingConstraint(
-        IGovernanceConstraint<GovernanceEvaluationContext> inner,
-        int index,
-        SimulationRecorder recorder) : IGovernanceConstraint<GovernanceEvaluationContext>
-    {
-        public string Name => inner.Name;
-
-        public async ValueTask<ConstraintEvaluationResult> EvaluateAsync(
-            GovernanceEvaluationContext context,
-            CancellationToken cancellationToken = default)
-        {
-            ConstraintEvaluationResult result = await inner
-                .EvaluateAsync(context, cancellationToken)
-                .ConfigureAwait(false);
-            recorder.ConstraintResults[index] = result;
-            return result;
-        }
-    }
-
-    private sealed class RecordingDecisionPolicy(
-        IGovernanceDecisionPolicy<GovernanceEvaluationContext> inner,
-        SimulationRecorder recorder) : IGovernanceDecisionPolicy<GovernanceEvaluationContext>
-    {
-        public async ValueTask<GovernanceDecision> ApplyAsync(
-            GovernanceEvaluationContext context,
-            GovernanceDecision composedDecision,
-            IReadOnlyList<ConstraintEvaluationResult> constraintResults,
-            CancellationToken cancellationToken = default)
-        {
-            recorder.ComposedDecision = composedDecision;
-            GovernanceDecision decision = await inner
-                .ApplyAsync(context, composedDecision, constraintResults, cancellationToken)
-                .ConfigureAwait(false);
-            recorder.PolicyDecision = decision;
-            return decision;
-        }
-    }
-
-    private sealed class RecordingCapabilityValidator(
-        IEndpointCapabilityGrantValidator inner,
-        SimulationRecorder recorder) : IEndpointCapabilityGrantValidator
-    {
-        public async ValueTask<GovernanceDecision> ValidateAsync(
-            HttpContext httpContext,
-            EndpointGovernanceDescriptor descriptor,
-            GovernanceDecision currentDecision,
-            CancellationToken cancellationToken = default)
-        {
-            recorder.CapabilityInput = currentDecision;
-            GovernanceDecision decision = await inner
-                .ValidateAsync(httpContext, descriptor, currentDecision, cancellationToken)
-                .ConfigureAwait(false);
-            recorder.CapabilityOutput = decision;
-            return decision;
-        }
-    }
 
     private sealed class TokenPreviewCapabilityValidator(
         ClaimEndpointCapabilityGrantValidator entitlementValidator,
@@ -604,7 +331,7 @@ public sealed class PolicySimulator : IPolicySimulator
         CapabilityTokenIssuer issuer,
         CapabilityTokenSigningKey signingKey,
         Dictionary<string, StringValues> fields,
-        SimulationRecorder recorder) : IEndpointCapabilityGrantValidator
+        GovernanceStageRecorder recorder) : IEndpointCapabilityGrantValidator
     {
         public async ValueTask<GovernanceDecision> ValidateAsync(
             HttpContext httpContext,
@@ -684,37 +411,6 @@ public sealed class PolicySimulator : IPolicySimulator
 
             recorder.CapabilityOutput = decision;
             return decision;
-        }
-    }
-
-    private sealed class CapturingDecisionReceiptSink : IDecisionReceiptSink
-    {
-        public IDecisionReceipt? Receipt { get; private set; }
-
-        public ValueTask WriteAsync(IDecisionReceipt receipt, CancellationToken cancellationToken = default)
-        {
-            ArgumentNullException.ThrowIfNull(receipt);
-            cancellationToken.ThrowIfCancellationRequested();
-            Receipt = receipt;
-            return ValueTask.CompletedTask;
-        }
-    }
-
-    private sealed class SimulationServiceProvider(
-        IServiceProvider inner,
-        IGovernancePolicyEvaluator<GovernanceEvaluationContext> evaluator,
-        IEndpointCapabilityGrantValidator capabilityValidator,
-        IDecisionReceiptSink receiptSink) : IServiceProvider
-    {
-        public object? GetService(Type serviceType)
-        {
-            return serviceType == typeof(IGovernancePolicyEvaluator<GovernanceEvaluationContext>)
-                ? evaluator
-                : serviceType == typeof(IEndpointCapabilityGrantValidator)
-                ? capabilityValidator
-                : serviceType == typeof(IDecisionReceiptSink)
-                ? receiptSink
-                : inner.GetService(serviceType);
         }
     }
 }

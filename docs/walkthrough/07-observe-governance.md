@@ -6,7 +6,7 @@ description: Use the Development governance explorer to run the real governed en
 # Step 7: Observe governance in action
 
 **Status:** Complete. The explorer combines evidence query, live notifications, verification, a resettable demonstration
-database, a bounded in-process load demonstration, and a policy simulator.
+database, a bounded in-process load demonstration, a policy simulator, and decision replay.
 
 Step 6 established the durable evidence chain. Step 7 presents that same production-shaped governance path as an
 interactive walkthrough: one panel calls the governed endpoints, and the other queries and verifies the decision,
@@ -48,6 +48,7 @@ The controls sit on the left in tabs, and the right-hand panel shows the output 
 | **Demo identity** | the fixed demo claims and the database reset | the evidence timeline |
 | **Load demonstration** | the bounded run and its status | the live metrics and latency histogram |
 | **Policy simulator** | the simulation inputs and their status | the staged simulation result |
+| **Decision replay** | the receipt lookup, recent decisions, and candidate policy | the decision, its reconstruction, and the side-by-side replay |
 
 A tab appears only when its feature is available, so outside Development the explorer shows the actions alone. The
 explorer remembers the selected tab for the browser session, except after a database reset, which returns to
@@ -188,6 +189,90 @@ The checked-in Development configuration enables the simulator:
 The service and route are registered only when the environment is exactly `Development` and the switch is enabled.
 `POST /api/v1/policy-simulator/evaluate` requires the administrator policy and an antiforgery token.
 
+## Decision replay
+
+The administrator-only **Decision replay** opens a past decision and asks two questions of it: does it still hold under
+the current policy, and what would a policy change have done to it?
+
+Find a decision by its receipt identifier, or pick one from **Recent decisions**, newest first, with **Load older** for
+earlier pages. Before anything is replayed, the right-hand panel shows the persisted decision: its operation, actor,
+outcome and reason codes, the policy version and hash it was recorded under, and its evidence hash with the result of
+recomputing it.
+
+**Replay selected decision** always replays against the current policy. Optionally, it also replays against a
+candidate: leave registered constraints out, choose the stand-in policy, or both. The results appear side by side under
+the recorded decision, with a changed outcome highlighted and reason codes marked as added or removed.
+
+### What the ledger can reconstruct
+
+The ledger stores minimized evidence, not the request. Replay rebuilds the evaluation context from what is stored, and
+the panel labels each input as recorded, inferred, or not recorded:
+
+| Input | Stored? | How replay obtains it |
+| --- | --- | --- |
+| Operation | Recorded | The receipt's operation name, mapped to the sample endpoint |
+| Endpoint declarations: policy markers and capability scopes | Recorded | The receipt metadata |
+| Actor identifier and type | Recorded | The receipt |
+| Policy version and hash; outcome and reason codes | Recorded | The receipt |
+| Actor's administrator role | Not recorded | Inferred from the reason codes when they determine it |
+| Actor's capability grant | Not recorded; an accepted grant's identifier is | Inferred from the grant identifier, a grant denial, or an outcome the capability check let through |
+| Capability token | Not recorded | Never re-verified: with signed tokens enabled, the recorded grant outcome is used |
+| Request payload | Not recorded | Not needed: the policy does not read it |
+
+Inference follows how the policy runs. For example, a decision denied with
+`referenceapplication.actor.administrator_required` shows the actor lacked the role, and an allowed administrator action
+shows they had it. The capability check runs for every decision that is not already denied, so one that was not denied
+passed it. Positive role inference is made only when the recorded policy hash is the current one.
+
+When a replay needs a fact that cannot be inferred, it is evaluated under each value instead of being guessed. If every
+value gives the same decision, the panel says the fact made no difference. Otherwise the replay is marked **partial**
+and shows the outcome for each value. For example, a capability action never checks the administrator role, so the
+ledger holds no evidence of it. Under the stand-in policy, which adds that requirement, the replay of an allowed
+capability action is partial: denied without the role, allowed with it.
+
+### Current policy and candidates
+
+A replay against the current policy of a decision recorded under the current policy hash is a **re-verification**: it
+should reproduce the recorded outcome and reason codes. If the recorded hash differs from
+`ReferenceApplicationGovernancePolicySet.PolicyHash`, the lookup says so before any replay, and the current-policy
+replay is labelled a **what-if**, not a re-verification. The lookup also flags an endpoint whose governance
+declarations have changed since the decision.
+
+Candidates are always labelled what-if. The stand-in policy, version 1.1.0 with its own hash, exists only for replay;
+the governed endpoints never evaluate it. It changes two things:
+
+- capability-protected actions also require a configured administrator role; and
+- creating an audited record also requires explicit acknowledgment. The records endpoint does not declare
+  `[RequireAcknowledgment]`, so it cannot present a challenge: the replay shows it blocking the request instead, a
+  sign that this policy change would need an endpoint change too.
+
+### What replay never does
+
+Replay is read-only. It runs through the same pipeline harness as the policy simulator, so the decision receipt sink is
+never invoked and the receipt is captured instead of appended. No ledger, outbox, lifecycle, mutation-audit, or
+capability-use row is written or changed. A token is never verified again, so no use is consumed.
+
+### Configure
+
+The checked-in Development configuration enables decision replay:
+
+```json
+{
+  "ReferenceApplication": {
+    "DecisionReplay": {
+      "Enabled": true
+    }
+  }
+}
+```
+
+The service and routes are registered only when the environment is exactly `Development` and the switch is enabled.
+All three require the administrator policy:
+
+- `GET /api/v1/decision-replay/decisions?before={recordId}` lists decisions, newest first, 25 per page;
+- `GET /api/v1/decision-replay/decisions/{decisionReceiptId}` returns one decision and its reconstruction; and
+- `POST /api/v1/decision-replay/decisions/{decisionReceiptId}/replay` replays it, and requires an antiforgery token.
+
 ## Run the walkthrough
 
 1. Start the web project in Development and open `/Account/Login`.
@@ -200,6 +285,8 @@ The service and route are registered only when the environment is exactly `Devel
    and cancel it before completion to observe both terminal paths.
 7. On the **Policy simulator** tab, evaluate an operation, clear a constraint to see what it contributes, then
    restore it and send the request for real to compare the simulated receipt with the persisted decision.
+8. On the **Decision replay** tab, pick a recent decision and replay it to confirm it still holds. Then choose the
+   stand-in policy and replay an allowed capability action to see a partial what-if.
 
 See [Development-only demo identity controls](development-demo-identity.md) for the fixed claims and safety boundary.
 Real performance measurements are documented under [Governance benchmarks](../benchmarks/governance-overhead.md); the
@@ -220,3 +307,12 @@ as simulated with a modified policy, and that no simulation writes ledger, outbo
 capability-use records. The signed-token preview shows the grant's claims, payload binding, and expiry without key
 material. The panel and route are absent outside Development, and rejected for non-administrators and for requests
 without an antiforgery token.
+
+`DecisionReplayTests` prove that a decision is found by its receipt identifier and an unknown one returns not found;
+that, for every sample operation and several actors, replaying the persisted decision under the current policy
+reproduces its outcome and reason codes; and that this also holds for a grant denial recorded with signed tokens
+enabled. They prove that a candidate with a constraint left out, or the stand-in policy, changes the outcome and is
+labelled hypothetical, and that a replay needing an unrecorded fact is partial with a branch for each value. A decision
+recorded under a different policy hash is flagged in the list and the lookup before replay. Ledger, outbox, lifecycle,
+mutation-audit, application-record, and capability-use row counts are unchanged after replays. The routes and panel are
+absent outside Development and rejected for non-administrators, and a replay without an antiforgery token is rejected.

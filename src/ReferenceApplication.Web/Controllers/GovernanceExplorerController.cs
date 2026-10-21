@@ -8,6 +8,7 @@ using ReferenceApplication.Web.Authentication.Options;
 using ReferenceApplication.Web.Extensions;
 using ReferenceApplication.Web.Governance;
 using ReferenceApplication.Web.Governance.Demonstration;
+using ReferenceApplication.Web.Governance.Replay;
 using ReferenceApplication.Web.Governance.Simulation;
 using ReferenceApplication.Web.Models;
 
@@ -24,7 +25,8 @@ public sealed class GovernanceExplorerController(
     IHostEnvironment environment,
     IEnumerable<IDemoIdentityService> demoIdentityServices,
     IEnumerable<IGovernanceLoadDemonstrationService> loadDemonstrationServices,
-    IEnumerable<IPolicySimulator> policySimulators) : Controller
+    IEnumerable<IPolicySimulator> policySimulators,
+    IEnumerable<IDecisionReplayService> decisionReplayServices) : Controller
 {
     private readonly IAuthorizationService _authorizationService =
         authorizationService ?? throw new ArgumentNullException(nameof(authorizationService));
@@ -40,6 +42,8 @@ public sealed class GovernanceExplorerController(
         loadDemonstrationServices?.Any() == true;
     private readonly IPolicySimulator? _policySimulator =
         policySimulators?.FirstOrDefault();
+    private readonly IDecisionReplayService? _decisionReplay =
+        decisionReplayServices?.FirstOrDefault();
 
     /// <summary>
     /// Displays the explorer for an authenticated actor.
@@ -64,6 +68,9 @@ public sealed class GovernanceExplorerController(
         bool showPolicySimulator = administrator.Succeeded &&
             _policySimulator is not null &&
             PolicySimulatorServiceExtensions.IsActive(_configuration, _environment);
+        bool showDecisionReplay = administrator.Succeeded &&
+            _decisionReplay is not null &&
+            DecisionReplayServiceExtensions.IsActive(_configuration, _environment);
 
         return View(new GovernanceExplorerViewModel
         {
@@ -86,6 +93,8 @@ public sealed class GovernanceExplorerController(
             LoadDemonstrationMaximumDurationMilliseconds = loadOptions.MaximumDurationMilliseconds,
             ShowPolicySimulator = showPolicySimulator,
             PolicySimulatorConstraintNames = showPolicySimulator ? _policySimulator!.ConstraintNames : [],
+            ShowDecisionReplay = showDecisionReplay,
+            DecisionReplayConstraintNames = showDecisionReplay ? _decisionReplay!.ConstraintNames : [],
             CapabilityTokensEnabled = _configuration.GetValue<bool>(
                 $"{CapabilityTokenOptions.SectionName}:{nameof(CapabilityTokenOptions.Enabled)}")
         });

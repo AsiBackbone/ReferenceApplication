@@ -44,6 +44,7 @@ public static class PolicySimulatorServiceExtensions
 
         services.AddHttpContextAccessor();
         services.TryAddScoped<ClaimEndpointCapabilityGrantValidator>();
+        services.TryAddScoped<GovernancePipelineHarness>();
         services.AddScoped<IPolicySimulator, PolicySimulator>();
         return services;
     }

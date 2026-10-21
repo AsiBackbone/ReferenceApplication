@@ -32,6 +32,24 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
 
 ### Added
 
+* A Development-only, administrator-only decision replay in the governance explorer (#60), behind
+  `ReferenceApplication:DecisionReplay:Enabled`, on a new **Decision replay** tab.
+  * `GET /api/v1/decision-replay/decisions` lists persisted decisions newest first, 25 per page, and
+    `GET /api/v1/decision-replay/decisions/{decisionReceiptId}` finds one; an unknown identifier returns not found. The
+    lookup shows the recorded policy against the current one, the evidence-hash verification, and each evaluation
+    input as recorded, inferred, or not recorded.
+  * `POST /api/v1/decision-replay/decisions/{decisionReceiptId}/replay` replays a decision against the current policy
+    and, optionally, a candidate: registered constraints left out, the stand-in policy 1.1.0, or both. Results are
+    shown side by side with the recorded decision, with changed outcomes and added or removed reason codes marked.
+  * The ledger does not record the actor's administrator role or capability grant. Replay infers them from the recorded
+    outcome and reason codes where those determine them; where they do not, it evaluates each value and marks the
+    replay partial when the result depends on it, rather than inventing a value. Signed tokens are never verified
+    again: the recorded grant outcome is used.
+  * A decision recorded under a different policy hash is flagged before replay, and its current-policy replay is
+    labelled a what-if rather than a re-verification. Candidates are always labelled what-if.
+  * Replay is read-only: the receipt is captured, never appended, and no evidence row is written or changed.
+  * The policy simulator and decision replay now share `GovernancePipelineHarness`, which runs the endpoint governance
+    pipeline against a simulated request and records each stage. `PolicySimulator` is now internal.
 * A Development-only, administrator-only policy simulator in the governance explorer (#59), behind
   `ReferenceApplication:PolicySimulator:Enabled`.
   * The reader builds a request from fixed options: the governed operation, the simulated actor's administrator role

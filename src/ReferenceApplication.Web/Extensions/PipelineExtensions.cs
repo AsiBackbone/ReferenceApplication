@@ -66,6 +66,7 @@ public static class PipelineExtensions
         app.MapApplicationDemoIdentity();
         app.MapApplicationGovernanceLoadDemonstration();
         app.MapApplicationPolicySimulator();
+        app.MapApplicationDecisionReplay();
 
         return app;
     }

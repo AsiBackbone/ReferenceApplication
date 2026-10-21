@@ -66,6 +66,16 @@ public sealed class GovernanceExplorerViewModel
     public IReadOnlyList<string> PolicySimulatorConstraintNames { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets a value indicating whether the administrator may use the Development-only decision replay.
+    /// </summary>
+    public bool ShowDecisionReplay { get; set; }
+
+    /// <summary>
+    /// Gets or sets the registered constraint names a decision replay can leave out, in evaluation order.
+    /// </summary>
+    public IReadOnlyList<string> DecisionReplayConstraintNames { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets a value indicating whether signed capability tokens are enabled.
     /// </summary>
     public bool CapabilityTokensEnabled { get; set; }

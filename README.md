@@ -184,6 +184,8 @@ In Development, `ReferenceApplication:GovernanceLoadDemonstration:Enabled` adds 
 
 In Development, `ReferenceApplication:PolicySimulator:Enabled` adds an administrator-only policy simulator to the explorer. It runs AsiBackbone's endpoint governance pipeline against a simulated request for a sample operation and shows each constraint, the decision-policy step, the capability-grant check, and the receipt that would be appended. It persists nothing and never shows signing key material.
 
+In Development, `ReferenceApplication:DecisionReplay:Enabled` adds an administrator-only decision replay to the explorer. It finds a persisted decision by receipt identifier or from the recent decisions, shows which evaluation inputs the minimized ledger records and which it can only infer, and replays the decision against the current policy and an optional what-if candidate, side by side. A replay never writes to the ledger, and a policy-hash mismatch is flagged before replay.
+
 `POST /Account/Logout` and all Step 5 governed operations require an authenticated user and a valid antiforgery token. Restrict production access to the health endpoints at the ingress, firewall, or proxy layer.
 
 ### Data Protection keys

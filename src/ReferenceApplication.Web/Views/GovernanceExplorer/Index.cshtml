@@ -3,7 +3,8 @@
 @{
     ViewData["Title"] = "Governance Explorer";
     ViewData["BodyClass"] = "governance-explorer-page";
-    bool showTabs = Model.ShowDemoIdentityControls || Model.ShowGovernanceLoadDemonstration || Model.ShowPolicySimulator;
+    bool showTabs = Model.ShowDemoIdentityControls || Model.ShowGovernanceLoadDemonstration || Model.ShowPolicySimulator ||
+        Model.ShowDecisionReplay;
 }
 
 @section Styles {
@@ -24,7 +25,8 @@
      data-can-view-evidence="@Model.CanViewEvidence.ToString().ToLowerInvariant()"
      data-database-reset="@Model.DemonstrationDatabaseWasReset.ToString().ToLowerInvariant()"
      data-load-demonstration="@Model.ShowGovernanceLoadDemonstration.ToString().ToLowerInvariant()"
-     data-policy-simulator="@Model.ShowPolicySimulator.ToString().ToLowerInvariant()">
+     data-policy-simulator="@Model.ShowPolicySimulator.ToString().ToLowerInvariant()"
+     data-decision-replay="@Model.ShowDecisionReplay.ToString().ToLowerInvariant()">
     <section class="explorer-panel controls-panel" aria-label="Explorer controls">
         @if (showTabs)
         {
@@ -52,6 +54,13 @@
                     <button id="explorer-tab-simulator" class="explorer-tab" type="button" role="tab" aria-selected="false"
                             aria-controls="explorer-panel-simulator" tabindex="-1" data-output="simulator">
                         Policy simulator
+                    </button>
+                }
+                @if (Model.ShowDecisionReplay)
+                {
+                    <button id="explorer-tab-replay" class="explorer-tab" type="button" role="tab" aria-selected="false"
+                            aria-controls="explorer-panel-replay" tabindex="-1" data-output="replay">
+                        Decision replay
                     </button>
                 }
             </div>
@@ -249,6 +258,77 @@
                 </div>
             </div>
         }
+
+        @if (Model.ShowDecisionReplay)
+        {
+            <div id="explorer-panel-replay" class="explorer-tab-panel" role="tabpanel"
+                 aria-labelledby="explorer-tab-replay" hidden>
+                <p class="demonstration-label">Replay, nothing is persisted</p>
+                <h2 id="decision-replay-heading">Decision replay</h2>
+                <p>
+                    Open a past decision by its receipt identifier, or pick one of the recent decisions, then replay it
+                    against the current policy and, if you like, a what-if candidate. Replay reads the ledger and never
+                    writes to it.
+                </p>
+                <form id="decision-replay-lookup" class="decision-replay-lookup">
+                    <label for="decision-replay-receipt">Decision receipt identifier</label>
+                    <input id="decision-replay-receipt" name="decisionReceiptId" maxlength="128" autocomplete="off"
+                           spellcheck="false" />
+                    <div class="decision-replay-buttons">
+                        <button id="find-decision" type="submit">Find decision</button>
+                    </div>
+                </form>
+
+                <div class="decision-replay-recent-heading">
+                    <h3 id="decision-replay-recent-heading">Recent decisions</h3>
+                    <button id="decision-replay-refresh" class="secondary-button" type="button">Newest</button>
+                </div>
+                <ol id="decision-replay-recent" class="decision-replay-recent" aria-labelledby="decision-replay-recent-heading"
+                    aria-busy="false">
+                    <li class="output-note">The newest decisions load when this tab opens.</li>
+                </ol>
+                <button id="decision-replay-older" class="secondary-button" type="button" hidden>Load older</button>
+
+                <form id="decision-replay-form">
+                    @Html.AntiForgeryToken()
+                    <fieldset>
+                        <legend>Candidate policy (what-if)</legend>
+                        <p>
+                            Every replay runs against the current policy. Choose a candidate as well to see what a policy
+                            change would have done to this decision.
+                        </p>
+                        <div class="toggle-row">
+                            <input id="decision-replay-candidate" type="checkbox" name="candidatePolicy" value="true" />
+                            <label for="decision-replay-candidate">
+                                Stand-in policy @ReferenceApplication.Web.Governance.Replay.CandidateGovernancePolicySet.Version
+                            </label>
+                        </div>
+                        <ul class="candidate-policy-changes">
+                            @foreach (string change in ReferenceApplication.Web.Governance.Replay.CandidateGovernancePolicySet.Changes)
+                            {
+                                <li>@change</li>
+                            }
+                        </ul>
+                        <p>Constraints in the candidate. Clear one to leave it out.</p>
+                        @for (int index = 0; index < Model.DecisionReplayConstraintNames.Count; index++)
+                        {
+                            string constraintName = Model.DecisionReplayConstraintNames[index];
+                            <div class="toggle-row">
+                                <input id="decision-replay-constraint-@index" type="checkbox" checked
+                                       data-constraint-name="@constraintName" />
+                                <label for="decision-replay-constraint-@index">@constraintName</label>
+                            </div>
+                        }
+                    </fieldset>
+                    <div class="decision-replay-buttons">
+                        <button id="replay-decision" type="submit" disabled>Replay selected decision</button>
+                    </div>
+                </form>
+                <div id="decision-replay-status" class="load-demonstration-status" role="status" aria-live="polite">
+                    No decision selected.
+                </div>
+            </div>
+        }
     </section>
 
     <section class="explorer-panel output-panel" aria-label="Explorer output">
@@ -303,6 +383,18 @@
                     Evaluate a request in the Policy simulator tab to see each stage of its decision.
                 </p>
                 <div id="policy-simulator-result" class="policy-simulator-result" aria-live="polite"></div>
+            </div>
+        }
+
+        @if (Model.ShowDecisionReplay)
+        {
+            <div id="explorer-output-replay" class="explorer-output" data-output-view="replay" hidden>
+                <h2>Decision replay</h2>
+                <p id="decision-replay-empty" class="output-note">
+                    Find or select a decision in the Decision replay tab to see what the ledger can reconstruct.
+                </p>
+                <div id="decision-replay-details" class="decision-replay-details" aria-live="polite"></div>
+                <div id="decision-replay-result" class="decision-replay-result" aria-live="polite"></div>
             </div>
         }
     </section>
