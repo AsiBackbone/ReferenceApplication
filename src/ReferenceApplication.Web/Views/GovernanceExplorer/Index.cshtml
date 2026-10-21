@@ -4,7 +4,7 @@
     ViewData["Title"] = "Governance Explorer";
     ViewData["BodyClass"] = "governance-explorer-page";
     bool showTabs = Model.ShowDemoIdentityControls || Model.ShowGovernanceLoadDemonstration || Model.ShowPolicySimulator ||
-        Model.ShowDecisionReplay;
+        Model.ShowDecisionReplay || Model.ShowPipelineInspector;
 }
 
 @section Styles {
@@ -26,7 +26,8 @@
      data-database-reset="@Model.DemonstrationDatabaseWasReset.ToString().ToLowerInvariant()"
      data-load-demonstration="@Model.ShowGovernanceLoadDemonstration.ToString().ToLowerInvariant()"
      data-policy-simulator="@Model.ShowPolicySimulator.ToString().ToLowerInvariant()"
-     data-decision-replay="@Model.ShowDecisionReplay.ToString().ToLowerInvariant()">
+     data-decision-replay="@Model.ShowDecisionReplay.ToString().ToLowerInvariant()"
+     data-pipeline-inspector="@Model.ShowPipelineInspector.ToString().ToLowerInvariant()">
     <section class="explorer-panel controls-panel" aria-label="Explorer controls">
         @if (showTabs)
         {
@@ -61,6 +62,13 @@
                     <button id="explorer-tab-replay" class="explorer-tab" type="button" role="tab" aria-selected="false"
                             aria-controls="explorer-panel-replay" tabindex="-1" data-output="replay">
                         Decision replay
+                    </button>
+                }
+                @if (Model.ShowPipelineInspector)
+                {
+                    <button id="explorer-tab-pipeline" class="explorer-tab" type="button" role="tab" aria-selected="false"
+                            aria-controls="explorer-panel-pipeline" tabindex="-1" data-output="pipeline">
+                        Pipeline inspector
                     </button>
                 }
             </div>
@@ -329,6 +337,52 @@
                 </div>
             </div>
         }
+
+        @if (Model.ShowPipelineInspector)
+        {
+            <div id="explorer-panel-pipeline" class="explorer-tab-panel" role="tabpanel"
+                 aria-labelledby="explorer-tab-pipeline" hidden>
+                <p class="demonstration-label">Demonstration, not a benchmark</p>
+                <h2 id="pipeline-inspector-heading">Pipeline inspector</h2>
+                <p>
+                    Follow a governed request through the pipeline. Policy evaluation and the decision-receipt append run on
+                    the request path. A mutation stages its audit completion in the same transaction, and the outbox worker
+                    delivers it later, appending the lifecycle event. The times shown come from timestamps the pipeline
+                    already records; the
+                    <a href="https://asibackbone.github.io/ReferenceApplication/benchmarks/governance-overhead.html">published benchmarks</a>
+                    measure what each stage costs.
+                </p>
+                <form id="pipeline-inspector-form">
+                    <label for="pipeline-correlation">Request correlation identifier</label>
+                    <input id="pipeline-correlation" name="correlationId" maxlength="128" autocomplete="off"
+                           spellcheck="false" />
+                    <div class="toggle-row">
+                        <input id="pipeline-follow" type="checkbox" checked />
+                        <label for="pipeline-follow">Follow the latest governed action</label>
+                    </div>
+
+                    <label for="pipeline-outbox-status">Outbox entries</label>
+                    <select id="pipeline-outbox-status" name="status">
+                        <option value="">All statuses</option>
+                        @foreach (string status in Model.PipelineOutboxStatuses)
+                        {
+                            <option value="@status">@status</option>
+                        }
+                    </select>
+
+                    <div class="toggle-row">
+                        <input id="pipeline-live" type="checkbox" checked />
+                        <label for="pipeline-live">Refresh every 2 seconds while this tab is open</label>
+                    </div>
+                    <div class="pipeline-inspector-buttons">
+                        <button id="refresh-pipeline" type="submit">Refresh now</button>
+                    </div>
+                </form>
+                <div id="pipeline-inspector-status" class="load-demonstration-status" role="status" aria-live="polite">
+                    The pipeline is read when this tab opens.
+                </div>
+            </div>
+        }
     </section>
 
     <section class="explorer-panel output-panel" aria-label="Explorer output">
@@ -395,6 +449,32 @@
                 </p>
                 <div id="decision-replay-details" class="decision-replay-details" aria-live="polite"></div>
                 <div id="decision-replay-result" class="decision-replay-result" aria-live="polite"></div>
+            </div>
+        }
+
+        @if (Model.ShowPipelineInspector)
+        {
+            <div id="explorer-output-pipeline" class="explorer-output" data-output-view="pipeline" hidden>
+                <p class="demonstration-label">Demonstration, not a benchmark</p>
+                <h2>Governance pipeline</h2>
+                <section class="pipeline-section" aria-labelledby="pipeline-stages-heading">
+                    <h3 id="pipeline-stages-heading">Stage timing</h3>
+                    <div id="pipeline-stages">
+                        <p class="output-note">Run a governed action, or enter a correlation identifier, to time its stages.</p>
+                    </div>
+                </section>
+                <section class="pipeline-section" aria-labelledby="pipeline-outbox-heading">
+                    <h3 id="pipeline-outbox-heading">Audit-completion outbox</h3>
+                    <div id="pipeline-outbox"></div>
+                </section>
+                <section class="pipeline-section" aria-labelledby="pipeline-reconciliation-heading">
+                    <h3 id="pipeline-reconciliation-heading">Reconciliation</h3>
+                    <div id="pipeline-reconciliation"></div>
+                </section>
+                <section class="pipeline-section" aria-labelledby="pipeline-telemetry-heading">
+                    <h3 id="pipeline-telemetry-heading">Telemetry</h3>
+                    <div id="pipeline-telemetry"></div>
+                </section>
             </div>
         }
     </section>

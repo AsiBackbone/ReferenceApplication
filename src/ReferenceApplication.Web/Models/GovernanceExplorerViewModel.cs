@@ -76,6 +76,16 @@ public sealed class GovernanceExplorerViewModel
     public IReadOnlyList<string> DecisionReplayConstraintNames { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets a value indicating whether the administrator may use the Development-only pipeline inspector.
+    /// </summary>
+    public bool ShowPipelineInspector { get; set; }
+
+    /// <summary>
+    /// Gets or sets the outbox statuses the pipeline inspector can filter entries by.
+    /// </summary>
+    public IReadOnlyList<string> PipelineOutboxStatuses { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets a value indicating whether signed capability tokens are enabled.
     /// </summary>
     public bool CapabilityTokensEnabled { get; set; }

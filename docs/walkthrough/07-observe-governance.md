@@ -6,7 +6,7 @@ description: Use the Development governance explorer to run the real governed en
 # Step 7: Observe governance in action
 
 **Status:** Complete. The explorer combines evidence query, live notifications, verification, a resettable demonstration
-database, a bounded in-process load demonstration, a policy simulator, and decision replay.
+database, a bounded in-process load demonstration, a policy simulator, decision replay, and a pipeline inspector.
 
 Step 6 established the durable evidence chain. Step 7 presents that same production-shaped governance path as an
 interactive walkthrough: one panel calls the governed endpoints, and the other queries and verifies the decision,
@@ -49,6 +49,7 @@ The controls sit on the left in tabs, and the right-hand panel shows the output 
 | **Load demonstration** | the bounded run and its status | the live metrics and latency histogram |
 | **Policy simulator** | the simulation inputs and their status | the staged simulation result |
 | **Decision replay** | the receipt lookup, recent decisions, and candidate policy | the decision, its reconstruction, and the side-by-side replay |
+| **Pipeline inspector** | the request to follow, the outbox filter, and live refresh | stage timing, the outbox, reconciliation, and telemetry |
 
 A tab appears only when its feature is available, so outside Development the explorer shows the actions alone. The
 explorer remembers the selected tab for the browser session, except after a database reset, which returns to
@@ -273,6 +274,100 @@ All three require the administrator policy:
 - `GET /api/v1/decision-replay/decisions/{decisionReceiptId}` returns one decision and its reconstruction; and
 - `POST /api/v1/decision-replay/decisions/{decisionReceiptId}/replay` replays it, and requires an antiforgery token.
 
+## Pipeline inspector
+
+> **Demonstration, not a benchmark.** The inspector shows when each stage of one request happened. The
+> [governance benchmarks](../benchmarks/governance-overhead.md) measure what each stage costs.
+
+The administrator-only **Pipeline inspector** shows the main architectural point of the pattern: governance is split
+between a short synchronous path and work deferred to the background.
+
+| Stage | Where it runs | Measured cost |
+| --- | --- | --- |
+| In-memory policy evaluation | On the request path | about 0.2–0.5 µs per decision |
+| Decision-receipt append to the SQLite ledger | On the request path, before the action runs | about 6.7 ms |
+| Audit-completion delivery: lifecycle event and notification | In the background, after the response | about 10.8 ms |
+
+The figures are means from the benchmark snapshot. The two synchronous stages are what every governed request pays. A
+mutation also stages its audit completion in the same transaction, which costs one more row. Delivering it, and
+appending the lifecycle event, is left to the outbox worker, so a slow or failing destination delays the evidence but
+never the request. The trade-off is a window in which the decision is recorded but its completion is not. The outbox
+closes that window with retries and dead-lettering, and reconciliation reports any batch that never closes it.
+
+### What it shows
+
+- **Stage timing** for one request: the latest action the explorer ran, or any correlation identifier you enter. Each
+  stage shows its time, its offset from the first, and where the timestamp comes from. A boundary marks where the
+  response is sent and background delivery takes over.
+
+  | Stage | Timestamp |
+  | --- | --- |
+  | Request received; response sent | The ASP.NET Core server span, when OpenTelemetry tracing created one |
+  | Decision evaluated; decision receipt appended | The ledger's `OccurredUtc` and `RecordedUtc` |
+  | Mutation saved; outbox entry staged | The outbox entry's `ReceiptCompletedUtc` and `CreatedUtc`, committed together |
+  | Outbox dispatched | `DeliveredUtc`, or `LastAttemptUtc` while retrying |
+  | Lifecycle event appended | The delivery that appended it; the event itself carries the completion time |
+
+- **The audit-completion outbox**: pending, retrying, deferred, delivered, failed, and dead-lettered entries, with
+  attempt counts, next-attempt times, the last error, and whether each entry's lifecycle event has been appended.
+  Filter it by status.
+- **Reconciliation**: the latest summary and the open findings.
+- **Telemetry**: the activity sources and meters in the process, whether the host's OpenTelemetry configuration collects
+  each, the current values of the host's own gauges, and the spans and metric measurements recorded for the selected
+  request.
+
+The inspector refreshes when the evidence stream sends a hint, and polls every 2 seconds while its tab is open and the
+page is visible. Polling is what shows retries and dead-letters, which send no hint.
+
+### What it reads, and what it never does
+
+Every read is a query. Stage timing uses timestamps the pipeline already stores, so the inspector adds nothing to the
+governed request path. The outbox is read through its query interface and reconciliation through the reconciler, so the
+inspector adds no second write path; snapshots change no row.
+
+Telemetry comes from an in-process `ActivityListener` and `MeterListener`, never from the OTLP exporter. The activity
+listener never samples, so it creates no spans; it sees only spans OpenTelemetry tracing already created. The meter
+listener enables measurements only for the request-duration histogram, when OpenTelemetry already collects it, and for
+the host's reconciliation gauges, which it reads on demand. Measurements carry no trace identifier, so the request's
+duration measurement is matched by route, method, and time. Spans and measurements are held in bounded buffers of 512
+each.
+
+A request's spans are found by trace identifier. A decision made by a policy evaluator records none, because
+AsiBackbone's `GovernanceEvaluationContext` carries no trace identifier, so the decision's ledger record has no
+`TraceId`. The inspector then links through the NCAT mutation audit, which records the span that saved the change. A
+decision that changes no data and records no trace identifier shows its request and response stages as not captured.
+
+The inspector shows two gaps in the host's telemetry. The host does not use `AsiBackbone.OpenTelemetry`, so governance
+itself emits no spans or metrics; only ASP.NET Core and HttpClient instrumentation is collected. And the
+`ReferenceApplication.AuditReconciliation` meter is created but not added to the OpenTelemetry pipeline, so its gauges
+are not exported.
+
+### Reconciliation in Development
+
+The host does not otherwise register NCAT audit reconciliation. While the inspector is active, it registers
+reconciliation with its background worker, metrics, and the `application-audit-integrity` health check, bound to
+`ReferenceApplication:AuditReconciliation`. The checked-in Development configuration runs the worker every minute.
+Staging and Production compositions are unchanged.
+
+### Configure
+
+```json
+{
+  "ReferenceApplication": {
+    "PipelineInspector": {
+      "Enabled": true
+    },
+    "AuditReconciliation": {
+      "Interval": "00:01:00"
+    }
+  }
+}
+```
+
+The service, listener, reconciliation, and route are registered only when the environment is exactly `Development` and
+the switch is enabled. `GET /api/v1/pipeline-inspector/snapshot?correlationId={id}&status={status}` requires the
+administrator policy and is never cached.
+
 ## Run the walkthrough
 
 1. Start the web project in Development and open `/Account/Login`.
@@ -287,6 +382,9 @@ All three require the administrator policy:
    restore it and send the request for real to compare the simulated receipt with the persisted decision.
 8. On the **Decision replay** tab, pick a recent decision and replay it to confirm it still holds. Then choose the
    stand-in policy and replay an allowed capability action to see a partial what-if.
+9. Open the **Pipeline inspector** tab, then create an audited record on the **Actions** tab. Back on the inspector,
+   watch the record's outbox entry move from pending to delivered within the worker's poll interval, and the lifecycle
+   event appear, without reloading.
 
 See [Development-only demo identity controls](development-demo-identity.md) for the fixed claims and safety boundary.
 Real performance measurements are documented under [Governance benchmarks](../benchmarks/governance-overhead.md); the
@@ -316,3 +414,11 @@ labelled hypothetical, and that a replay needing an unrecorded fact is partial w
 recorded under a different policy hash is flagged in the list and the lookup before replay. Ledger, outbox, lifecycle,
 mutation-audit, application-record, and capability-use row counts are unchanged after replays. The routes and panel are
 absent outside Development and rejected for non-administrators, and a replay without an antiforgery token is rejected.
+
+`PipelineInspectorTests` prove that a created record's outbox entry is shown pending and then delivered, with the
+lifecycle event its delivery appended, and that a failed delivery is shown with its attempt count, last error, and next
+attempt. One request's stages come in pipeline order with the synchronous stages first, and the persisted timestamps are
+in that order. Reconciliation reports a missing completion as an open finding. The telemetry view lists the sources and
+meters present, marks which OpenTelemetry collects, reads the host's gauges, and shows the request's server span.
+Snapshots leave every outbox entry and evidence row unchanged. The inspector, its listener, the reconciliation it
+registers, and its route are absent outside Development, and the route is rejected for non-administrators.

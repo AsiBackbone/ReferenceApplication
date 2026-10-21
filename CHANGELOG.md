@@ -32,6 +32,20 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
 
 ### Added
 
+* A Development-only, administrator-only pipeline inspector in the governance explorer (#61), behind
+  `ReferenceApplication:PipelineInspector:Enabled`, on a new **Pipeline inspector** tab.
+  * `GET /api/v1/pipeline-inspector/snapshot` returns the audit-completion outbox (health and the latest entries, with
+    attempt counts, next attempts, errors, and whether each lifecycle event was appended), the reconciliation summary
+    and open findings, the telemetry present in the process, and optionally one request's stage timing.
+  * Stage timing uses timestamps the pipeline already stores, plus the request's server span when OpenTelemetry tracing
+    created one, and marks the synchronous/asynchronous boundary. Nothing is added to the governed request path.
+  * Telemetry comes from an in-process `ActivityListener` that never samples and a `MeterListener` that observes only
+    what OpenTelemetry already collects and the host's own gauges, never from the OTLP exporter.
+  * The explorer refreshes on evidence-stream hints and polls every 2 seconds while the tab is open and visible.
+  * While the inspector is active, NCAT audit reconciliation is registered in Development, bound to
+    `ReferenceApplication:AuditReconciliation`, with its worker running every minute. The host did not register it
+    before.
+  * Timings are labelled "Demonstration, not a benchmark" and link to the governance benchmarks.
 * A Development-only, administrator-only decision replay in the governance explorer (#60), behind
   `ReferenceApplication:DecisionReplay:Enabled`, on a new **Decision replay** tab.
   * `GET /api/v1/decision-replay/decisions` lists persisted decisions newest first, 25 per page, and
