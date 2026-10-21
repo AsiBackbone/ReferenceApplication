@@ -4,25 +4,25 @@
     "net10.0": {
       "AsiBackbone.Analyzers": {
         "type": "Direct",
-        "requested": "[7.2.1, )",
-        "resolved": "7.2.1",
-        "contentHash": "2Sta9Mb3hwjPZLs8EVluIL0Lgpv3/U3bQTKcK5RO7rv5YkftnKSV3Nb1OwQb4hX5mL+tG+HtmwQrKeddQTxv/Q=="
+        "requested": "[7.3.0, )",
+        "resolved": "7.3.0",
+        "contentHash": "dsDPuk6GdD6alKwK5BLoTs0Z7/sdMIsuSn2i7y4ETrVryMKwPmnIHmS297YQDwP5/ahDn8RM2jUTd3LojVeYuQ=="
       },
       "AsiBackbone.AspNetCore": {
         "type": "Direct",
-        "requested": "[7.2.1, )",
-        "resolved": "7.2.1",
-        "contentHash": "pcS0dgvXzncI5t5Qi+/wbW22osM2SVtjbW6stUZA+gyKOp5uIHjDvGr9w4NYj71pzQPZf2W6NeiMdY9rVFTxwQ==",
+        "requested": "[7.3.0, )",
+        "resolved": "7.3.0",
+        "contentHash": "ycSZ2ATmTpnZENfScRatz+Yn5AZsJR4x/XorOjaIkDC47lcQkKUQg/wzF2ms3a5zHBYsLD86FMV+FuzF7L+JFA==",
         "dependencies": {
-          "AsiBackbone.Core": "7.2.1",
-          "AsiBackbone.DependencyInjection": "7.2.1"
+          "AsiBackbone.Core": "7.3.0",
+          "AsiBackbone.DependencyInjection": "7.3.0"
         }
       },
       "AsiBackbone.Core": {
         "type": "Direct",
-        "requested": "[7.2.1, )",
-        "resolved": "7.2.1",
-        "contentHash": "Oi9CWxBj62+sPi2EAjrRrIa4kDWUBsr+3pe7iI3Q1VaRNDfpYOHOERu9Whb0keWO+wOcWroq8EXoToLsZKB0ig=="
+        "requested": "[7.3.0, )",
+        "resolved": "7.3.0",
+        "contentHash": "FO0yZVrsCZtKklqfmwKZRtSJmkR/lrNJCQx4X2wVrA9WG/RGvlzASEeGNPBzkhN2K3YfxF9RAoWlQguFFJtTaw=="
       },
       "Asp.Versioning.Mvc": {
         "type": "Direct",
@@ -99,20 +99,20 @@
       },
       "OpenTelemetry.Exporter.OpenTelemetryProtocol": {
         "type": "Direct",
-        "requested": "[1.20.0, )",
-        "resolved": "1.20.0",
-        "contentHash": "lr18RekIxV5MUP/gWnDOkYmdm4zvE0q8OQVYKrQcN0xqOCqPcuIHl2uJbe8A3CZujIAy90hhfBMvKNRV/hgBPQ==",
+        "requested": "[1.20.1, )",
+        "resolved": "1.20.1",
+        "contentHash": "IlO8F0Y01ki0N5hJaeFJ5j3MVYJdbyNpDF9g7goU8wA3o8r/+ir9WJNnmte7QlUzM3iSV/aIuev1fqwF1CZOqg==",
         "dependencies": {
-          "OpenTelemetry": "1.20.0"
+          "OpenTelemetry": "1.20.1"
         }
       },
       "OpenTelemetry.Extensions.Hosting": {
         "type": "Direct",
-        "requested": "[1.20.0, )",
-        "resolved": "1.20.0",
-        "contentHash": "UJXCmt0jSUKQWIyMCzDY9fqNymvFgnMWrl0m8Z/M7ez1wpEy6bshXLTZxXGIoA/JjuhwPU71PyhIBWYDXI9+cw==",
+        "requested": "[1.20.1, )",
+        "resolved": "1.20.1",
+        "contentHash": "wnoK07COxyQBR47QwP80SIO4cpD2xeF4PrBDYFXDMnhDLmOP4nN0Szy1wCBLo5UABU1I4xwWRGzZM0bFdCbRog==",
         "dependencies": {
-          "OpenTelemetry": "1.20.0"
+          "OpenTelemetry": "1.20.1"
         }
       },
       "OpenTelemetry.Instrumentation.AspNetCore": {
@@ -215,8 +215,8 @@
       },
       "AsiBackbone.DependencyInjection": {
         "type": "Transitive",
-        "resolved": "7.2.1",
-        "contentHash": "PhK/5GX31VQZ1UcVjU0DyGwA1w0MhRWmN0AavXJW3aPGSKAri+46rbRwrEba8pFgtX2dXBDahDoMbVdb2jQQeg=="
+        "resolved": "7.3.0",
+        "contentHash": "jqLmnZqU3JoiFwbUx6zOTcdOVIDXn6ZLGDcBHqPXMxQ8zrySXH3flf2S3uPTmKAPkO3Fg3GyVXS8jmaEvDeMTw=="
       },
       "Asp.Versioning.Abstractions": {
         "type": "Transitive",
@@ -544,23 +544,23 @@
       },
       "OpenTelemetry": {
         "type": "Transitive",
-        "resolved": "1.20.0",
-        "contentHash": "aV9S8ovlBpR+g3PaSlkTjN7jOfJly4+bmfRImn3G+moflKjZV2bDw41U+/pMkHUjn7vcZ06yvwKMbHASMUeR/Q==",
+        "resolved": "1.20.1",
+        "contentHash": "+XDw3fYbiv1a40aFnDJSQleeuUJciXuhoIA19XmcGhT47Hy/xZRqk8NCjHUDKrg72Ixjthicecp8ygBDNeH/Jw==",
         "dependencies": {
-          "OpenTelemetry.Api.ProviderBuilderExtensions": "1.20.0"
+          "OpenTelemetry.Api.ProviderBuilderExtensions": "1.20.1"
         }
       },
       "OpenTelemetry.Api": {
         "type": "Transitive",
-        "resolved": "1.20.0",
-        "contentHash": "kLqqAdAF6q+mbS5Rp6YJ+hbGwbt+vQC8spJh3TpRGvZPGZK+DbEB0B/Fq4YqiMKkqsdShehJZfxfVjlzGb2B3Q=="
+        "resolved": "1.20.1",
+        "contentHash": "QO9hlwadOdJGR4vDpJyDnl9B62v7epIBSTIHUA4C+bCtrRaB4TWmYSnu3QVOIe7caH8dt7NaHRei6zebESJJyw=="
       },
       "OpenTelemetry.Api.ProviderBuilderExtensions": {
         "type": "Transitive",
-        "resolved": "1.20.0",
-        "contentHash": "689zUHtj7zXYzMAO/TkI5S5/mqOS8n55DLrYZ2KAhQrCDKJDDmFHB9w8dKY7gmL6fihMdkt+k3mTqcqL3nInng==",
+        "resolved": "1.20.1",
+        "contentHash": "eDzDY/jTBqRytkYECmVKF7ZP5sKmCIqv1SSnA5BSWltIIvc3931TOMRyCW1qCGNIgmtldtJhISnsmFNxOCfauQ==",
         "dependencies": {
-          "OpenTelemetry.Api": "1.20.0"
+          "OpenTelemetry.Api": "1.20.1"
         }
       },
       "Serilog": {
@@ -734,8 +734,8 @@
       "referenceapplication.infrastructure": {
         "type": "Project",
         "dependencies": {
-          "AsiBackbone.Core": "[7.2.1, )",
-          "AsiBackbone.EntityFrameworkCore": "[7.2.1, )",
+          "AsiBackbone.Core": "[7.3.0, )",
+          "AsiBackbone.EntityFrameworkCore": "[7.3.0, )",
           "Microsoft.EntityFrameworkCore": "[10.0.13, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[10.0.13, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[10.0.13, )",
@@ -744,12 +744,12 @@
       },
       "AsiBackbone.EntityFrameworkCore": {
         "type": "CentralTransitive",
-        "requested": "[7.2.1, )",
-        "resolved": "7.2.1",
-        "contentHash": "p+chb3GkQQyavkK4OYHbmzOJajHb6Blbhke3ezgrbdgOAoFnmlNM12617KRViQVbu3xe8duDvlIVxNPwcplfmw==",
+        "requested": "[7.3.0, )",
+        "resolved": "7.3.0",
+        "contentHash": "KdDe9d2O7WjLskEXxd3cdKVWpZuHZtEJyT/zJlGs48omyKXm3cLnCho8sVa+EZLuQjW2rOrrkci3EjIa15s5Mw==",
         "dependencies": {
-          "AsiBackbone.Core": "7.2.1",
-          "AsiBackbone.DependencyInjection": "7.2.1",
+          "AsiBackbone.Core": "7.3.0",
+          "AsiBackbone.DependencyInjection": "7.3.0",
           "Microsoft.EntityFrameworkCore": "10.0.13",
           "Microsoft.EntityFrameworkCore.Relational": "10.0.13"
         }
