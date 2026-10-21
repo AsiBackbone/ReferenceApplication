@@ -9,6 +9,7 @@
     <PackageVersion Include="AsiBackbone.Core" Version="7.4.0" />
     <PackageVersion Include="AsiBackbone.EntityFrameworkCore" Version="7.4.0" />
     <PackageVersion Include="AsiBackbone.Signing.LocalDevelopment" Version="7.4.0" />
+    <PackageVersion Include="AsiBackbone.Signing.ManagedKey" Version="7.4.0" />
     <PackageVersion Include="AsiBackbone.Storage.InMemory" Version="7.4.0" />
     <PackageVersion Include="AsiBackbone.Testing" Version="7.4.0" />
     <PackageVersion Include="Asp.Versioning.Mvc" Version="10.2.1" />

@@ -247,7 +247,8 @@ public sealed class GovernanceLoadDemonstrationTests
             {
                 [$"{_section}:Enabled"] = "true",
                 ["ReferenceApplication:AuditCompletionOutbox:Enabled"] = "false"
-            }, environmentName);
+            }, environmentName)
+            .WithWebHostBuilder(builder => builder.UseSetting($"{_section}:Enabled", "true"));
 
         Assert.Null(factory.Services.GetService<IGovernanceLoadDemonstrationService>());
         using HttpClient client = factory.CreateHttpsClient();
@@ -307,6 +308,9 @@ public sealed class GovernanceLoadDemonstrationTests
     private static async Task<WebApplicationFactory<Program>> CreateDevelopmentFactoryAsync(
         TestSqliteDatabase database)
     {
+        // The feature is registered and mapped from configuration read during service registration, before test
+        // configuration sources are applied, so the switch is also supplied as a host setting. Without it these tests
+        // would depend on whatever the local appsettings.Development.json, user secrets, or environment variables say.
         WebApplicationFactory<Program> unconfigured = ApplicationWebApplicationFactory
             .CreateAllowingAnonymousAccess(new Dictionary<string, string?>
             {
@@ -319,10 +323,12 @@ public sealed class GovernanceLoadDemonstrationTests
                 ["ReferenceApplication:AuditCompletionOutbox:Enabled"] = "false",
                 [$"{_section}:Enabled"] = "true"
             }, Environments.Development)
-            .WithWebHostBuilder(builder => builder.ConfigureServices(services =>
-                services.AddAuthentication().AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>(
-                    _authenticationScheme,
-                    _ => { })));
+            .WithWebHostBuilder(builder => builder
+                .UseSetting($"{_section}:Enabled", "true")
+                .ConfigureServices(services =>
+                    services.AddAuthentication().AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>(
+                        _authenticationScheme,
+                        _ => { })));
         return await database.ApplyAsync(unconfigured);
     }
 

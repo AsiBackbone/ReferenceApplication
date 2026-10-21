@@ -496,7 +496,7 @@
           "AsiBackbone.AspNetCore": "[7.4.0, )",
           "AsiBackbone.Core": "[7.4.0, )",
           "AsiBackbone.Signing.LocalDevelopment": "[7.4.0, )",
-          "AsiBackbone.Storage.InMemory": "[7.4.0, )",
+          "AsiBackbone.Signing.ManagedKey": "[7.4.0, )",
           "Asp.Versioning.Mvc": "[10.2.1, )",
           "AspNet.Security.OAuth.GitHub": "[10.0.0, )",
           "Microsoft.AspNetCore.Authentication.Google": "[10.0.13, )",
@@ -555,11 +555,11 @@
           "AsiBackbone.DependencyInjection": "7.4.0"
         }
       },
-      "AsiBackbone.Storage.InMemory": {
+      "AsiBackbone.Signing.ManagedKey": {
         "type": "CentralTransitive",
         "requested": "[7.4.0, )",
         "resolved": "7.4.0",
-        "contentHash": "D++d1//z8kRmTFk1yBwIkcaszZ2TbpdeSufHHBUWRCT0aIm9py0bY/71ckByvwrRglqSmodWwx7WUoeE3ZSqgQ==",
+        "contentHash": "QWTVCeXp61RXIHjorHOXAyEggAdiujoHYrcUnn2gvCZIDNWxaQj75szTXd21zG29bhsgbemS6HJ132sbO4cLbQ==",
         "dependencies": {
           "AsiBackbone.Core": "7.4.0",
           "AsiBackbone.DependencyInjection": "7.4.0"

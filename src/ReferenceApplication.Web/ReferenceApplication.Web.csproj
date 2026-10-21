@@ -13,7 +13,7 @@
     <PackageReference Include="AsiBackbone.AspNetCore" />
     <PackageReference Include="AsiBackbone.Core" />
     <PackageReference Include="AsiBackbone.Signing.LocalDevelopment" />
-    <PackageReference Include="AsiBackbone.Storage.InMemory" />
+    <PackageReference Include="AsiBackbone.Signing.ManagedKey" />
     <PackageReference Include="Asp.Versioning.Mvc" />
     <PackageReference Include="AspNet.Security.OAuth.GitHub" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />

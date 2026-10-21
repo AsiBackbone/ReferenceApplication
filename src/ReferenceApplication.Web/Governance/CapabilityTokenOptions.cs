@@ -11,13 +11,17 @@ namespace ReferenceApplication.Web.Governance;
 /// </para>
 /// <para>
 /// The signing key is a secret. Supply it through user secrets, an environment variable, or a secret store; it is
-/// never part of checked-in configuration. Startup fails when tokens are enabled without a usable key.
+/// never part of checked-in configuration. The verification keys are public, but they still decide which tokens are
+/// trusted, so they come from configuration rather than source. Startup fails when tokens are enabled without a usable
+/// signing key or without a trusted public key that matches it.
 /// </para>
 /// <para>
 /// Every setting here is a host decision. <see cref="Issuer" />, <see cref="Audience" />,
 /// <see cref="AllowedClockSkewSeconds" />, and <see cref="KeyId" /> are passed to AsiBackbone's validator options;
-/// <see cref="LifetimeSeconds" /> applies at issuance; the key settings feed <see cref="CapabilityTokenKeyRing" />, which a
-/// production deployment replaces with a managed key service, so the key settings then no longer apply.
+/// <see cref="VerificationKeys" /> are passed to AsiBackbone's public-key verifier; <see cref="LifetimeSeconds" />,
+/// <see cref="KeyVersion" />, and <see cref="SigningKeyPem" /> apply at issuance through
+/// <see cref="CapabilityTokenSigningKey" />; and <see cref="UseStorePurgeIntervalSeconds" /> schedules the purge of
+/// AsiBackbone's EF Core use store.
 /// </para>
 /// </remarks>
 public sealed class CapabilityTokenOptions
@@ -35,7 +39,21 @@ public sealed class CapabilityTokenOptions
     /// <summary>
     /// Gets the largest clock skew accepted from configuration.
     /// </summary>
+    /// <remarks>
+    /// The EF Core use store keeps each consumed grant until it expires plus this period, so a grant can never be
+    /// purged while a validator could still accept it.
+    /// </remarks>
     public const int MaximumAllowedClockSkewSeconds = 60;
+
+    /// <summary>
+    /// Gets the shortest use store purge interval accepted from configuration.
+    /// </summary>
+    public const int MinimumUseStorePurgeIntervalSeconds = 10;
+
+    /// <summary>
+    /// Gets the longest use store purge interval accepted from configuration.
+    /// </summary>
+    public const int MaximumUseStorePurgeIntervalSeconds = 86_400;
 
     /// <summary>
     /// Gets or sets a value indicating whether capability-protected endpoints require signed capability tokens.
@@ -53,7 +71,7 @@ public sealed class CapabilityTokenOptions
     public string Audience { get; set; } = "referenceapplication.governed-operations";
 
     /// <summary>
-    /// Gets or sets the signing key identifier recorded in token proofs.
+    /// Gets or sets the key identifier recorded in token proofs and required on them by the validator.
     /// </summary>
     public string KeyId { get; set; } = "referenceapplication-capability-token";
 
@@ -63,22 +81,22 @@ public sealed class CapabilityTokenOptions
     public string KeyVersion { get; set; } = "1";
 
     /// <summary>
-    /// Gets or sets the current PEM-encoded RSA private key, at least 2048 bits, used to sign and verify tokens.
+    /// Gets or sets the current PEM-encoded RSA private key, at least 2048 bits, used to sign tokens at issuance.
     /// </summary>
+    /// <remarks>
+    /// Verification never uses this key. Its public half must also be listed in <see cref="VerificationKeys" /> under
+    /// <see cref="KeyVersion" />, so the tokens this application issues verify.
+    /// </remarks>
     public string? SigningKeyPem { get; set; }
 
     /// <summary>
-    /// Gets or sets the version of the previous signing key, accepted for verification only during a rotation.
-    /// </summary>
-    public string? PreviousKeyVersion { get; set; }
-
-    /// <summary>
-    /// Gets or sets the previous PEM-encoded RSA key, accepted for verification only during a rotation.
+    /// Gets or sets the trusted public key versions that verify token proofs.
     /// </summary>
     /// <remarks>
-    /// The public key is enough, because the previous key never signs.
+    /// List the current version, and during a rotation the previous one, until every token it signed has expired plus
+    /// <see cref="AllowedClockSkewSeconds" />.
     /// </remarks>
-    public string? PreviousVerificationKeyPem { get; set; }
+    public List<CapabilityTokenVerificationKeyOptions> VerificationKeys { get; set; } = [];
 
     /// <summary>
     /// Gets or sets how long an issued token remains valid, in seconds.
@@ -91,13 +109,19 @@ public sealed class CapabilityTokenOptions
     public int AllowedClockSkewSeconds { get; set; }
 
     /// <summary>
+    /// Gets or sets how often consumed grants past their retention horizon are purged from the use store, in seconds.
+    /// </summary>
+    public int UseStorePurgeIntervalSeconds { get; set; } = 300;
+
+    /// <summary>
     /// Gets or sets a value indicating whether capability tokens may be enabled in the Production environment with the
-    /// sample configured-key provider.
+    /// sample issuance signing key.
     /// </summary>
     /// <remarks>
-    /// The sample key provider is AsiBackbone's local-development signing service, which keeps the key in process
-    /// memory. Startup refuses it in Production unless this is set, so a deployment states the choice explicitly. A
-    /// real production deployment replaces the provider with a managed key service instead of setting this.
+    /// Verification and replay storage use AsiBackbone's production components, but issuance signs with AsiBackbone's
+    /// configured-key local-development provider, which keeps the private key in process memory. Startup refuses it in
+    /// Production unless this is set, so a deployment states the choice explicitly. A real production deployment signs
+    /// through a managed key service, or issues tokens from a separate service, instead of setting this.
     /// </remarks>
     public bool AllowSampleSigningKeyInProduction { get; set; }
 }

@@ -95,8 +95,9 @@ docker compose run --rm referenceapplication.migrations
 
 The repository's migration history also includes the Step 6 migration, `AddGovernedAuditEvidence`, which adds the
 AsiBackbone persistence tables to the host-owned `ApplicationDbContext`. The `database update` command above applies the
-whole history, including that migration. If you created the database before Step 6, run the same command again; it
-applies only the pending migration. Migrations never run automatically at application startup.
+whole history, including that migration and `AddCapabilityGrantUses`, which adds the
+[signed capability token](signed-capability-tokens.md) replay table. If you created the database before either, run the
+same command again; it applies only the pending migrations. Migrations never run automatically at application startup.
 
 The repository already contains every migration, so do not run `migrations add` here. See
 [Step 6: Persist and Verify Audit Evidence](06-persist-and-verify-audit.md#how-the-migration-was-created) for how the

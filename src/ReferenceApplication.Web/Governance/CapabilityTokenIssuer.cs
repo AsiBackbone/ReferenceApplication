@@ -25,19 +25,21 @@ namespace ReferenceApplication.Web.Governance;
 /// <para>
 /// Issuance is host-owned: AsiBackbone does not issue grants. The library supplies the signing helper, the token
 /// encoding, and <see cref="FormFieldCapabilityGrantRequestBindingProvider.CreateBinding" />; the host decides who is
-/// entitled, the lifetime, the use limit, and where the issuer runs. In production, sign with the managed key service
-/// that the relying endpoint's <see cref="IGovernanceSignatureVerificationService" /> trusts.
+/// entitled, the lifetime, the use limit, which key signs, and where the issuer runs. The signature must verify under
+/// a public key the relying endpoint's <see cref="IGovernanceSignatureVerificationService" /> trusts; in this sample
+/// that is a <see cref="CapabilityTokenOptions.VerificationKeys" /> entry, and in production it is the public key of
+/// the managed key service that signs.
 /// </para>
 /// </remarks>
 public sealed class CapabilityTokenIssuer(
     IOptions<CapabilityTokenOptions> optionsAccessor,
-    CapabilityTokenKeyRing keyRing,
+    CapabilityTokenSigningKey signingKey,
     TimeProvider timeProvider)
 {
     private readonly IOptions<CapabilityTokenOptions> _optionsAccessor =
         optionsAccessor ?? throw new ArgumentNullException(nameof(optionsAccessor));
-    private readonly CapabilityTokenKeyRing _keyRing =
-        keyRing ?? throw new ArgumentNullException(nameof(keyRing));
+    private readonly CapabilityTokenSigningKey _signingKey =
+        signingKey ?? throw new ArgumentNullException(nameof(signingKey));
     private readonly TimeProvider _timeProvider =
         timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
 
@@ -79,9 +81,9 @@ public sealed class CapabilityTokenIssuer(
         SignedGovernanceArtifact<CapabilityGrant> signedGrant = await GovernanceArtifactSigner
             .SignCapabilityGrantAsync(
                 grant,
-                _keyRing.Signer,
-                keyId: _keyRing.KeyId,
-                keyVersion: _keyRing.KeyVersion,
+                _signingKey.Signer,
+                keyId: _signingKey.KeyId,
+                keyVersion: _signingKey.KeyVersion,
                 cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 

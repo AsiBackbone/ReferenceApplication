@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -49,11 +50,11 @@ public sealed class CapabilityTokenEndpointTests : IDisposable
     private const string _scope = ReferenceApplicationGovernancePolicySet.ConsequentialExecutionScope;
     private const int _lifetimeSeconds = 120;
 
-    // Generated for the test run, so no signing key is checked in.
-    private static readonly Lazy<string> _signingKeyPem = new(static () =>
+    // Generated for the test run, so no signing key is checked in. The public half is the only key verification sees.
+    private static readonly Lazy<(string PrivateKeyPem, string PublicKeyPem)> _signingKey = new(static () =>
     {
         using var rsa = RSA.Create(2048);
-        return rsa.ExportPkcs8PrivateKeyPem();
+        return (rsa.ExportPkcs8PrivateKeyPem(), rsa.ExportSubjectPublicKeyInfoPem());
     });
 
     private readonly TestSqliteDatabase _database = TestSqliteDatabase.Create();
@@ -100,6 +101,75 @@ public sealed class CapabilityTokenEndpointTests : IDisposable
             static decision => decision.CapabilityTokenId is null);
         AuditLedgerRecord deniedRecord = await FindRecordAsync(dbContext, denied.RecordId);
         Assert.Contains(SignedCapabilityGrantReasonCodes.UseLimitExceeded, deniedRecord.ReasonCodes);
+    }
+
+    /// <summary>
+    /// Verifies that two application instances sharing the database each verify a token from configured public keys
+    /// alone, and together accept a single-use token exactly once.
+    /// </summary>
+    [Fact]
+    public async Task IssuedToken_IsConsumedOnceAcrossInstancesSharingTheDatabase()
+    {
+        using WebApplicationFactory<Program> issuingInstance = await CreateFactoryAsync(tokensEnabled: true);
+        using WebApplicationFactory<Program> otherInstance = await CreateFactoryAsync(tokensEnabled: true);
+        using HttpClient issuingClient = issuingInstance.CreateHttpsClient();
+        using HttpClient otherClient = otherInstance.CreateHttpsClient();
+
+        CapabilityTokenResponse issued = await IssueAsync(issuingClient, "capability", permission: _scope);
+
+        using HttpResponseMessage accepted = await PostOperationAsync(otherClient, "capability", issued.Token);
+        using HttpResponseMessage replayed = await PostOperationAsync(issuingClient, "capability", issued.Token);
+
+        Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, replayed.StatusCode);
+
+        await using AsyncServiceScope scope = issuingInstance.Services.CreateAsyncScope();
+        ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        CapabilityGrantUseEntity use = await dbContext.Set<CapabilityGrantUseEntity>()
+            .AsNoTracking()
+            .SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(issued.TokenId, use.TokenId);
+        Assert.Equal(1, use.UseCount);
+
+        List<AuditLedgerRecordEntity> decisions = await dbContext.AsiBackboneAuditLedgerRecords
+            .AsNoTracking()
+            .ToListAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(2, decisions.Count);
+        Assert.Equal(issued.TokenId, Assert.Single(decisions, static decision => decision.CapabilityTokenId is not null).CapabilityTokenId);
+        AuditLedgerRecordEntity denied = Assert.Single(decisions, static decision => decision.CapabilityTokenId is null);
+        Assert.Contains(
+            SignedCapabilityGrantReasonCodes.UseLimitExceeded,
+            (await FindRecordAsync(dbContext, denied.RecordId)).ReasonCodes);
+    }
+
+    /// <summary>
+    /// Verifies that the scheduled purge keeps a consumed grant through expiry plus the retention grace period, and
+    /// removes it afterwards.
+    /// </summary>
+    [Fact]
+    public async Task UseStorePurge_RemovesConsumedGrantOnlyAfterItsRetentionHorizon()
+    {
+        using WebApplicationFactory<Program> factory = await CreateFactoryAsync(tokensEnabled: true);
+        using HttpClient client = factory.CreateHttpsClient();
+        CapabilityGrantUsePurgeService purge = Assert.Single(
+            factory.Services.GetServices<IHostedService>().OfType<CapabilityGrantUsePurgeService>());
+
+        CapabilityTokenResponse issued = await IssueAsync(client, "capability", permission: _scope);
+        using HttpResponseMessage response = await PostOperationAsync(client, "capability", issued.Token);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        _clock.Advance(TimeSpan.FromSeconds(_lifetimeSeconds));
+        int purgedWithinRetention = await purge.PurgeOnceAsync(TestContext.Current.CancellationToken);
+
+        _clock.Advance(TimeSpan.FromSeconds(CapabilityTokenOptions.MaximumAllowedClockSkewSeconds + 1));
+        int purgedAfterRetention = await purge.PurgeOnceAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, purgedWithinRetention);
+        Assert.Equal(1, purgedAfterRetention);
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.False(await dbContext.Set<CapabilityGrantUseEntity>().AnyAsync(TestContext.Current.CancellationToken));
     }
 
     /// <summary>
@@ -371,7 +441,7 @@ public sealed class CapabilityTokenEndpointTests : IDisposable
     public void Startup_TokensEnabledWithoutSigningKey_Fails()
     {
         using WebApplicationFactory<Program> factory = ApplicationWebApplicationFactory.CreateAllowingAnonymousAccess()
-            .WithWebHostBuilder(builder => ApplyCapabilityTokenSettings(builder, enabled: true, signingKeyPem: null));
+            .WithWebHostBuilder(builder => ApplyCapabilityTokenSettings(builder, enabled: true, withKeys: false));
 
         // ValidateOnStart runs while the host starts, so the factory fails to start rather than serve a request. The host
         // reports every failed options validation together; AsiBackbone's grant options read the capability token
@@ -593,7 +663,7 @@ public sealed class CapabilityTokenEndpointTests : IDisposable
         // The capability grant model is selected at service registration, before test configuration sources are
         // applied, so its settings are supplied as host settings, which are visible that early.
         return _database.ApplyAsync(ApplicationWebApplicationFactory.CreateAllowingAnonymousAccess(configuration)
-            .WithWebHostBuilder(builder => ApplyCapabilityTokenSettings(builder, tokensEnabled, _signingKeyPem.Value)
+            .WithWebHostBuilder(builder => ApplyCapabilityTokenSettings(builder, tokensEnabled, withKeys: true)
                 .ConfigureServices(services =>
             {
                 services.RemoveAll<TimeProvider>();
@@ -606,7 +676,7 @@ public sealed class CapabilityTokenEndpointTests : IDisposable
             })));
     }
 
-    private static IWebHostBuilder ApplyCapabilityTokenSettings(IWebHostBuilder builder, bool enabled, string? signingKeyPem)
+    private static IWebHostBuilder ApplyCapabilityTokenSettings(IWebHostBuilder builder, bool enabled, bool withKeys)
     {
         builder
             .UseSetting($"{CapabilityTokenOptions.SectionName}:Enabled", enabled ? "true" : "false")
@@ -614,8 +684,13 @@ public sealed class CapabilityTokenEndpointTests : IDisposable
                 $"{CapabilityTokenOptions.SectionName}:LifetimeSeconds",
                 _lifetimeSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
-        return enabled && signingKeyPem is not null
-            ? builder.UseSetting($"{CapabilityTokenOptions.SectionName}:SigningKeyPem", signingKeyPem)
+        // The private key signs at issuance; verification is configured with the public key only, as a production
+        // relying endpoint would be.
+        return enabled && withKeys
+            ? builder
+                .UseSetting($"{CapabilityTokenOptions.SectionName}:SigningKeyPem", _signingKey.Value.PrivateKeyPem)
+                .UseSetting($"{CapabilityTokenOptions.SectionName}:VerificationKeys:0:KeyVersion", "1")
+                .UseSetting($"{CapabilityTokenOptions.SectionName}:VerificationKeys:0:PublicKeyPem", _signingKey.Value.PublicKeyPem)
             : builder;
     }
 

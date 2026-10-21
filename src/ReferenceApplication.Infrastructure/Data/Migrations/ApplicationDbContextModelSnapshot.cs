@@ -576,6 +576,51 @@ namespace ReferenceApplication.Infrastructure.Data.Migrations
                     b.ToTable("AsiBackboneAuditLedgerRecords", (string)null);
                 });
 
+            modelBuilder.Entity("AsiBackbone.EntityFrameworkCore.Persistence.CapabilityGrantUseEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Issuer")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("LastUsedUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RetainUntilUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TokenId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UseCount")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RetainUntilUtc");
+
+                    b.HasIndex("Issuer", "TokenId")
+                        .IsUnique();
+
+                    b.ToTable("AsiBackboneCapabilityGrantUses", (string)null);
+                });
+
             modelBuilder.Entity("AsiBackbone.EntityFrameworkCore.Persistence.DecisionReceiptLifecycleEventEntity", b =>
                 {
                     b.Property<Guid>("Id")

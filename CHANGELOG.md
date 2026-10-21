@@ -34,26 +34,34 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
 
 * Signed capability tokens, disabled by default (#58). With `ReferenceApplication:CapabilityTokens:Enabled`, the
   capability-protected endpoints require a signed, request-bound token instead of accepting the permission claim alone.
-  * Validation is AsiBackbone 7.3.0's `SignedCapabilityGrantEndpointValidator`, registered through
+  * Validation is AsiBackbone's `SignedCapabilityGrantEndpointValidator`, registered through
     `AddAsiBackboneSignedCapabilityGrants` with its form-field request binding. It replaces the claim validator only
     while tokens are enabled. Every rejection is denied with AsiBackbone's documented reason code.
   * `POST /api/v1/capability-tokens` issues a grant to an actor who holds the capability claim. The grant is bound to
     that actor, the governed operation and its scopes, the request's form fields, the policy version and hash, a short
     lifetime, and a single signed use. It is signed with `GovernanceArtifactSigner.SignCapabilityGrantAsync` and
     encoded as a `CapabilityGrantToken`.
-  * Keys come from configuration as PEM through AsiBackbone's configured-key `LocalDevelopmentSigningService`, never from
-    source. `CapabilityTokenKeyRing` accepts one previous verification key during a rotation. Startup fails when tokens
-    are enabled without a usable key. In Production it also fails unless `AllowSampleSigningKeyInProduction` is set.
-  * Replay protection uses AsiBackbone's process-local `InMemoryCapabilityGrantUseStore`.
+  * Proofs are verified by AsiBackbone 7.4.0's `PublicKeySignatureVerificationService`, registered through
+    `AddAsiBackboneKeySignatureVerification` with the public keys in `VerificationKeys`. Previous key versions keep
+    verifying during a rotation, and a version marked `Revoked` is denied at once. No private key reaches verification.
+  * Issuance signs with a PEM private key from configuration, never from source, through AsiBackbone's configured-key
+    `LocalDevelopmentSigningService` (`CapabilityTokenSigningKey`). Startup fails when tokens are enabled without a
+    usable signing key, or when no unrevoked `VerificationKeys` entry under `KeyVersion` matches it. In Production it
+    also fails unless `AllowSampleSigningKeyInProduction` is set.
+  * Replay protection uses AsiBackbone 7.4.0's `EfCoreCapabilityGrantUseStore` against `ApplicationDbContext`, so
+    instances sharing the database accept a single-use token exactly once. Migration `AddCapabilityGrantUses` creates
+    its table, and `CapabilityGrantUsePurgeService` purges records past their retention horizon every
+    `UseStorePurgeIntervalSeconds`.
   * The authorizing token's identifier reaches the decision ledger's `CapabilityTokenId` through the decision receipt,
     covered by the record hash. The evidence timeline returns it as `capabilityTokenId`.
   * The supplemental walkthrough page compares the claim and token models and covers issuance, key rotation, and replay
     storage. A responsibilities table says what AsiBackbone provides once enabled and what the host must still supply,
-    and a production wiring outline shows which steps a deployment keeps and which it replaces. `AddApplicationCapabilityTokens`
-    marks each of the same six steps in code as library or host. The page links to AsiBackbone's article for the
-    library behavior.
-  * This replaces the host-side prototype built against 7.2.1, which is not merged: no host validator, token codec, use
-    store, ledger side channel, or HMAC provider is added.
+    and a production wiring outline shows that only the issuance signing key still needs replacing.
+    `AddApplicationCapabilityTokens` marks each of the same six steps in code as library or host. The page links to
+    AsiBackbone's article for the library behavior.
+  * This replaces the host-side prototype built against 7.2.1, which is not merged, and the interim 7.3.0 wiring: no
+    host validator, token codec, signature verifier, key ring, use store, ledger side channel, or HMAC provider is
+    added, and `AsiBackbone.Storage.InMemory` is no longer referenced.
 * A CI container smoke test that, on every pull request:
   * builds both images;
   * proves readiness against the migrated `ApplicationDatabase` and against the demonstration database;
