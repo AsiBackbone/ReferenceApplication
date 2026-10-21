@@ -32,6 +32,29 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
 
 ### Added
 
+* A Development-only, administrator-only policy simulator in the governance explorer (#59), behind
+  `ReferenceApplication:PolicySimulator:Enabled`.
+  * The reader builds a request from fixed options: the governed operation, the simulated actor's administrator role
+    and consequential capability, the acknowledgment flag, and a sample payload. Individual constraints can be left
+    out, and the result is then labelled as simulated with a modified policy.
+  * `POST /api/v1/policy-simulator/evaluate` runs AsiBackbone's `DefaultEndpointGovernanceService` against a simulated
+    request for the real governed endpoint, with the policy evaluator composed exactly as the registered one. It
+    reports each constraint's outcome and reason codes in evaluation order, the composed decision and the
+    decision-policy step, the capability-grant check, the decision receipt that would be appended, and what the real
+    endpoint would return.
+  * With signed capability tokens enabled, the capability stage previews the grant `CapabilityTokenIssuer` would sign:
+    its claims, payload binding, and validity window, with key identifiers but never key material. Nothing is signed
+    and no use is consumed.
+  * Simulations persist nothing: the receipt sink captures instead of writing, and the simulated request runs on an
+    isolated asynchronous flow.
+  * **Send for real** posts the same inputs through the real endpoint, when the policy is unmodified, the simulated
+    actor matches the signed-in actor, and no capability token is needed, so the simulated receipt can be compared
+    with the persisted decision in the evidence timeline.
+  * The registered policy evaluator and the simulator now compose through `AsiBackboneServiceExtensions.CreatePolicyEvaluator`,
+    and `CapabilityTokenIssuer.CreateGrant` builds the unsigned grant that `IssueAsync` signs.
+  * The explorer now places its controls in tabs (Actions, Demo identity, Load demonstration, Policy simulator), each
+    shown only when available, with the active tab's output in the right-hand panel: the evidence timeline, the live
+    load metrics, or the staged simulation result.
 * Signed capability tokens, disabled by default (#58). With `ReferenceApplication:CapabilityTokens:Enabled`, the
   capability-protected endpoints require a signed, request-bound token instead of accepting the permission claim alone.
   * Validation is AsiBackbone's `SignedCapabilityGrantEndpointValidator`, registered through

@@ -8,6 +8,7 @@ using ReferenceApplication.Web.Authentication.Options;
 using ReferenceApplication.Web.Extensions;
 using ReferenceApplication.Web.Governance;
 using ReferenceApplication.Web.Governance.Demonstration;
+using ReferenceApplication.Web.Governance.Simulation;
 using ReferenceApplication.Web.Models;
 
 namespace ReferenceApplication.Web.Controllers;
@@ -22,7 +23,8 @@ public sealed class GovernanceExplorerController(
     IConfiguration configuration,
     IHostEnvironment environment,
     IEnumerable<IDemoIdentityService> demoIdentityServices,
-    IEnumerable<IGovernanceLoadDemonstrationService> loadDemonstrationServices) : Controller
+    IEnumerable<IGovernanceLoadDemonstrationService> loadDemonstrationServices,
+    IEnumerable<IPolicySimulator> policySimulators) : Controller
 {
     private readonly IAuthorizationService _authorizationService =
         authorizationService ?? throw new ArgumentNullException(nameof(authorizationService));
@@ -36,6 +38,8 @@ public sealed class GovernanceExplorerController(
         demoIdentityServices?.Any() == true;
     private readonly bool _hasLoadDemonstrationService =
         loadDemonstrationServices?.Any() == true;
+    private readonly IPolicySimulator? _policySimulator =
+        policySimulators?.FirstOrDefault();
 
     /// <summary>
     /// Displays the explorer for an authenticated actor.
@@ -57,6 +61,9 @@ public sealed class GovernanceExplorerController(
         GovernanceLoadDemonstrationOptions loadOptions = _configuration
             .GetSection(GovernanceLoadDemonstrationOptions.SectionName)
             .Get<GovernanceLoadDemonstrationOptions>() ?? new GovernanceLoadDemonstrationOptions();
+        bool showPolicySimulator = administrator.Succeeded &&
+            _policySimulator is not null &&
+            PolicySimulatorServiceExtensions.IsActive(_configuration, _environment);
 
         return View(new GovernanceExplorerViewModel
         {
@@ -76,7 +83,11 @@ public sealed class GovernanceExplorerController(
             LoadDemonstrationDefaultIterations = loadOptions.DefaultIterations,
             LoadDemonstrationMaximumIterations = loadOptions.MaximumIterations,
             LoadDemonstrationDefaultDurationMilliseconds = loadOptions.DefaultDurationMilliseconds,
-            LoadDemonstrationMaximumDurationMilliseconds = loadOptions.MaximumDurationMilliseconds
+            LoadDemonstrationMaximumDurationMilliseconds = loadOptions.MaximumDurationMilliseconds,
+            ShowPolicySimulator = showPolicySimulator,
+            PolicySimulatorConstraintNames = showPolicySimulator ? _policySimulator!.ConstraintNames : [],
+            CapabilityTokensEnabled = _configuration.GetValue<bool>(
+                $"{CapabilityTokenOptions.SectionName}:{nameof(CapabilityTokenOptions.Enabled)}")
         });
     }
 }

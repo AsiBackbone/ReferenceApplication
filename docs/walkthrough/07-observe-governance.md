@@ -6,7 +6,7 @@ description: Use the Development governance explorer to run the real governed en
 # Step 7: Observe governance in action
 
 **Status:** Complete. The explorer combines evidence query, live notifications, verification, a resettable demonstration
-database, and a bounded in-process load demonstration.
+database, a bounded in-process load demonstration, and a policy simulator.
 
 Step 6 established the durable evidence chain. Step 7 presents that same production-shaped governance path as an
 interactive walkthrough: one panel calls the governed endpoints, and the other queries and verifies the decision,
@@ -37,6 +37,22 @@ Authentication is required to open the explorer. Any authenticated actor can exe
 the resulting HTTP outcome. Full evidence, hash verification, the unfiltered notification stream, and database reset
 require the configured administrator policy. The Development demo identity supplies only the two fixed claims needed
 to compare the sample outcomes; it accepts no arbitrary claim values.
+
+### Layout
+
+The controls sit on the left in tabs, and the right-hand panel shows the output of the active tab:
+
+| Tab | Controls | Right-hand output |
+| --- | --- | --- |
+| **Actions** | the governed action buttons and their status | the evidence timeline |
+| **Demo identity** | the fixed demo claims and the database reset | the evidence timeline |
+| **Load demonstration** | the bounded run and its status | the live metrics and latency histogram |
+| **Policy simulator** | the simulation inputs and their status | the staged simulation result |
+
+A tab appears only when its feature is available, so outside Development the explorer shows the actions alone. The
+explorer remembers the selected tab for the browser session, except after a database reset, which returns to
+**Actions**. **Send for real** in the simulator switches the right-hand panel to the evidence timeline; select the
+**Policy simulator** tab again to return to the simulated receipt.
 
 ## Disposable Development database
 
@@ -100,15 +116,90 @@ explorer actions still use the real endpoint pipeline and write their evidence t
 database. This separation keeps the evidence timeline meaningful while the load control exercises the same composed
 policy evaluator used by the host.
 
+## Policy simulator
+
+The administrator-only **Policy simulator** shows how a decision is built, one stage at a time. The explorer's action
+buttons show only the outcome; the simulator lets you change the inputs and watch each stage respond.
+
+Build a request from fixed options:
+
+- the governed operation: administrator, capability, consequential, or create audited record;
+- the simulated actor's administrator role and consequential capability, the same fixed claims the demo identity
+  offers, with your own actor identifier;
+- the acknowledgment flag, which, as in the explorer, only enables the consequential request; and
+- a sample payload, posted as the record title or as a `Note` field.
+
+You can also clear individual constraints to see what each contributes. The result is then labelled **Simulated with a
+modified policy**, and it cannot be sent for real.
+
+**Evaluate** reports four stages:
+
+1. each constraint's outcome and reason codes, in evaluation order;
+2. the decision composed from them, and the decision-policy step, for example the consequential action becoming
+   acknowledgment-required;
+3. the capability-grant check. With permission claims, the claim validator's result. With
+   [signed capability tokens](signed-capability-tokens.md), the token issuance would sign: its subject, operation,
+   scopes, payload binding, validity window, and the identifiers of the signing key, never the key itself; and
+4. the decision receipt that would be appended to the ledger, with the policy version and hash.
+
+It also says what the real endpoint would do: run the action, block it with a status code, or answer with an
+acknowledgment challenge.
+
+### How it stays faithful
+
+The simulator does not reimplement governance. It resolves the real governed endpoint, builds a simulated request for
+it, and runs AsiBackbone's `DefaultEndpointGovernanceService`, the same service the governance middleware runs. The
+policy evaluator is composed by the same method as the registered one. The simulator wraps each constraint, the
+decision policy, and the capability validator only to record what they return. It does not call the governed HTTP
+endpoint, as the load demonstration does not.
+
+### What it never does
+
+Nothing is persisted. The decision receipt sink is replaced with one that captures the receipt instead of writing it,
+so no ledger, outbox, lifecycle, or mutation-audit record is created. With signed tokens enabled, the signed-grant
+validator, which would consume a use, is replaced with the token preview, so the use store is untouched. The simulated
+request runs on an isolated asynchronous flow, so services that read the current request see the simulated one and
+never the real one.
+
+### Send for real
+
+**Send for real** posts the same inputs through the real endpoint, so you can compare the simulated receipt with the
+persisted decision in the evidence timeline. It is available only when the comparison is meaningful:
+
+- every constraint is in the policy;
+- the simulated role and capability match the signed-in actor; apply a matching demo identity first; and
+- the operation needs no capability token. The explorer does not request tokens yet, so with signed tokens enabled the
+  capability-protected operations cannot be sent from here.
+
+### Configure
+
+The checked-in Development configuration enables the simulator:
+
+```json
+{
+  "ReferenceApplication": {
+    "PolicySimulator": {
+      "Enabled": true
+    }
+  }
+}
+```
+
+The service and route are registered only when the environment is exactly `Development` and the switch is enabled.
+`POST /api/v1/policy-simulator/evaluate` requires the administrator policy and an antiforgery token.
+
 ## Run the walkthrough
 
 1. Start the web project in Development and open `/Account/Login`.
 2. Apply the demo administrator role and, when needed, the consequential capability.
-3. Open `/governance-explorer`, run the sample actions, and watch the persisted timeline update.
+3. Open `/governance-explorer`, run the sample actions on the **Actions** tab, and watch the persisted timeline
+   update.
 4. Use **Verify hashes** to compare stored decision evidence with its canonical hash.
 5. Use **Reset demonstration database** when you want a fresh walkthrough state.
-6. As the administrator, start a bounded live run, watch its transient metrics, and cancel it before completion to
-   observe both terminal paths.
+6. As the administrator, on the **Load demonstration** tab, start a bounded live run, watch its transient metrics,
+   and cancel it before completion to observe both terminal paths.
+7. On the **Policy simulator** tab, evaluate an operation, clear a constraint to see what it contributes, then
+   restore it and send the request for real to compare the simulated receipt with the persisted decision.
 
 See [Development-only demo identity controls](development-demo-identity.md) for the fixed claims and safety boundary.
 Real performance measurements are documented under [Governance benchmarks](../benchmarks/governance-overhead.md); the
@@ -121,3 +212,11 @@ administrator reset clears all demonstration records and evidence, leaves a migr
 antiforgery token. Load-demonstration tests prove single-run concurrency, administrator authorization, cancellation,
 iteration and duration enforcement, aggregate metric publication, and complete service and route absence in Staging
 and Production.
+
+`PolicySimulatorTests` prove that, for every sample operation and several simulated actors, the simulated receipt
+carries the outcome and reason codes the real endpoint then persists for the same inputs, and that the simulated
+endpoint result matches the real response. They also prove that clearing a constraint changes the result and marks it
+as simulated with a modified policy, and that no simulation writes ledger, outbox, lifecycle, mutation-audit, or
+capability-use records. The signed-token preview shows the grant's claims, payload binding, and expiry without key
+material. The panel and route are absent outside Development, and rejected for non-administrators and for requests
+without an antiforgery token.

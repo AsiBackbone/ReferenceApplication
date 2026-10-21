@@ -53,30 +53,7 @@ public sealed class CapabilityTokenIssuer(
         CapabilityTokenIssueRequest request,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.SubjectId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.OperationName);
-        ArgumentNullException.ThrowIfNull(request.Scopes);
-        ArgumentNullException.ThrowIfNull(request.PayloadFields);
-
-        CapabilityTokenOptions options = _optionsAccessor.Value;
-        DateTimeOffset issuedUtc = TruncateToSeconds(_timeProvider.GetUtcNow());
-        string resourceBinding = FormFieldCapabilityGrantRequestBindingProvider.CreateBinding(request.PayloadFields);
-
-        var grant = CapabilityGrant.Create(
-            tokenId: Guid.NewGuid().ToString("N"),
-            issuer: options.Issuer,
-            audience: options.Audience,
-            scopes: request.Scopes,
-            issuedUtc: issuedUtc,
-            expiresUtc: issuedUtc.AddSeconds(options.LifetimeSeconds),
-            notBeforeUtc: issuedUtc,
-            subjectId: request.SubjectId,
-            operationName: request.OperationName,
-            policyVersion: ReferenceApplicationGovernancePolicySet.Version,
-            policyHash: ReferenceApplicationGovernancePolicySet.PolicyHash,
-            resourceBinding: resourceBinding,
-            maxUseCount: 1);
+        CapabilityGrant grant = CreateGrant(request);
 
         SignedGovernanceArtifact<CapabilityGrant> signedGrant = await GovernanceArtifactSigner
             .SignCapabilityGrantAsync(
@@ -92,9 +69,46 @@ public sealed class CapabilityTokenIssuer(
             Token: CapabilityGrantToken.Encode(signedGrant),
             OperationName: request.OperationName,
             Scopes: signedGrant.Artifact.Scopes,
-            ResourceBinding: resourceBinding,
+            ResourceBinding: signedGrant.Artifact.ResourceBinding ?? string.Empty,
             IssuedUtc: signedGrant.Artifact.IssuedUtc,
             ExpiresUtc: signedGrant.Artifact.ExpiresUtc);
+    }
+
+    /// <summary>
+    /// Builds the unsigned grant that <see cref="IssueAsync" /> would sign for a request.
+    /// </summary>
+    /// <param name="request">What the token is bound to.</param>
+    /// <returns>The grant, with a new token identifier and the current issuance time.</returns>
+    /// <remarks>
+    /// The Development policy simulator previews a token through this method, so the preview shows exactly the claims,
+    /// binding, and validity window issuance would sign, without signing anything or consuming a use.
+    /// </remarks>
+    public CapabilityGrant CreateGrant(CapabilityTokenIssueRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.SubjectId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.OperationName);
+        ArgumentNullException.ThrowIfNull(request.Scopes);
+        ArgumentNullException.ThrowIfNull(request.PayloadFields);
+
+        CapabilityTokenOptions options = _optionsAccessor.Value;
+        DateTimeOffset issuedUtc = TruncateToSeconds(_timeProvider.GetUtcNow());
+        string resourceBinding = FormFieldCapabilityGrantRequestBindingProvider.CreateBinding(request.PayloadFields);
+
+        return CapabilityGrant.Create(
+            tokenId: Guid.NewGuid().ToString("N"),
+            issuer: options.Issuer,
+            audience: options.Audience,
+            scopes: request.Scopes,
+            issuedUtc: issuedUtc,
+            expiresUtc: issuedUtc.AddSeconds(options.LifetimeSeconds),
+            notBeforeUtc: issuedUtc,
+            subjectId: request.SubjectId,
+            operationName: request.OperationName,
+            policyVersion: ReferenceApplicationGovernancePolicySet.Version,
+            policyHash: ReferenceApplicationGovernancePolicySet.PolicyHash,
+            resourceBinding: resourceBinding,
+            maxUseCount: 1);
     }
 
     private static DateTimeOffset TruncateToSeconds(DateTimeOffset value)

@@ -95,6 +95,8 @@ public sealed partial class GovernanceExplorerTests
         Assert.Contains("data-can-view-evidence=\"false\"", html, StringComparison.Ordinal);
         Assert.Contains("data-load-demonstration=\"false\"", html, StringComparison.Ordinal);
         Assert.DoesNotContain("Demonstration, not a benchmark", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("id=\"explorer-tab-load\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-output-view=\"load\"", html, StringComparison.Ordinal);
         Assert.Contains("full ledger requires an administrator", html, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("data-governed-action=\"administrator\"", html, StringComparison.Ordinal);
     }
@@ -177,6 +179,21 @@ public sealed partial class GovernanceExplorerTests
         Assert.Contains("id=\"cancel-load-demonstration\"", html, StringComparison.Ordinal);
         Assert.Contains("Governance demo actor", html, StringComparison.Ordinal);
         Assert.Contains("data-can-view-evidence=\"true\"", html, StringComparison.Ordinal);
+        Assert.Contains("role=\"tablist\"", html, StringComparison.Ordinal);
+        Assert.Contains("id=\"explorer-tab-actions\"", html, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"explorer-panel-identity\"", html, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"explorer-panel-load\"", html, StringComparison.Ordinal);
+        Assert.Contains("data-output-view=\"evidence\"", html, StringComparison.Ordinal);
+        Assert.Contains("data-output-view=\"load\"", html, StringComparison.Ordinal);
+
+        // A form with an explicit action does not get an automatic antiforgery token, so each posting form must
+        // render its own; without it, applying a demo identity or resetting the database returns 400.
+        MatchCollection postForms = PostFormRegex().Matches(html);
+        Assert.Contains(
+            postForms,
+            static form => form.Value.Contains("action=\"/Account/DemoSignIn\"", StringComparison.Ordinal));
+        Assert.All(postForms, static form =>
+            Assert.Contains("name=\"__RequestVerificationToken\"", form.Value, StringComparison.Ordinal));
     }
 
     private static WebApplicationFactory<Program> CreateFactory()
@@ -206,6 +223,9 @@ public sealed partial class GovernanceExplorerTests
 
     [GeneratedRegex("<script\\b(?<attributes>[^>]*)>(?<body>.*?)</script>", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
     private static partial Regex ScriptElementRegex();
+
+    [GeneratedRegex("<form\\b[^>]*\\bmethod=\"post\"[^>]*>.*?</form>", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+    private static partial Regex PostFormRegex();
 
     private sealed class HeaderAuthenticationHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
