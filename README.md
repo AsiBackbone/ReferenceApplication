@@ -182,6 +182,8 @@ authoritative persisted timeline.
 
 In Development, `ReferenceApplication:GovernanceLoadDemonstration:Enabled` adds an administrator-only bounded run to the explorer. It evaluates the production policy composition in-process, permits only one cancellable run at a time, and enforces both iteration and duration ceilings. The streamed throughput and latency histogram are transient demonstration feedback—not benchmark results—and the run persists no synthetic evidence. Use the [published BenchmarkDotNet results](https://asibackbone.github.io/ReferenceApplication/benchmarks/governance-overhead.html) for repeatable measurements.
 
+In Development, `ReferenceApplication:PolicySimulator:Enabled` adds an administrator-only policy simulator to the explorer. It runs AsiBackbone's endpoint governance pipeline against a simulated request for a sample operation and shows each constraint, the decision-policy step, the capability-grant check, and the receipt that would be appended. It persists nothing and never shows signing key material.
+
 `POST /Account/Logout` and all Step 5 governed operations require an authenticated user and a valid antiforgery token. Restrict production access to the health endpoints at the ingress, firewall, or proxy layer.
 
 ### Data Protection keys

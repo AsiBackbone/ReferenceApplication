@@ -56,6 +56,21 @@ public sealed class GovernanceExplorerViewModel
     public int LoadDemonstrationMaximumDurationMilliseconds { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the administrator may use the Development-only policy simulator.
+    /// </summary>
+    public bool ShowPolicySimulator { get; set; }
+
+    /// <summary>
+    /// Gets or sets the registered constraint names the policy simulator can leave out, in evaluation order.
+    /// </summary>
+    public IReadOnlyList<string> PolicySimulatorConstraintNames { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether signed capability tokens are enabled.
+    /// </summary>
+    public bool CapabilityTokensEnabled { get; set; }
+
+    /// <summary>
     /// Gets or sets the display name of the current actor.
     /// </summary>
     public string ActorDisplayName { get; set; } = "Authenticated actor";

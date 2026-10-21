@@ -52,15 +52,38 @@ public static class AsiBackboneServiceExtensions
         services.AddScoped<IGovernanceConstraint<GovernanceEvaluationContext>, AdministratorRoleConstraint>();
         services.AddScoped<IGovernanceConstraint<GovernanceEvaluationContext>, CapabilityScopeDeclarationConstraint>();
         services.AddScoped<IGovernanceDecisionPolicy<GovernanceEvaluationContext>, ConsequentialActionDecisionPolicy>();
-        services.AddScoped<IGovernancePolicyEvaluator<GovernanceEvaluationContext>>(serviceProvider =>
-            DefaultGovernancePolicyEvaluator.CreateBuilder<GovernanceEvaluationContext>()
-                .AddConstraints(serviceProvider.GetServices<IGovernanceConstraint<GovernanceEvaluationContext>>())
-                .WithDecisionPolicy(
-                    serviceProvider.GetRequiredService<IGovernanceDecisionPolicy<GovernanceEvaluationContext>>())
-                .WithLogger(
-                    serviceProvider.GetService<ILogger<DefaultGovernancePolicyEvaluator<GovernanceEvaluationContext>>>())
-                .Build());
+        services.AddScoped(serviceProvider =>
+            CreatePolicyEvaluator(
+                serviceProvider.GetServices<IGovernanceConstraint<GovernanceEvaluationContext>>(),
+                serviceProvider.GetRequiredService<IGovernanceDecisionPolicy<GovernanceEvaluationContext>>(),
+                serviceProvider.GetService<ILogger<DefaultGovernancePolicyEvaluator<GovernanceEvaluationContext>>>()));
 
         return services;
+    }
+
+    /// <summary>
+    /// Composes the application's policy evaluator from its constraints and decision policy.
+    /// </summary>
+    /// <param name="constraints">The constraints, in evaluation order.</param>
+    /// <param name="decisionPolicy">The decision policy applied to the composed decision.</param>
+    /// <param name="logger">The optional evaluator logger.</param>
+    /// <returns>The composed evaluator.</returns>
+    /// <remarks>
+    /// The registered evaluator and the Development policy simulator both compose through this method, so a
+    /// simulation evaluates exactly the composition the governed endpoints use.
+    /// </remarks>
+    internal static IGovernancePolicyEvaluator<GovernanceEvaluationContext> CreatePolicyEvaluator(
+        IEnumerable<IGovernanceConstraint<GovernanceEvaluationContext>> constraints,
+        IGovernanceDecisionPolicy<GovernanceEvaluationContext> decisionPolicy,
+        ILogger<DefaultGovernancePolicyEvaluator<GovernanceEvaluationContext>>? logger)
+    {
+        ArgumentNullException.ThrowIfNull(constraints);
+        ArgumentNullException.ThrowIfNull(decisionPolicy);
+
+        return DefaultGovernancePolicyEvaluator.CreateBuilder<GovernanceEvaluationContext>()
+            .AddConstraints(constraints)
+            .WithDecisionPolicy(decisionPolicy)
+            .WithLogger(logger)
+            .Build();
     }
 }

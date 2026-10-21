@@ -178,8 +178,10 @@ asks for, and `CapabilityTokenSigningKey` carries the `AsiBackboneProductionConf
 the review. Verification and replay storage use AsiBackbone's production components and are not behind the guard.
 
 While tokens are enabled, the governance explorer's capability and consequential actions are denied, because the
-explorer does not request tokens yet. The token assembly view
-([#59](https://github.com/AsiBackbone/ReferenceApplication/issues/59)) and the tampering and replay scenarios
+explorer does not request tokens yet. The explorer's
+[policy simulator](07-observe-governance.md#policy-simulator)
+([#59](https://github.com/AsiBackbone/ReferenceApplication/issues/59)) shows the token issuance would sign for a
+simulated request, without signing it or consuming a use. The tampering and replay scenarios
 ([#62](https://github.com/AsiBackbone/ReferenceApplication/issues/62)) build on this page.
 
 ### Rotate the key
