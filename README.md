@@ -186,6 +186,8 @@ In Development, `ReferenceApplication:PolicySimulator:Enabled` adds an administr
 
 In Development, `ReferenceApplication:DecisionReplay:Enabled` adds an administrator-only decision replay to the explorer. It finds a persisted decision by receipt identifier or from the recent decisions, shows which evaluation inputs the minimized ledger records and which it can only infer, and replays the decision against the current policy and an optional what-if candidate, side by side. A replay never writes to the ledger, and a policy-hash mismatch is flagged before replay.
 
+In Development, `ReferenceApplication:PipelineInspector:Enabled` adds an administrator-only pipeline inspector to the explorer. It times one governed request's stages from timestamps the pipeline already stores, marking where the response ends and background delivery begins, and shows the audit-completion outbox, reconciliation findings, and in-process telemetry. Its timings are demonstration, not benchmark results; it adds nothing to the governed request path and never writes. While active, it also registers NCAT audit reconciliation for Development.
+
 `POST /Account/Logout` and all Step 5 governed operations require an authenticated user and a valid antiforgery token. Restrict production access to the health endpoints at the ingress, firewall, or proxy layer.
 
 ### Data Protection keys

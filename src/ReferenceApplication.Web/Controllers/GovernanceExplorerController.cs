@@ -8,6 +8,7 @@ using ReferenceApplication.Web.Authentication.Options;
 using ReferenceApplication.Web.Extensions;
 using ReferenceApplication.Web.Governance;
 using ReferenceApplication.Web.Governance.Demonstration;
+using ReferenceApplication.Web.Governance.Pipeline;
 using ReferenceApplication.Web.Governance.Replay;
 using ReferenceApplication.Web.Governance.Simulation;
 using ReferenceApplication.Web.Models;
@@ -26,7 +27,8 @@ public sealed class GovernanceExplorerController(
     IEnumerable<IDemoIdentityService> demoIdentityServices,
     IEnumerable<IGovernanceLoadDemonstrationService> loadDemonstrationServices,
     IEnumerable<IPolicySimulator> policySimulators,
-    IEnumerable<IDecisionReplayService> decisionReplayServices) : Controller
+    IEnumerable<IDecisionReplayService> decisionReplayServices,
+    IEnumerable<IPipelineInspector> pipelineInspectors) : Controller
 {
     private readonly IAuthorizationService _authorizationService =
         authorizationService ?? throw new ArgumentNullException(nameof(authorizationService));
@@ -44,6 +46,8 @@ public sealed class GovernanceExplorerController(
         policySimulators?.FirstOrDefault();
     private readonly IDecisionReplayService? _decisionReplay =
         decisionReplayServices?.FirstOrDefault();
+    private readonly IPipelineInspector? _pipelineInspector =
+        pipelineInspectors?.FirstOrDefault();
 
     /// <summary>
     /// Displays the explorer for an authenticated actor.
@@ -71,6 +75,9 @@ public sealed class GovernanceExplorerController(
         bool showDecisionReplay = administrator.Succeeded &&
             _decisionReplay is not null &&
             DecisionReplayServiceExtensions.IsActive(_configuration, _environment);
+        bool showPipelineInspector = administrator.Succeeded &&
+            _pipelineInspector is not null &&
+            PipelineInspectorServiceExtensions.IsActive(_configuration, _environment);
 
         return View(new GovernanceExplorerViewModel
         {
@@ -95,6 +102,8 @@ public sealed class GovernanceExplorerController(
             PolicySimulatorConstraintNames = showPolicySimulator ? _policySimulator!.ConstraintNames : [],
             ShowDecisionReplay = showDecisionReplay,
             DecisionReplayConstraintNames = showDecisionReplay ? _decisionReplay!.ConstraintNames : [],
+            ShowPipelineInspector = showPipelineInspector,
+            PipelineOutboxStatuses = showPipelineInspector ? _pipelineInspector!.OutboxStatuses : [],
             CapabilityTokensEnabled = _configuration.GetValue<bool>(
                 $"{CapabilityTokenOptions.SectionName}:{nameof(CapabilityTokenOptions.Enabled)}")
         });

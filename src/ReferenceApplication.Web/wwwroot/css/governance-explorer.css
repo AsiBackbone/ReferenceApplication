@@ -104,7 +104,8 @@
 #load-demonstration-form,
 #policy-simulator-form,
 .decision-replay-lookup,
-#decision-replay-form {
+#decision-replay-form,
+#pipeline-inspector-form {
     display: grid;
     gap: 0.875rem;
     margin-top: 1.25rem;
@@ -139,7 +140,9 @@
 #load-demonstration-form input,
 #policy-simulator-form select,
 #policy-simulator-payload,
-#decision-replay-receipt {
+#decision-replay-receipt,
+#pipeline-correlation,
+#pipeline-outbox-status {
     min-height: 2.75rem;
     padding: 0.65rem 0.75rem;
     border: 1px solid #8c959f;
@@ -149,7 +152,8 @@
 
 .load-demonstration-buttons,
 .policy-simulator-buttons,
-.decision-replay-buttons {
+.decision-replay-buttons,
+.pipeline-inspector-buttons {
     display: flex;
     flex-wrap: wrap;
     gap: 0.75rem;
@@ -157,7 +161,8 @@
 
 .load-demonstration-buttons button,
 .policy-simulator-buttons button,
-.decision-replay-buttons button {
+.decision-replay-buttons button,
+.pipeline-inspector-buttons button {
     min-height: 2.75rem;
     padding: 0.7rem 1rem;
     border: 1px solid #0969da;
@@ -818,6 +823,189 @@ button:disabled {
 
 .replay-branch .simulation-stage {
     background: #ffffff;
+}
+
+#pipeline-correlation {
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    font-size: 0.9rem;
+}
+
+.pipeline-section {
+    margin-top: 1.25rem;
+    padding: 1rem;
+    border: 1px solid #d0d7de;
+    border-radius: 0.75rem;
+    background: #f6f8fa;
+}
+
+.pipeline-section h3 {
+    margin: 0 0 0.75rem;
+    font-size: 1.05rem;
+}
+
+.pipeline-section h4 {
+    margin: 1rem 0 0.5rem;
+    font-size: 0.95rem;
+}
+
+.pipeline-section dl {
+    display: grid;
+    grid-template-columns: minmax(8rem, 0.4fr) minmax(0, 1fr);
+    gap: 0.35rem 0.8rem;
+    margin: 0 0 0.75rem;
+    font-size: 0.88rem;
+}
+
+.pipeline-section dt {
+    min-width: 0;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.pipeline-section dd {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.pipeline-stages,
+.pipeline-entries {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pipeline-stage,
+.pipeline-entry {
+    min-width: 0;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid #d0d7de;
+    border-left: 0.3rem solid #8c959f;
+    border-radius: 0.6rem;
+    background: #ffffff;
+}
+
+.pipeline-stage p,
+.pipeline-entry p {
+    margin: 0.25rem 0 0;
+}
+
+.pipeline-stage-recorded {
+    border-left-color: #1a7f37;
+}
+
+.pipeline-stage-pending,
+.pipeline-stage-retrying {
+    border-left-color: #9a6700;
+}
+
+.pipeline-stage-failed {
+    border-left-color: #cf222e;
+}
+
+.pipeline-stage-not-applicable,
+.pipeline-stage-not-captured {
+    border-left-style: dashed;
+    color: #57606a;
+}
+
+.pipeline-entry-selected {
+    border-left-color: #0969da;
+    background: #ddf4ff;
+}
+
+.pipeline-stage-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.35rem 0.75rem;
+}
+
+.pipeline-stage-name {
+    min-width: 0;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.pipeline-stage-time {
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    font-size: 0.85rem;
+    white-space: pre-wrap;
+}
+
+.pipeline-stage-source,
+.pipeline-stage-note {
+    color: #57606a;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.pipeline-boundary {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.6rem 0.85rem;
+    border-top: 2px dashed #0969da;
+    border-bottom: 2px dashed #0969da;
+    background: #ddf4ff;
+    color: #0550ae;
+    font-size: 0.88rem;
+}
+
+.pipeline-badge {
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: #eaeef2;
+    color: #24292f;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.pipeline-badge-recorded,
+.pipeline-badge-delivered {
+    background: #dafbe1;
+    color: #116329;
+}
+
+.pipeline-badge-pending,
+.pipeline-badge-retrying,
+.pipeline-badge-retryablefailure,
+.pipeline-badge-deferred,
+.pipeline-badge-warning {
+    background: #fff8c5;
+    color: #633c01;
+}
+
+.pipeline-badge-failed,
+.pipeline-badge-deadlettered,
+.pipeline-badge-error,
+.pipeline-badge-critical {
+    background: #ffebe9;
+    color: #a40e26;
+}
+
+.pipeline-telemetry-list {
+    margin-top: 0.75rem;
+    font-size: 0.88rem;
+}
+
+.pipeline-telemetry-list summary {
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.pipeline-telemetry-list ul {
+    margin: 0.4rem 0 0;
+    padding-left: 1.2rem;
+    overflow-wrap: anywhere;
+}
+
+#explorer-output-pipeline > .demonstration-label {
+    margin-bottom: 0.75rem;
 }
 
 @media (max-width: 820px) {

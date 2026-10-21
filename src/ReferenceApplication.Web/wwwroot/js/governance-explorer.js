@@ -19,11 +19,17 @@
     const hasLoadDemonstration = explorer.dataset.loadDemonstration === "true";
     const hasPolicySimulator = explorer.dataset.policySimulator === "true";
     const hasDecisionReplay = explorer.dataset.decisionReplay === "true";
+    const hasPipelineInspector = explorer.dataset.pipelineInspector === "true";
     const actionButtons = Array.from(actionsForm.querySelectorAll("[data-governed-action]"));
     const requestToken = actionsForm.querySelector("input[name='__RequestVerificationToken']");
     const acknowledgment = document.getElementById("explorer-acknowledgment");
     const recordTitle = document.getElementById("explorer-record-title");
     let activeCorrelationId = null;
+    // Panels that refresh on evidence-stream hints register here; the stream itself is opened once, below.
+    const evidenceHintListeners = [];
+    const notifyEvidenceHint = (notification) => {
+        evidenceHintListeners.forEach((listener) => listener(notification));
+    };
     let awaitingDecision = false;
 
     const setStatus = (message) => {
@@ -1059,6 +1065,384 @@
         }
     }
 
+    if (hasPipelineInspector) {
+        const pipelinePanel = document.getElementById("explorer-panel-pipeline");
+        const pipelineTab = document.getElementById("explorer-tab-pipeline");
+        const pipelineForm = document.getElementById("pipeline-inspector-form");
+        const correlationInput = document.getElementById("pipeline-correlation");
+        const followInput = document.getElementById("pipeline-follow");
+        const statusSelect = document.getElementById("pipeline-outbox-status");
+        const liveInput = document.getElementById("pipeline-live");
+        const pipelineStatus = document.getElementById("pipeline-inspector-status");
+        const stagesOutput = document.getElementById("pipeline-stages");
+        const outboxOutput = document.getElementById("pipeline-outbox");
+        const reconciliationOutput = document.getElementById("pipeline-reconciliation");
+        const telemetryOutput = document.getElementById("pipeline-telemetry");
+
+        if (pipelinePanel && pipelineForm && correlationInput && followInput && statusSelect && liveInput &&
+            pipelineStatus && stagesOutput && outboxOutput && reconciliationOutput && telemetryOutput) {
+            const snapshotPath = "/api/v1/pipeline-inspector/snapshot";
+            const pollIntervalMilliseconds = 2000;
+            let refreshing = false;
+            let lastSnapshotText = null;
+
+            const formatClock = (value) => {
+                if (!value) {
+                    return null;
+                }
+
+                const date = new Date(value);
+                const milliseconds = String(date.getMilliseconds()).padStart(3, "0");
+                return `${date.toLocaleTimeString([], { hour12: false })}.${milliseconds}`;
+            };
+
+            const formatSeconds = (seconds) => (seconds === null || seconds === undefined
+                ? null
+                : `${Number(seconds).toFixed(seconds < 10 ? 1 : 0)} s`);
+
+            const element = (tag, className, text) => {
+                const created = document.createElement(tag);
+                if (className) {
+                    created.className = className;
+                }
+
+                if (text !== undefined && text !== null) {
+                    created.textContent = text;
+                }
+
+                return created;
+            };
+
+            const badge = (status) => element("span", `pipeline-badge pipeline-badge-${String(status).toLowerCase()}`, status);
+
+            const renderStages = (request) => {
+                if (!request) {
+                    stagesOutput.replaceChildren(element(
+                        "p",
+                        "output-note",
+                        "Run a governed action, or enter a correlation identifier, to time its stages."));
+                    return;
+                }
+
+                if (!request.found) {
+                    stagesOutput.replaceChildren(element(
+                        "p",
+                        "output-note",
+                        `No governance decision is recorded for correlation ${request.correlationId}.`));
+                    return;
+                }
+
+                const intro = element(
+                    "p",
+                    "output-note",
+                    `Correlation ${request.correlationId}${request.traceId ? ` · trace ${request.traceId}` : ""}. ` +
+                    "Offsets are from the first recorded stage, read from timestamps the pipeline already stores.");
+                const list = element("ol", "pipeline-stages");
+                let boundaryShown = false;
+                request.stages.forEach((stage) => {
+                    if (!stage.synchronous && !boundaryShown) {
+                        boundaryShown = true;
+                        const boundary = element("li", "pipeline-boundary");
+                        boundary.setAttribute("role", "separator");
+                        boundary.append(
+                            element("strong", null, "Synchronous | asynchronous"),
+                            element("span", null, "The response has been sent; the outbox worker continues in the background."));
+                        list.append(boundary);
+                    }
+
+                    const item = element("li", `pipeline-stage pipeline-stage-${stage.status}`);
+                    const heading = element("div", "pipeline-stage-heading");
+                    heading.append(element("span", "pipeline-stage-name", stage.name), badge(stage.status));
+                    const timing = element("p", "pipeline-stage-time");
+                    timing.textContent = stage.occurredUtc
+                        ? `${formatClock(stage.occurredUtc)}${stage.offsetMilliseconds === null
+                            ? ""
+                            : `  +${stage.offsetMilliseconds.toFixed(1)} ms`}`
+                        : "No timestamp";
+                    item.append(heading, timing, element("p", "pipeline-stage-source", stage.source));
+                    if (stage.note) {
+                        item.append(element("p", "pipeline-stage-note", stage.note));
+                    }
+
+                    list.append(item);
+                });
+                stagesOutput.replaceChildren(intro, list);
+            };
+
+            const renderOutbox = (outbox, selectedCorrelationId) => {
+                if (!outbox.enabled) {
+                    outboxOutput.replaceChildren(element("p", "output-note", "The audit-completion outbox is disabled."));
+                    return;
+                }
+
+                const health = createDetails([
+                    ["Waiting", `${outbox.backlogCount} (pending, retrying, or deferred)`],
+                    ["Oldest waiting", formatSeconds(outbox.oldestPendingAgeSeconds)],
+                    ["Retries", outbox.totalRetryCount],
+                    ["Dead-lettered", outbox.deadLetterCount],
+                    ["Worker polls every", formatSeconds(outbox.pollIntervalSeconds)],
+                    ["Attempts before dead-letter", outbox.maxRetryAttempts]
+                ]);
+
+                const list = element("ul", "pipeline-entries");
+                outbox.entries.forEach((entry) => {
+                    const selected = selectedCorrelationId && entry.correlationId === selectedCorrelationId;
+                    const item = element("li", selected ? "pipeline-entry pipeline-entry-selected" : "pipeline-entry");
+                    const heading = element("div", "pipeline-stage-heading");
+                    heading.append(element("span", "pipeline-stage-name", `Batch ${entry.mutationBatchId}`), badge(entry.status));
+                    item.append(heading, createDetails([
+                        ["Correlation", entry.correlationId],
+                        ["Staged", formatClock(entry.createdUtc)],
+                        ["Attempts failed", entry.retryCount > 0 ? `${entry.retryCount} of ${outbox.maxRetryAttempts}` : null],
+                        ["Last attempt", formatClock(entry.lastAttemptUtc)],
+                        ["Next attempt", formatClock(entry.nextAttemptUtc)],
+                        ["Delivered", formatClock(entry.deliveredUtc)],
+                        ["Last error", entry.lastErrorCode
+                            ? `${entry.lastErrorCode}${entry.lastErrorMessage ? `: ${entry.lastErrorMessage}` : ""}`
+                            : null],
+                        ["Lifecycle event", `${entry.lifecycleEventAppended ? "appended" : "not yet appended"} · ${entry.lifecycleEventId}`]
+                    ]));
+                    list.append(item);
+                });
+
+                if (outbox.entries.length === 0) {
+                    list.append(element(
+                        "li",
+                        "output-note",
+                        outbox.statusFilter ? `No entries are ${outbox.statusFilter}.` : "No entries have been staged."));
+                }
+
+                outboxOutput.replaceChildren(health, list);
+            };
+
+            const renderReconciliation = (reconciliation) => {
+                if (!reconciliation.enabled) {
+                    reconciliationOutput.replaceChildren(element("p", "output-note", "Audit reconciliation is disabled."));
+                    return;
+                }
+
+                const summary = createDetails([
+                    ["Last run", reconciliation.lastRunUtc
+                        ? new Date(reconciliation.lastRunUtc).toLocaleString()
+                        : "Not yet run in this process"],
+                    ["Worker", reconciliation.workerEnabled
+                        ? `Runs every ${formatSeconds(reconciliation.intervalSeconds)}`
+                        : "Not running"],
+                    ["Open findings", reconciliation.openFindingCount],
+                    ["Errors", reconciliation.errorFindingCount],
+                    ["Critical", reconciliation.criticalFindingCount],
+                    ["Missing completions", reconciliation.missingCompletionCount],
+                    ["Stale deliveries", reconciliation.staleDeliveryCount],
+                    ["Dead letters", reconciliation.deadLetterCount],
+                    ["Manifest failures", reconciliation.manifestVerificationFailureCount]
+                ]);
+
+                const findings = element("ul", "pipeline-entries");
+                reconciliation.openFindings.forEach((finding) => {
+                    const item = element("li", "pipeline-entry");
+                    const heading = element("div", "pipeline-stage-heading");
+                    heading.append(element("span", "pipeline-stage-name", finding.reasonCode), badge(finding.severity));
+                    item.append(heading, createDetails([
+                        ["Batch", finding.mutationBatchId],
+                        ["Destination", finding.destination],
+                        ["First seen", new Date(finding.firstObservedUtc).toLocaleString()],
+                        ["Last seen", new Date(finding.lastObservedUtc).toLocaleString()]
+                    ]), element("p", "pipeline-stage-note", finding.guidance));
+                    findings.append(item);
+                });
+
+                if (reconciliation.openFindings.length === 0) {
+                    findings.append(element("li", "output-note", "No open findings."));
+                }
+
+                reconciliationOutput.replaceChildren(summary, findings);
+            };
+
+            const renderTelemetry = (telemetry, request) => {
+                const children = [createDetails([
+                    ["Tracing", telemetry.tracingEnabled ? "enabled" : "disabled"],
+                    ["Metrics", telemetry.metricsEnabled ? "enabled" : "disabled"],
+                    ["OTLP export", telemetry.otlpExportEnabled ? "enabled" : "disabled"]
+                ])];
+
+                if (request && request.found) {
+                    children.push(element("h4", null, "Spans for the selected request"));
+                    const spans = element("ul", "pipeline-entries");
+                    request.spans.forEach((span) => {
+                        const item = element("li", "pipeline-entry");
+                        const heading = element("div", "pipeline-stage-heading");
+                        heading.append(element("span", "pipeline-stage-name", span.name), badge(span.kind));
+                        item.append(heading, createDetails([
+                            ["Source", span.source],
+                            ["Started", formatClock(span.startUtc)],
+                            ["Duration", `${span.durationMilliseconds.toFixed(1)} ms`],
+                            ["Status", span.status],
+                            ...Object.entries(span.tags)
+                        ]));
+                        spans.append(item);
+                    });
+                    if (request.spans.length === 0) {
+                        spans.append(element("li", "output-note", "No spans were observed for this request's trace."));
+                    }
+
+                    children.push(spans, element("h4", null, "Metrics recorded for the selected request"));
+                    const measurements = element("ul", "pipeline-entries");
+                    request.measurements.forEach((measurement) => {
+                        const item = element("li", "pipeline-entry");
+                        item.append(
+                            element("p", "pipeline-stage-name", `${measurement.instrument}: ${measurement.value.toFixed(4)} ${measurement.unit || ""}`),
+                            createDetails([["Meter", measurement.meter], ...Object.entries(measurement.tags)]));
+                        measurements.append(item);
+                    });
+                    if (request.measurements.length === 0) {
+                        measurements.append(element("li", "output-note", "No measurement was matched to this request."));
+                    }
+
+                    children.push(
+                        measurements,
+                        element("p", "output-note", "Measurements carry no trace identifier; they are matched by route, method, and time."));
+                }
+
+                if (telemetry.hostGauges.length > 0) {
+                    children.push(element("h4", null, "Host gauges"), createDetails(
+                        telemetry.hostGauges.map((gauge) => [gauge.instrument, gauge.value])));
+                }
+
+                const sources = element("details", "pipeline-telemetry-list");
+                sources.append(element("summary", null, `Activity sources in the process (${telemetry.activitySources.length})`));
+                const sourceList = element("ul");
+                telemetry.activitySources.forEach((source) => {
+                    sourceList.append(element(
+                        "li",
+                        null,
+                        `${source.name}${source.version ? ` ${source.version}` : ""}: ` +
+                        `${source.addedToOpenTelemetry ? "collected by OpenTelemetry" : "not collected"}, ` +
+                        `${source.spansObserved} spans observed`));
+                });
+                sources.append(sourceList);
+
+                const meters = element("details", "pipeline-telemetry-list");
+                meters.append(element("summary", null, `Meters in the process (${telemetry.meters.length})`));
+                const meterList = element("ul");
+                telemetry.meters.forEach((meter) => {
+                    const item = element(
+                        "li",
+                        null,
+                        `${meter.name}: ${meter.addedToOpenTelemetry ? "collected by OpenTelemetry" : "not collected"}`);
+                    const instruments = element("ul");
+                    meter.instruments.forEach((instrument) => {
+                        instruments.append(element(
+                            "li",
+                            null,
+                            `${instrument.name} (${instrument.kind}${instrument.unit ? `, ${instrument.unit}` : ""})`));
+                    });
+                    item.append(instruments);
+                    meterList.append(item);
+                });
+                meters.append(meterList);
+
+                children.push(sources, meters);
+                telemetryOutput.replaceChildren(...children);
+            };
+
+            const render = (snapshot) => {
+                renderStages(snapshot.request);
+                renderOutbox(snapshot.outbox, snapshot.request?.correlationId);
+                renderReconciliation(snapshot.reconciliation);
+                renderTelemetry(snapshot.telemetry, snapshot.request);
+            };
+
+            const refresh = async () => {
+                if (refreshing) {
+                    return;
+                }
+
+                if (followInput.checked && activeCorrelationId && correlationInput.value !== activeCorrelationId) {
+                    correlationInput.value = activeCorrelationId;
+                }
+
+                const query = new URLSearchParams();
+                if (correlationInput.value.trim()) {
+                    query.set("correlationId", correlationInput.value.trim());
+                }
+
+                if (statusSelect.value) {
+                    query.set("status", statusSelect.value);
+                }
+
+                refreshing = true;
+                try {
+                    const queryText = query.toString();
+                    const url = queryText ? `${snapshotPath}?${queryText}` : snapshotPath;
+                    const response = await fetch(url, { headers: { "Accept": "application/json" }, credentials: "same-origin" });
+                    const text = await response.text();
+                    if (!response.ok) {
+                        const payload = text && (response.headers.get("content-type") || "").includes("json") ? JSON.parse(text) : null;
+                        pipelineStatus.textContent = payload?.message || `The pipeline read returned HTTP ${response.status}.`;
+                        return;
+                    }
+
+                    const snapshot = JSON.parse(text);
+                    // Re-render only when something other than the read time changed, so polling does not disturb
+                    // reading or focus.
+                    const comparable = JSON.stringify({ ...snapshot, generatedUtc: null });
+                    if (comparable !== lastSnapshotText) {
+                        lastSnapshotText = comparable;
+                        render(snapshot);
+                    }
+
+                    pipelineStatus.textContent = `Read at ${formatClock(snapshot.generatedUtc)}.` +
+                        (liveInput.checked ? " Refreshing every 2 seconds while this tab is open." : "");
+                } catch {
+                    pipelineStatus.textContent = "The pipeline could not be read.";
+                } finally {
+                    refreshing = false;
+                }
+            };
+
+            const isWatching = () => !pipelinePanel.hidden && document.visibilityState === "visible";
+
+            pipelineForm.addEventListener("submit", (event) => {
+                event.preventDefault();
+                void refresh();
+            });
+            correlationInput.addEventListener("input", () => {
+                followInput.checked = false;
+            });
+            statusSelect.addEventListener("change", () => void refresh());
+            followInput.addEventListener("change", () => {
+                if (followInput.checked) {
+                    void refresh();
+                }
+            });
+            pipelineTab?.addEventListener("click", () => void refresh());
+
+            // Bounded polling: one read every two seconds at most, and only while the tab is open and the page is
+            // visible. Retries and dead-letters send no stream hint, so polling is what shows them.
+            window.setInterval(() => {
+                if (liveInput.checked && isWatching()) {
+                    void refresh();
+                }
+            }, pollIntervalMilliseconds);
+
+            evidenceHintListeners.push((notification) => {
+                if (!isWatching()) {
+                    return;
+                }
+
+                void refresh();
+                if (notification.kind === "lifecycle-event") {
+                    // Delivery publishes the hint before the outbox entry is marked delivered; read again after it commits.
+                    window.setTimeout(() => void refresh(), 750);
+                }
+            });
+
+            if (!pipelinePanel.hidden) {
+                void refresh();
+            }
+        }
+    }
+
     if (canViewEvidence) {
         setActionsDisabled(true);
         setStatus("Connecting to the evidence stream…");
@@ -1077,8 +1461,11 @@
                 correlationLabel.textContent = `Correlation: ${activeCorrelationId}`;
                 verifyButton.disabled = false;
                 void loadEvidence();
+                notifyEvidenceHint(notification);
                 return;
             }
+
+            notifyEvidenceHint(notification);
 
             if (notification.correlationId === activeCorrelationId) {
                 void loadEvidence();
