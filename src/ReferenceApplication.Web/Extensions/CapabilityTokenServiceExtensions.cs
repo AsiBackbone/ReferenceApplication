@@ -32,10 +32,62 @@ public static class CapabilityTokenServiceExtensions
     /// configuration, so exactly one validator is ever registered.
     /// </para>
     /// <para>
-    /// The host supplies what the library leaves to it: issuer and audience, clock skew, the signing key through
-    /// <see cref="CapabilityTokenKeyRing" />, the process-local <see cref="InMemoryCapabilityGrantUseStore" />, and the
-    /// form-field request binding. Options are validated at startup, so enabling tokens without a signing key stops the
-    /// application before it serves a request.
+    /// The method body is laid out in the order a host wires signed grants, and each step is marked with who owns it.
+    /// </para>
+    /// <list type="table">
+    /// <listheader>
+    /// <term>Step</term>
+    /// <description>Owner, and what this sample registers</description>
+    /// </listheader>
+    /// <item>
+    /// <term>1. Validator</term>
+    /// <description>
+    /// AsiBackbone, enabled by <c>AddAsiBackboneSignedCapabilityGrants</c>: token reading and decoding, proof
+    /// verification, subject, operation, scope, policy, time, and binding checks, use consumption, fail-closed denials
+    /// with documented reason codes, and the grant identifier on the decision receipt. Do not reimplement any of it.
+    /// </description>
+    /// </item>
+    /// <item>
+    /// <term>2. Validator options</term>
+    /// <description>
+    /// Host: issuer, audience, clock skew, and the pinned key identifier, mapped here from
+    /// <see cref="CapabilityTokenOptions" />.
+    /// </description>
+    /// </item>
+    /// <item>
+    /// <term>3. Request binding</term>
+    /// <description>
+    /// Host choice of an AsiBackbone provider: <c>AddAsiBackboneFormFieldCapabilityGrantBinding</c>. Keep it for form
+    /// posts; register another <c>ICapabilityGrantRequestBindingProvider</c> for JSON bodies or route-identified
+    /// resources.
+    /// </description>
+    /// </item>
+    /// <item>
+    /// <term>4. Verification key</term>
+    /// <description>
+    /// Host: <see cref="CapabilityTokenKeyRing" /> over AsiBackbone's configured-key local-development provider.
+    /// Production replaces it with an <see cref="IGovernanceSignatureVerificationService" /> backed by a managed key
+    /// service.
+    /// </description>
+    /// </item>
+    /// <item>
+    /// <term>5. Use store</term>
+    /// <description>
+    /// Host: AsiBackbone's process-local <see cref="InMemoryCapabilityGrantUseStore" />. Production with more than one
+    /// replica replaces it with a shared <see cref="ICapabilityGrantUseStore" /> whose consume is atomic.
+    /// </description>
+    /// </item>
+    /// <item>
+    /// <term>6. Issuance</term>
+    /// <description>
+    /// Host: entitlement, lifetime, and where the issuer runs. <see cref="CapabilityTokenIssuer" /> composes the
+    /// AsiBackbone signing helper and token encoding; production may move it to a separate service.
+    /// </description>
+    /// </item>
+    /// </list>
+    /// <para>
+    /// Options are validated at startup, so enabling tokens without a signing key stops the application before it serves
+    /// a request.
     /// </para>
     /// </remarks>
     public static IServiceCollection AddApplicationCapabilityTokens(
@@ -71,8 +123,16 @@ public static class CapabilityTokenServiceExtensions
                 $"{CapabilityTokenOptions.SectionName}:Enabled is true in the Production environment, but the sample configured-key provider keeps the signing key in process memory. Register a managed key provider, or set {CapabilityTokenOptions.SectionName}:{nameof(CapabilityTokenOptions.AllowSampleSigningKeyInProduction)} to true to accept the sample provider deliberately.");
         }
 
+        // 1. LIBRARY: the signed capability grant validator. AsiBackbone owns reading and decoding the token, verifying
+        //    the proof, checking subject, operation, scopes, policy, validity window, and request binding, consuming the
+        //    use, denying every failure with a documented reason code, and putting the grant identifier on the decision
+        //    receipt. The library refuses to register beside another validator, so the claim validator is removed first.
         services.RemoveAll<IEndpointCapabilityGrantValidator>();
         services.AddAsiBackboneSignedCapabilityGrants(static _ => { });
+
+        // 2. HOST: what the validator checks the grant against. Issuer and audience are required by the library; clock
+        //    skew and key pinning are the host's policy. Production keeps this step and sets its own values. Pin only the
+        //    key identifier: pinning a key version would deny outstanding tokens during a rotation.
         services.AddOptions<AsiBackbone.AspNetCore.CapabilityGrants.SignedCapabilityGrantOptions>()
             .Configure<IOptions<CapabilityTokenOptions>>(static (grantOptions, tokenOptionsAccessor) =>
             {
@@ -82,16 +142,30 @@ public static class CapabilityTokenServiceExtensions
                 grantOptions.AllowedClockSkew = TimeSpan.FromSeconds(tokenOptions.AllowedClockSkewSeconds);
                 grantOptions.ExpectedProofKeyId = tokenOptions.KeyId;
             });
+
+        // 3. HOST CHOICE, LIBRARY IMPLEMENTATION: what a grant's resource binding covers. The form-field provider fits
+        //    endpoints that post forms with antiforgery, as these do. Production keeps it for forms, or registers its own
+        //    ICapabilityGrantRequestBindingProvider for JSON bodies or resources identified by route values.
         services.AddAsiBackboneFormFieldCapabilityGrantBinding();
 
+        // 4. HOST: the key that verifies proofs, and signs at issuance. The sample wraps AsiBackbone's configured-key
+        //    local-development provider in a key ring that adds one previous key for rotation. PRODUCTION REPLACES THIS
+        //    STEP: register an IGovernanceSignatureVerificationService backed by a managed key service, and sign issued
+        //    tokens with the matching IGovernanceSigningService.
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<CapabilityTokenKeyRing>();
         services.AddSingleton<IGovernanceSignatureVerificationService>(static serviceProvider =>
             serviceProvider.GetRequiredService<CapabilityTokenKeyRing>());
 
-        // Process-local replay protection. Several replicas each hold their own store, so a single-use token could be
-        // accepted once per replica; a multi-replica deployment registers a shared store instead.
+        // 5. HOST: replay protection. AsiBackbone's in-memory store is process-local, so several replicas would each
+        //    accept a single-use token once. PRODUCTION WITH MORE THAN ONE REPLICA REPLACES THIS STEP: register a shared
+        //    ICapabilityGrantUseStore whose consume is atomic across replicas and that keeps a consumed grant until it
+        //    expires plus the allowed clock skew.
         services.TryAddSingleton<ICapabilityGrantUseStore, InMemoryCapabilityGrantUseStore>();
+
+        // 6. HOST: issuance. Entitlement, lifetime, and where the issuer runs are host decisions; the issuer composes the
+        //    library's signing helper and token encoding. Production keeps the decisions and may run the issuer as a
+        //    separate service, sharing only the public verification key with this one.
         services.AddSingleton<CapabilityTokenIssuer>();
 
         return services;

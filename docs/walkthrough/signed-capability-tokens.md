@@ -40,18 +40,26 @@ the claim validator registered. While it is `true`, it removes that registration
 `AddAsiBackboneSignedCapabilityGrants`, which refuses to register beside another validator. Entitlement still comes
 from claims in both models: a token is issued only to an actor who holds every scope the target endpoint declares.
 
-## What the host owns
+## What AsiBackbone provides and what the host supplies
 
-| Decision | Reference Application choice |
-|:---|:---|
-| Entitlement | `POST /api/v1/capability-tokens` issues only to an actor whose permission claims cover the endpoint's scopes |
-| Lifetime and use limit | `LifetimeSeconds` (120 by default, at most 900) and a signed `MaxUseCount` of one |
-| Issuer and audience | `Issuer` and `Audience` from configuration, also required by the validator |
-| Key material | `CapabilityTokenKeyRing`, AsiBackbone's configured-key `LocalDevelopmentSigningService` with a PEM key from configuration |
-| Use store | AsiBackbone's process-local `InMemoryCapabilityGrantUseStore` |
-| Request binding | AsiBackbone's `FormFieldCapabilityGrantRequestBindingProvider` |
-| Clock skew | `AllowedClockSkewSeconds` (0 by default, at most 60) |
-| Time | The registered `TimeProvider`, which tests replace to move time instead of sleeping |
+Setting `Enabled` to `true` makes the application call AsiBackbone's registration extensions, which move the
+generic, security-sensitive work into the library. The rest stays with the host, in this sample and in production.
+`AddApplicationCapabilityTokens` registers everything in the same six steps as the table, and each step in the code is
+marked `LIBRARY` or `HOST`.
+
+| Step | Provided by AsiBackbone when enabled | Still required from the host | This sample | Production |
+|:---|:---|:---|:---|:---|
+| 1. Validator | `AddAsiBackboneSignedCapabilityGrants` registers `SignedCapabilityGrantEndpointValidator`: token reading and decoding, proof verification, subject, operation, scope, policy, validity-window and binding checks, use consumption, fail-closed denials with reason codes | Call the extension, and register no other `IEndpointCapabilityGrantValidator` | Removes the claim validator, then calls the extension | Same |
+| 2. Validator options | `SignedCapabilityGrantOptions` and its startup validation | Issuer, audience, clock skew, and optional key pinning | Mapped from `ReferenceApplication:CapabilityTokens` | Same, with production values; pin the key identifier, not the version |
+| 3. Request binding | `FormFieldCapabilityGrantRequestBindingProvider` (`AddAsiBackboneFormFieldCapabilityGrantBinding`) | Choose what a binding covers | Form fields, excluding antiforgery | Keep for form posts; register an `ICapabilityGrantRequestBindingProvider` for JSON bodies or route-identified resources |
+| 4. Keys | `GovernanceArtifactVerifier` checks proofs through `IGovernanceSignatureVerificationService`; `AsiBackbone.Signing.ManagedKey` signs through a managed key client | The verification service, the signing service, and the key material | `CapabilityTokenKeyRing` over the configured-key `LocalDevelopmentSigningService`, PEM from configuration, one previous key for rotation | **Replace**: an `IGovernanceSignatureVerificationService` backed by the key service's public key, and `AddAsiBackboneManagedKeySigning` with an `IManagedKeySigningClient` for issuance |
+| 5. Use store | `ICapabilityGrantUseStore` contract; `InMemoryCapabilityGrantUseStore` for one process | A store that fits the deployment | `InMemoryCapabilityGrantUseStore` | **Replace** when there is more than one replica: a shared store with an atomic consume |
+| 6. Issuance | `GovernanceArtifactSigner.SignCapabilityGrantAsync`, `CapabilityGrantToken.Encode`, `FormFieldCapabilityGrantRequestBindingProvider.CreateBinding` | Entitlement, lifetime, use limit, and where the issuer runs | `CapabilityTokenIssuer` behind `POST /api/v1/capability-tokens`, entitlement from permission claims | Same decisions; often a separate issuing service that holds the signing key |
+| Evidence | The grant identifier on the decision receipt, copied to `AuditLedgerRecord.CapabilityTokenId` and bound by the record hash | A decision receipt sink and ledger store | `LedgerDecisionReceiptSink` over the EF Core ledger, unchanged | Same |
+| Time | Reads `TimeProvider` from the container | Register the clock | `TimeProvider.System`; tests replace it | Same |
+
+Nothing in steps 1 to 3, or in the evidence path, needs host code. A host-written validator, token codec, or ledger
+side channel is a sign that something the library provides is being reimplemented.
 
 ## Issue a token
 
@@ -169,20 +177,54 @@ explorer does not request tokens yet. The token assembly view
 Do not pin `KeyVersion` in the validator during a rotation; the Reference Application pins only the key identifier. See
 the [AsiBackbone key rotation guidance](https://asibackbone.github.io/AsiBackbone/articles/signed-capability-grants.html#key-rotation).
 
-## What a production deployment must supply
+## Wire it for production
 
-- **A managed signing provider.** The sample uses AsiBackbone's configured-key `LocalDevelopmentSigningService`, whose
-  key sits in process memory with no custody, revocation, or hardware protection. Register an
-  `IGovernanceSignatureVerificationService` backed by a key service, such as one built on
-  `AsiBackbone.Signing.ManagedKey`, and sign issued tokens with it.
-- **The key from a secret store**, with rotation as above.
+Keep steps 1 to 3 and 6 as they are, with production values. Replace steps 4 and 5. In outline, with the host-written
+types named for illustration:
+
+```csharp
+// 1. LIBRARY: the validator. Register no other IEndpointCapabilityGrantValidator.
+services.AddAsiBackboneSignedCapabilityGrants(options =>
+{
+    // 2. HOST: what grants are validated against.
+    options.Issuer = "https://approvals.example.com";
+    options.Audience = "orders-api";
+    options.AllowedClockSkew = TimeSpan.FromSeconds(30);
+    options.ExpectedProofKeyId = "capability-grants";
+});
+
+// 3. HOST CHOICE, LIBRARY IMPLEMENTATION: what a binding covers.
+services.AddAsiBackboneFormFieldCapabilityGrantBinding();
+
+// 4. HOST: keys from a managed key service. AsiBackbone.Signing.ManagedKey signs through your key client; verification
+//    is yours to supply, typically checking the proof with the key service's public key.
+services.AddAsiBackboneManagedKeySigning(/* options and your IManagedKeySigningClient */);
+services.AddSingleton<IGovernanceSignatureVerificationService, KeyServiceVerificationService>();
+
+// 5. HOST: replay storage shared by every replica, with an atomic consume.
+services.AddSingleton<ICapabilityGrantUseStore, DatabaseCapabilityGrantUseStore>();
+
+// 6. HOST: issuance, here or in a separate service that holds the signing key.
+services.AddSingleton<CapabilityTokenIssuer>();
+```
+
+`KeyServiceVerificationService` and `DatabaseCapabilityGrantUseStore` are not part of this sample or of AsiBackbone. A
+production deployment must also supply:
+
+- **The verification service.** `AsiBackbone.Signing.ManagedKey` provides signing only. The relying endpoint needs an
+  `IGovernanceSignatureVerificationService` that checks proofs against the key service, and that trusts the previous
+  key version until outstanding tokens expire, as `CapabilityTokenKeyRing` does here.
+- **Key material from a secret store or key service**, never from source, with rotation as above.
 - **A shared use store.** `InMemoryCapabilityGrantUseStore` is process-local: with several replicas, a single-use token
-  could be accepted once by each. Register an `ICapabilityGrantUseStore` whose consume operation is atomic across
-  replicas, backed by the database or a distributed cache, that keeps a consumed grant until it expires plus the
-  allowed clock skew. See
+  could be accepted once by each. The shared store's consume must be atomic across replicas, backed by the database or
+  a distributed cache, and must keep a consumed grant until it expires plus the allowed clock skew. See
   [multi-replica replay storage](https://asibackbone.github.io/AsiBackbone/articles/signed-capability-grants.html#multi-replica-replay-storage).
 - **An issuer separate from the executor**, when that is the point of using tokens. The sample hosts both so the
-  walkthrough stays self-contained.
+  walkthrough stays self-contained. Only the issuer needs the signing key; the executor needs only the verification
+  key and the use store.
+
+Once step 4 uses a managed key service, `SigningKeyPem`, `PreviousVerificationKeyPem`, and
+`AllowSampleSigningKeyInProduction` no longer apply, and the Production guard is no longer needed.
 
 ## Verification
 

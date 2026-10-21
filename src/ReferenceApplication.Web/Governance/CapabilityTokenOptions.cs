@@ -13,6 +13,12 @@ namespace ReferenceApplication.Web.Governance;
 /// The signing key is a secret. Supply it through user secrets, an environment variable, or a secret store; it is
 /// never part of checked-in configuration. Startup fails when tokens are enabled without a usable key.
 /// </para>
+/// <para>
+/// Every setting here is a host decision. <see cref="Issuer" />, <see cref="Audience" />,
+/// <see cref="AllowedClockSkewSeconds" />, and <see cref="KeyId" /> are passed to AsiBackbone's validator options;
+/// <see cref="LifetimeSeconds" /> applies at issuance; the key settings feed <see cref="CapabilityTokenKeyRing" />, which a
+/// production deployment replaces with a managed key service, so the key settings then no longer apply.
+/// </para>
 /// </remarks>
 public sealed class CapabilityTokenOptions
 {

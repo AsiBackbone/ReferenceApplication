@@ -22,6 +22,12 @@ namespace ReferenceApplication.Web.Governance;
 /// Issuance does not decide entitlement. The caller checks that the actor may hold the requested scopes before
 /// calling <see cref="IssueAsync" />.
 /// </para>
+/// <para>
+/// Issuance is host-owned: AsiBackbone does not issue grants. The library supplies the signing helper, the token
+/// encoding, and <see cref="FormFieldCapabilityGrantRequestBindingProvider.CreateBinding" />; the host decides who is
+/// entitled, the lifetime, the use limit, and where the issuer runs. In production, sign with the managed key service
+/// that the relying endpoint's <see cref="IGovernanceSignatureVerificationService" /> trusts.
+/// </para>
 /// </remarks>
 public sealed class CapabilityTokenIssuer(
     IOptions<CapabilityTokenOptions> optionsAccessor,

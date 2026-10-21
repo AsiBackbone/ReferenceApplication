@@ -47,8 +47,11 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
   * Replay protection uses AsiBackbone's process-local `InMemoryCapabilityGrantUseStore`.
   * The authorizing token's identifier reaches the decision ledger's `CapabilityTokenId` through the decision receipt,
     covered by the record hash. The evidence timeline returns it as `capabilityTokenId`.
-  * The supplemental walkthrough page compares the claim and token models, covers issuance, key rotation, and replay
-    storage, and links to AsiBackbone's article for the library behavior.
+  * The supplemental walkthrough page compares the claim and token models and covers issuance, key rotation, and replay
+    storage. A responsibilities table says what AsiBackbone provides once enabled and what the host must still supply,
+    and a production wiring outline shows which steps a deployment keeps and which it replaces. `AddApplicationCapabilityTokens`
+    marks each of the same six steps in code as library or host. The page links to AsiBackbone's article for the
+    library behavior.
   * This replaces the host-side prototype built against 7.2.1, which is not merged: no host validator, token codec, use
     store, ledger side channel, or HMAC provider is added.
 * A CI container smoke test that, on every pull request:
