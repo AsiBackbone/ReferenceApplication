@@ -46,6 +46,9 @@ These procedures support the walkthrough without adding new AsiBackbone integrat
 - After Step 5, use the [Development-only demo identity controls](development-demo-identity.md) to exercise allowed,
   denied, and acknowledgment-required outcomes without an external identity provider. The reference configuration
   enables the control only in `Development`; it cannot be registered in another environment.
+- After Step 5, [Bind capabilities to signed tokens](signed-capability-tokens.md) replaces the claim-backed grant
+  check with AsiBackbone's signed capability grant validator: short-lived, single-use tokens bound to one actor,
+  operation, and request payload. It is disabled by default and records the authorizing token in the decision evidence.
 
 ## Test inheritance rule used throughout
 

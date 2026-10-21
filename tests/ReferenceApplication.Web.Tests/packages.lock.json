@@ -99,15 +99,6 @@
           "Microsoft.Extensions.DependencyInjection": "10.0.13"
         }
       },
-      "AsiBackbone.Storage.InMemory": {
-        "type": "Transitive",
-        "resolved": "7.3.0",
-        "contentHash": "qw/2PO2j5d3e+fqKQbugVEDbrFtBOT89PcJUebBDIKOT/eW9tKYZJqR+Nf4jYffY2zviYtO/W3Fei/eLIqaahg==",
-        "dependencies": {
-          "AsiBackbone.Core": "7.3.0",
-          "AsiBackbone.DependencyInjection": "7.3.0"
-        }
-      },
       "Asp.Versioning.Abstractions": {
         "type": "Transitive",
         "resolved": "10.2.1",
@@ -976,6 +967,8 @@
         "dependencies": {
           "AsiBackbone.AspNetCore": "[7.3.0, )",
           "AsiBackbone.Core": "[7.3.0, )",
+          "AsiBackbone.Signing.LocalDevelopment": "[7.3.0, )",
+          "AsiBackbone.Storage.InMemory": "[7.3.0, )",
           "Asp.Versioning.Mvc": "[10.2.1, )",
           "AspNet.Security.OAuth.GitHub": "[10.0.0, )",
           "Microsoft.AspNetCore.Authentication.Google": "[10.0.13, )",
@@ -1027,6 +1020,26 @@
           "Microsoft.EntityFrameworkCore": "10.0.13",
           "Microsoft.EntityFrameworkCore.Relational": "10.0.13",
           "Microsoft.Extensions.Logging.Abstractions": "10.0.13"
+        }
+      },
+      "AsiBackbone.Signing.LocalDevelopment": {
+        "type": "CentralTransitive",
+        "requested": "[7.3.0, )",
+        "resolved": "7.3.0",
+        "contentHash": "vtZlI3TjWpKcJpG0Qb2JXx+K0UBFMyaErMyJ6ntyS+9S1P69F9meNLn8Bzkfi7oSf8tDgXB8FsmLY6p3IzblLg==",
+        "dependencies": {
+          "AsiBackbone.Core": "7.3.0",
+          "AsiBackbone.DependencyInjection": "7.3.0"
+        }
+      },
+      "AsiBackbone.Storage.InMemory": {
+        "type": "CentralTransitive",
+        "requested": "[7.3.0, )",
+        "resolved": "7.3.0",
+        "contentHash": "qw/2PO2j5d3e+fqKQbugVEDbrFtBOT89PcJUebBDIKOT/eW9tKYZJqR+Nf4jYffY2zviYtO/W3Fei/eLIqaahg==",
+        "dependencies": {
+          "AsiBackbone.Core": "7.3.0",
+          "AsiBackbone.DependencyInjection": "7.3.0"
         }
       },
       "Asp.Versioning.Mvc": {

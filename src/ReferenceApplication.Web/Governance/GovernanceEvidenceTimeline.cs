@@ -118,7 +118,8 @@ internal sealed class GovernanceEvidenceQuery(IDbContextFactory<ApplicationDbCon
             MutationBatchId: null,
             RecordCount: null,
             EvidenceHash: decision.RecordHash,
-            EvidenceHashAlgorithm: null)));
+            EvidenceHashAlgorithm: null,
+            CapabilityTokenId: decision.CapabilityTokenId)));
 
         entries.AddRange(applicationRecords.Select(record => new GovernanceEvidenceTimelineEntry(
             Kind: _applicationRecordKind,
@@ -338,6 +339,7 @@ public sealed record GovernanceEvidenceTimelineResponse(
 /// <param name="RecordCount">The relevant mutation-audit record count.</param>
 /// <param name="EvidenceHash">The ledger record or mutation manifest hash.</param>
 /// <param name="EvidenceHashAlgorithm">The evidence hash algorithm, when recorded.</param>
+/// <param name="CapabilityTokenId">The capability token that authorized a decision, when one did.</param>
 public sealed record GovernanceEvidenceTimelineEntry(
     string Kind,
     DateTimeOffset OccurredUtc,
@@ -356,4 +358,5 @@ public sealed record GovernanceEvidenceTimelineEntry(
     string? MutationBatchId,
     int? RecordCount,
     string? EvidenceHash,
-    string? EvidenceHashAlgorithm);
+    string? EvidenceHashAlgorithm,
+    string? CapabilityTokenId = null);

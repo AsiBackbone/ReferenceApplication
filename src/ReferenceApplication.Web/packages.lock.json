@@ -24,6 +24,26 @@
         "resolved": "7.3.0",
         "contentHash": "FO0yZVrsCZtKklqfmwKZRtSJmkR/lrNJCQx4X2wVrA9WG/RGvlzASEeGNPBzkhN2K3YfxF9RAoWlQguFFJtTaw=="
       },
+      "AsiBackbone.Signing.LocalDevelopment": {
+        "type": "Direct",
+        "requested": "[7.3.0, )",
+        "resolved": "7.3.0",
+        "contentHash": "vtZlI3TjWpKcJpG0Qb2JXx+K0UBFMyaErMyJ6ntyS+9S1P69F9meNLn8Bzkfi7oSf8tDgXB8FsmLY6p3IzblLg==",
+        "dependencies": {
+          "AsiBackbone.Core": "7.3.0",
+          "AsiBackbone.DependencyInjection": "7.3.0"
+        }
+      },
+      "AsiBackbone.Storage.InMemory": {
+        "type": "Direct",
+        "requested": "[7.3.0, )",
+        "resolved": "7.3.0",
+        "contentHash": "qw/2PO2j5d3e+fqKQbugVEDbrFtBOT89PcJUebBDIKOT/eW9tKYZJqR+Nf4jYffY2zviYtO/W3Fei/eLIqaahg==",
+        "dependencies": {
+          "AsiBackbone.Core": "7.3.0",
+          "AsiBackbone.DependencyInjection": "7.3.0"
+        }
+      },
       "Asp.Versioning.Mvc": {
         "type": "Direct",
         "requested": "[10.2.1, )",

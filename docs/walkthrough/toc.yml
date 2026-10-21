@@ -16,6 +16,8 @@
   href: 05-govern-endpoints.md
 - name: Supplemental - Use the Development demo identity
   href: development-demo-identity.md
+- name: Supplemental - Bind capabilities to signed tokens
+  href: signed-capability-tokens.md
 - name: 6. Persist and verify audit evidence
   href: 06-persist-and-verify-audit.md
 - name: 7. Observe governance in action
