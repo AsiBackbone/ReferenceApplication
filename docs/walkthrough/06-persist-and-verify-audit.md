@@ -74,9 +74,11 @@ dotnet tool run dotnet-ef database update `
 Pop-Location
 ```
 
-`migrations list` shows `AddGovernedAuditEvidence` last, marked `(Pending)` until `database update` applies it. The
-application does not apply migrations automatically at startup, and governed operations fail closed until the migration
-is applied, because they cannot store their decision evidence.
+`migrations list` shows `AddGovernedAuditEvidence`, marked `(Pending)` until `database update` applies it. It is
+followed by `AddCapabilityGrantUses`, which adds the replay table for the
+[signed capability tokens](signed-capability-tokens.md) supplement; `database update` applies both. The application
+does not apply migrations automatically at startup, and governed operations fail closed until the migration is applied,
+because they cannot store their decision evidence.
 
 ### How the migration was created
 

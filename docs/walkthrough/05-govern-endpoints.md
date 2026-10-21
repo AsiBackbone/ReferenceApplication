@@ -72,6 +72,10 @@ the request:
 services.AddScoped<IEndpointCapabilityGrantValidator, ClaimEndpointCapabilityGrantValidator>();
 ```
 
+A claim proves entitlement but does not tie a grant to any particular request. The supplemental
+[Bind capabilities to signed tokens](signed-capability-tokens.md) procedure adopts AsiBackbone's second model, signed
+capability tokens bound to one actor, operation, and payload, and compares the two.
+
 ## Map HTTP outcomes
 
 The endpoint middleware now uses the application's Problem Details service for ordinary governance denials. The body is

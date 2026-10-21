@@ -129,6 +129,7 @@ public sealed partial class GovernanceExplorerTests
     public async Task Index_DevelopmentDemoIdentity_ShowsSelectedFixedClaims()
     {
         const string demoEnabledKey = "ReferenceApplication:DemoIdentity:Enabled";
+        const string loadDemonstrationEnabledKey = "ReferenceApplication:GovernanceLoadDemonstration:Enabled";
         using var database = TestSqliteDatabase.Create();
         WebApplicationFactory<Program> unconfiguredFactory =
             ApplicationWebApplicationFactory.CreateAllowingAnonymousAccess(new Dictionary<string, string?>
@@ -136,7 +137,9 @@ public sealed partial class GovernanceExplorerTests
                 [demoEnabledKey] = "true",
                 ["ReferenceApplication:AuditCompletionOutbox:Enabled"] = "false"
             }, Environments.Development)
-            .WithWebHostBuilder(builder => builder.UseSetting(demoEnabledKey, "true"));
+            .WithWebHostBuilder(builder => builder
+                .UseSetting(demoEnabledKey, "true")
+                .UseSetting(loadDemonstrationEnabledKey, "true"));
         using WebApplicationFactory<Program> factory = await database.ApplyAsync(unconfiguredFactory);
         using HttpClient client = factory.CreateHttpsClient();
         using HttpResponseMessage tokenResponse = await client.GetAsync(
