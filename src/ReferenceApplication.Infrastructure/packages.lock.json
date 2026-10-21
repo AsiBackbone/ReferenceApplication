@@ -4,15 +4,15 @@
     "net10.0": {
       "AsiBackbone.Analyzers": {
         "type": "Direct",
-        "requested": "[7.3.0, )",
-        "resolved": "7.3.0",
-        "contentHash": "dsDPuk6GdD6alKwK5BLoTs0Z7/sdMIsuSn2i7y4ETrVryMKwPmnIHmS297YQDwP5/ahDn8RM2jUTd3LojVeYuQ=="
+        "requested": "[7.4.0, )",
+        "resolved": "7.4.0",
+        "contentHash": "Dqrv6daUWdi/dlbZdmfYc9+HNIGU6AC388f1TW3c2jAx3Yd8nxlSaMGTDcxaSxY3FyUyHFcrOcRobtAwYFOrbg=="
       },
       "AsiBackbone.Core": {
         "type": "Direct",
-        "requested": "[7.3.0, )",
-        "resolved": "7.3.0",
-        "contentHash": "FO0yZVrsCZtKklqfmwKZRtSJmkR/lrNJCQx4X2wVrA9WG/RGvlzASEeGNPBzkhN2K3YfxF9RAoWlQguFFJtTaw==",
+        "requested": "[7.4.0, )",
+        "resolved": "7.4.0",
+        "contentHash": "09eS5gPRygrm3ieNDauwe0wcmHvcFlAgE08SpHi3ABC195azsM0V2sUMbh1YPlFMb03KJTz4VYDziWOHZDN6GQ==",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "10.0.13",
           "Microsoft.Extensions.Options": "10.0.13"
@@ -20,12 +20,12 @@
       },
       "AsiBackbone.EntityFrameworkCore": {
         "type": "Direct",
-        "requested": "[7.3.0, )",
-        "resolved": "7.3.0",
-        "contentHash": "KdDe9d2O7WjLskEXxd3cdKVWpZuHZtEJyT/zJlGs48omyKXm3cLnCho8sVa+EZLuQjW2rOrrkci3EjIa15s5Mw==",
+        "requested": "[7.4.0, )",
+        "resolved": "7.4.0",
+        "contentHash": "WP/pL/FDsHotTxDKNBuzXmYEb+XX4vv18UpFPxRJsnbclLOntdwFlDLT7fko5UxWv2cESUEAA53ULqSPap5SkA==",
         "dependencies": {
-          "AsiBackbone.Core": "7.3.0",
-          "AsiBackbone.DependencyInjection": "7.3.0",
+          "AsiBackbone.Core": "7.4.0",
+          "AsiBackbone.DependencyInjection": "7.4.0",
           "Microsoft.EntityFrameworkCore": "10.0.13",
           "Microsoft.EntityFrameworkCore.Relational": "10.0.13",
           "Microsoft.Extensions.Logging.Abstractions": "10.0.13"
@@ -116,8 +116,8 @@
       },
       "AsiBackbone.DependencyInjection": {
         "type": "Transitive",
-        "resolved": "7.3.0",
-        "contentHash": "jqLmnZqU3JoiFwbUx6zOTcdOVIDXn6ZLGDcBHqPXMxQ8zrySXH3flf2S3uPTmKAPkO3Fg3GyVXS8jmaEvDeMTw==",
+        "resolved": "7.4.0",
+        "contentHash": "AlPBmjU9Pwle497hVKzpWqoJi4gLay6JolKFpdNL9zcyghr0WsnsU7jC+4wblEzgmjJ44yv3dCDFnif5tI/udg==",
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection": "10.0.13"
         }
