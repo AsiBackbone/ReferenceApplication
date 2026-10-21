@@ -65,7 +65,7 @@ public sealed partial class CapabilityGrantUsePurgeService(
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        TimeSpan interval = TimeSpan.FromSeconds(_options.Value.UseStorePurgeIntervalSeconds);
+        var interval = TimeSpan.FromSeconds(_options.Value.UseStorePurgeIntervalSeconds);
 
         while (!stoppingToken.IsCancellationRequested)
         {
