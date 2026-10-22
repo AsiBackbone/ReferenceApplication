@@ -196,6 +196,93 @@ public sealed partial class GovernanceExplorerTests
             Assert.Contains("name=\"__RequestVerificationToken\"", form.Value, StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// Verifies that, with every governance sandbox tool enabled in Development, the explorer renders each one as a
+    /// keyboard-operable tab with its own output view and live status region, still with external-only script and style
+    /// resources, so the sandbox leaves the Content Security Policy unchanged.
+    /// </summary>
+    [Fact]
+    public async Task Index_DevelopmentSandbox_RendersEveryToolWithoutInlineScriptOrStyle()
+    {
+        const string demoEnabledKey = "ReferenceApplication:DemoIdentity:Enabled";
+        string[] sandboxSwitches =
+        [
+            "ReferenceApplication:GovernanceLoadDemonstration:Enabled",
+            "ReferenceApplication:PolicySimulator:Enabled",
+            "ReferenceApplication:DecisionReplay:Enabled",
+            "ReferenceApplication:PipelineInspector:Enabled",
+            "ReferenceApplication:FailureScenarios:Enabled"
+        ];
+        using var database = TestSqliteDatabase.Create();
+        WebApplicationFactory<Program> unconfiguredFactory =
+            ApplicationWebApplicationFactory.CreateAllowingAnonymousAccess(new Dictionary<string, string?>
+            {
+                [demoEnabledKey] = "true",
+                ["ReferenceApplication:AuditCompletionOutbox:Enabled"] = "false",
+                ["ReferenceApplication:AuditReconciliation:RunWorker"] = "false"
+            }, Environments.Development)
+            .WithWebHostBuilder(builder =>
+            {
+                // Feature switches are read during service registration, so they are pinned as host settings.
+                _ = builder
+                    .UseSetting(demoEnabledKey, "true")
+                    .UseSetting("ReferenceApplication:CapabilityTokens:Enabled", "false");
+                foreach (string sandboxSwitch in sandboxSwitches)
+                {
+                    _ = builder.UseSetting(sandboxSwitch, "true");
+                }
+            });
+        using WebApplicationFactory<Program> factory = await database.ApplyAsync(unconfiguredFactory);
+        using HttpClient client = factory.CreateHttpsClient();
+        using HttpResponseMessage tokenResponse = await client.GetAsync(
+            "/test/authentication/antiforgery-token",
+            TestContext.Current.CancellationToken);
+        string token = await tokenResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        using HttpResponseMessage signIn = await client.PostAsync(
+            "/Account/DemoSignIn",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = token,
+                ["administrator"] = bool.TrueString,
+                ["returnUrl"] = "/governance-explorer"
+            }),
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Redirect, signIn.StatusCode);
+
+        using HttpResponseMessage response = await client.GetAsync("/governance-explorer", TestContext.Current.CancellationToken);
+        string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        (string Tab, string Panel, string Output, string Status)[] tools =
+        [
+            ("explorer-tab-load", "explorer-panel-load", "load", "load-demonstration-status"),
+            ("explorer-tab-simulator", "explorer-panel-simulator", "simulator", "policy-simulator-status"),
+            ("explorer-tab-replay", "explorer-panel-replay", "replay", "decision-replay-status"),
+            ("explorer-tab-pipeline", "explorer-panel-pipeline", "pipeline", "pipeline-inspector-status"),
+            ("explorer-tab-scenarios", "explorer-panel-scenarios", "scenarios", "failure-scenario-status")
+        ];
+        foreach ((string tab, string panel, string output, string status) in tools)
+        {
+            Assert.Contains($"id=\"{tab}\"", html, StringComparison.Ordinal);
+            Assert.Contains($"aria-controls=\"{panel}\"", html, StringComparison.Ordinal);
+            Assert.Contains($"aria-labelledby=\"{tab}\"", html, StringComparison.Ordinal);
+            Assert.Contains($"data-output-view=\"{output}\"", html, StringComparison.Ordinal);
+            Assert.Matches($"id=\"{status}\"[^>]*aria-live=\"polite\"", html);
+        }
+
+        Assert.Contains("governance-overhead.html", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("<style", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(" style=", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatch(" on[a-z]+=\"", html);
+        MatchCollection scripts = ScriptElementRegex().Matches(html);
+        Assert.NotEmpty(scripts);
+        Assert.All(scripts.Cast<Match>(), script =>
+        {
+            Assert.Contains(" src=", script.Groups["attributes"].Value, StringComparison.OrdinalIgnoreCase);
+            Assert.True(string.IsNullOrWhiteSpace(script.Groups["body"].Value));
+        });
+    }
+
     private static WebApplicationFactory<Program> CreateFactory()
     {
         return ApplicationWebApplicationFactory.CreateAllowingAnonymousAccess(new Dictionary<string, string?>

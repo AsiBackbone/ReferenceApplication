@@ -43,6 +43,10 @@ _disableToc: true
     <strong>Observe governance in action</strong>
     <span>Use the Development explorer to run governed endpoints and inspect their persisted evidence.</span>
   </a>
+  <a class="entry-point" href="walkthrough/07-observe-governance.md#governance-sandbox">
+    <strong>Experiment in the governance sandbox</strong>
+    <span>A Development-only learning aid, not a production feature: simulate and replay decisions, follow the outbox, and trigger failure paths.</span>
+  </a>
   <a class="entry-point" href="walkthrough/08-benchmarks.md">
     <strong>Measure host overhead</strong>
     <span>Run the repeatable BenchmarkDotNet scenarios and understand their measurement boundary.</span>
@@ -82,6 +86,7 @@ _disableToc: true
 | Supported platform | .NET 10.0 |
 | Host baseline | [NCAT](https://asibackbone.github.io/NetCoreApplicationTemplate/) `2.11.5`, generated with `dotnet new netcoreapp-template` (default cookie authentication, SQLite) |
 | Governance framework | [AsiBackbone](https://asibackbone.github.io/AsiBackbone/) `7.5.0`, integrated through walkthrough Step 8 |
+| Governance sandbox | Development-only explorer tools for experimenting with the pipeline; never registered in Staging or Production |
 | Untouched scaffold | [`ncat-baseline` branch](https://github.com/AsiBackbone/ReferenceApplication/tree/ncat-baseline) |
 | Source | [AsiBackbone/ReferenceApplication](https://github.com/AsiBackbone/ReferenceApplication) |
 
