@@ -7,7 +7,7 @@ This project follows Semantic Versioning using the format `MAJOR.MINOR.PATCH`. C
 a stable public contract; releases remain `0.x` pre-releases until the repository's release-readiness criteria are met.
 The release version is independent of the NCAT version, which the `ncat-v<version>` tags record.
 
-## Unreleased
+## 0.1.0-alpha.11 - 2026-10-22
 
 ### Fixed
 
