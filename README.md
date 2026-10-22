@@ -167,6 +167,14 @@ refuses to start without one. CI starts this configuration on every pull request
 [production deployment checklist](https://asibackbone.github.io/ReferenceApplication/walkthrough/run-in-production.html)
 lists every decision a deployment outside Development must make.
 
+### Upgrading between releases
+
+Database upgrades are supported from `v0.1.0-alpha.11` onward and are tested on every pull request. CI builds that
+release's migration bundle, creates and seeds a database with it, upgrades it with the current bundle, and checks that
+every row of evidence survived unchanged and still verifies. Migrations are forward-only: back up the database and the
+Data Protection key ring before every upgrade, and roll back only by restoring that backup. See
+[Upgrade between releases](https://asibackbone.github.io/ReferenceApplication/walkthrough/upgrade-between-releases.html).
+
 ## Configuration and security notes
 
 The NCAT baseline behavior is documented authoritatively on the [NCAT documentation site](https://asibackbone.github.io/NetCoreApplicationTemplate/). The points below matter most when running this host.
