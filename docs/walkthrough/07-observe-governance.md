@@ -377,10 +377,10 @@ endpoint decision records the request's trace identifier, including a decision r
 request to its spans, whether or not the operation changes data. A decision recorded with no W3C trace identifier, such
 as one recorded before the upgrade or while tracing was off, shows its request and response stages as not captured.
 
-The inspector shows two gaps in the host's telemetry. The host does not use `AsiBackbone.OpenTelemetry`, so governance
-itself emits no spans or metrics; only ASP.NET Core and HttpClient instrumentation is collected. And the
-`ReferenceApplication.AuditReconciliation` meter is created but not added to the OpenTelemetry pipeline, so its gauges
-are not exported.
+Collected and not collected come from the same list the host's OpenTelemetry configuration is built from, so the
+inspector cannot disagree with what is exported. With the default settings it marks ASP.NET Core, HttpClient,
+`AsiBackbone.OpenTelemetry`, and `ReferenceApplication.AuditReconciliation` as collected, and a governed request shows
+its governance span alongside its server span. [Governance telemetry](#governance-telemetry) describes what is exported.
 
 ### Reconciliation observed in Development
 
@@ -411,6 +411,108 @@ Staging and Production retain the base values unless deployment configuration ov
 The service, listener, reconciliation, and route are registered only when the environment is exactly `Development` and
 the switch is enabled. `GET /api/v1/pipeline-inspector/snapshot?correlationId={id}&status={status}` requires the
 administrator policy and is never cached.
+
+## Governance telemetry
+
+Everything above runs in Development. Governance telemetry is what a deployed host exports, in every environment,
+through its normal OpenTelemetry pipeline and the OTLP exporter in
+[Run outside Development](run-in-production.md#checklist). It is on by default.
+
+### How it is produced
+
+The host references `AsiBackbone.OpenTelemetry` and registers its governance emitter with
+`UseOpenTelemetryEmission`. The emitter turns a governance envelope into a span and metrics; it configures no exporter
+of its own. The host projects persisted evidence through it:
+
+- `LedgerDecisionReceiptSink` projects a decision once its receipt is appended to the audit ledger, inside the governed
+  request; and
+- `AsiBackboneAuditCompletionPublisher` projects a lifecycle event once the outbox delivery appends it, in the outbox
+  worker.
+
+The ledger and the lifecycle store remain the record; telemetry is a projection of it. A decision whose receipt is not
+persisted, a duplicate delivery, a deferral, and a failed delivery project nothing. A projection never throws, ignores
+the request's cancellation because the evidence is already stored, and cannot change a governance outcome or a delivery
+result; a projection that is not delivered is logged as a warning (event `26101` or `26102`).
+
+This host projects directly rather than through AsiBackbone's durable governance outbox and drain worker, because the
+ledger and lifecycle store already hold everything the projection carries. A deployment that must deliver every
+governance event to an external system, rather than observe it, should add that outbox.
+
+### Spans
+
+Source `AsiBackbone.OpenTelemetry`, kind `Internal`, one span per projected event, named after the governed operation:
+
+| Event | When | Parent | Activity event |
+| --- | --- | --- | --- |
+| Decision | The receipt is appended, before the endpoint runs | The request's ASP.NET Core server span | `asibackbone.decision.evaluated` |
+| Lifecycle event | The outbox delivery appends it | The outbox worker's current span, if any | `asibackbone.lifecycle.recorded` |
+
+Span tags carry `asibackbone.event_type`, `asibackbone.decision.outcome` (on a lifecycle span, the persistence outcome
+of the governed change), `asibackbone.policy.version` and `asibackbone.policy.hash` on a decision span,
+`asibackbone.lifecycle.stage` on a lifecycle span, and the identifiers that join a span to the evidence:
+`asibackbone.correlation_id`, `asibackbone.audit_residue_id` (the decision receipt), `asibackbone.event_id`,
+`asibackbone.envelope_id`, and `asibackbone.trace_id`. Identifiers are unique per request, which is expected on spans;
+none is a metric dimension. Span names are the governed operation names, a fixed set the host's endpoints declare.
+
+### Metrics
+
+Meter `AsiBackbone.OpenTelemetry`:
+
+| Instrument | Type | Unit | Dimensions | Series in this host |
+| --- | --- | --- | --- | --- |
+| `asibackbone.governance.emissions` | Counter | — | `event_type`, `result`, `provider` | 2: `Decision` and `AuditLifecycle`, each `Delivered`, `open-telemetry` |
+| `asibackbone.governance.emission_failures` | Counter | — | the above, `failure_code`, `retryable` | Only when the emitter itself fails |
+| `asibackbone.governance.emission_latency_ms` | Histogram | ms | as `emissions` | 2 |
+
+Meter `ReferenceApplication.AuditReconciliation`, observable gauges without dimensions, read at each collection:
+
+| Gauge | Value |
+| --- | --- |
+| `ncat.audit.reconciliation.findings.open` | Open reconciliation findings |
+| `ncat.audit.reconciliation.findings.error` | Open findings with Error severity |
+| `ncat.audit.reconciliation.findings.critical` | Open findings with Critical severity |
+| `ncat.audit.reconciliation.manifest_failures` | Open manifest-verification failures |
+| `ncat.audit.reconciliation.missing_completions` | Open missing-completion findings |
+| `ncat.audit.reconciliation.stale_delivery` | Open stale-delivery findings |
+| `ncat.audit.reconciliation.dead_letters` | Open dead-letter findings |
+| `ncat.audit.outbox.pending` | Audit completions waiting for delivery |
+| `ncat.audit.outbox.oldest_pending_age_seconds` | Age of the oldest waiting completion |
+| `ncat.audit.outbox.retry_count` | Retries across waiting completions |
+
+The finding gauges are updated by each reconciliation run and the outbox gauges by the reconciliation worker and the
+`application-audit-integrity` health check, so they read zero until the first of those runs in the process.
+
+Two things a deployment might expect are not metrics. Decision outcomes are a span tag, not a metric dimension, so count
+outcomes in the tracing backend by `asibackbone.decision.outcome`. And AsiBackbone `7.5.0` emits no policy-evaluation
+latency: `emission_latency_ms` is the local cost of the projection, and request latency remains ASP.NET Core's
+`http.server.request.duration`.
+
+### What is never recorded
+
+Envelopes are built field by field, whatever emitter is registered. The actor and display name, reason codes, receipt
+and lifecycle metadata (including operation execution, mutation batch, and idempotency identifiers and manifest
+hashes), request bodies and form values, and mutation values never reach telemetry. `GovernedAuditEvidenceTests` assert
+that none of these appear on any exported governance span, and that governance metrics carry only the dimensions above.
+
+### Configure
+
+```json
+{
+  "ReferenceApplication": {
+    "OpenTelemetry": {
+      "Enabled": true,
+      "EnableTracing": true,
+      "EnableMetrics": true,
+      "EnableGovernanceInstrumentation": true
+    }
+  }
+}
+```
+
+`EnableGovernanceInstrumentation` adds the emitter, its source and meter, and the reconciliation meter. Spans need
+`EnableTracing`, and metrics `EnableMetrics`. With it off, or with OpenTelemetry off, no emitter is registered and
+nothing is projected; governance and its evidence are unchanged. Each projected event costs one internal span while
+tracing samples it, a counter increment, and a histogram record.
 
 ## Failure scenarios
 
@@ -569,9 +671,18 @@ absent outside Development and rejected for non-administrators, and a replay wit
 lifecycle event its delivery appended, and that a failed delivery is shown with its attempt count, last error, and next
 attempt. One request's stages come in pipeline order with the synchronous stages first, and the persisted timestamps are
 in that order. Reconciliation reports a missing completion as an open finding. The telemetry view lists the sources and
-meters present, marks which OpenTelemetry collects, reads the host's gauges, and shows the request's server span.
+meters present, marks which OpenTelemetry collects, including the governance source and meters, reads the host's
+gauges, and shows the request's server span and its governance span.
 Snapshots leave every outbox entry and evidence row unchanged. The inspector, its listener, the reconciliation it
 registers, and its route are absent outside Development, and the route is rejected for non-administrators.
+
+`GovernedAuditEvidenceTests` add in-memory span and metric exporters to the host's own OpenTelemetry providers. They
+prove that a governed record exports one decision span in the request's trace, with its outcome and policy identity,
+that delivering its completion exports one lifecycle span, that the governance counters and latency histogram and the
+reconciliation gauges are exported, and that no actor, request value, mutation value, or metadata appears. With
+`EnableGovernanceInstrumentation` off, no emitter is registered and no governance span or metric is exported.
+`GovernanceTelemetryProjectionTests` prove the minimized envelopes, that a projection never throws or follows the
+request's cancellation, and that a decision that fails to persist is not projected.
 
 `FailureScenarioTests` run each scenario through the real endpoint and assert its HTTP outcome, reason code, and
 evidence shape: the recorded decision and its reason codes, the ledger, record, mutation-audit, and outbox row counts,

@@ -26,6 +26,10 @@ namespace ReferenceApplication.Web.Governance;
 /// message is recognized as a duplicate, and a different event under the same key is reported as a terminal conflict.
 /// A message whose decision record is not yet available is deferred rather than guessed.
 /// </para>
+/// <para>
+/// A newly appended lifecycle event is projected onto telemetry through <see cref="GovernanceTelemetryProjection" />.
+/// A duplicate, a deferral, or a failure projects nothing, and a projection can never change the delivery result.
+/// </para>
 /// </remarks>
 public sealed class AsiBackboneAuditCompletionPublisher : IApplicationAuditCompletionPublisher
 {
@@ -70,6 +74,7 @@ public sealed class AsiBackboneAuditCompletionPublisher : IApplicationAuditCompl
     private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
     private readonly ILoggerFactory _loggerFactory;
     private readonly GovernanceEvidenceNotificationPublisher _notificationPublisher;
+    private readonly GovernanceTelemetryProjection _telemetryProjection;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AsiBackboneAuditCompletionPublisher" /> class.
@@ -77,18 +82,22 @@ public sealed class AsiBackboneAuditCompletionPublisher : IApplicationAuditCompl
     /// <param name="dbContextFactory">The factory for short-lived application database contexts.</param>
     /// <param name="loggerFactory">The logger factory used for the AsiBackbone EF Core stores.</param>
     /// <param name="notificationPublisher">The isolated best-effort evidence notification publisher.</param>
+    /// <param name="telemetryProjection">The best-effort projection of persisted evidence onto telemetry.</param>
     public AsiBackboneAuditCompletionPublisher(
         IDbContextFactory<ApplicationDbContext> dbContextFactory,
         ILoggerFactory loggerFactory,
-        GovernanceEvidenceNotificationPublisher notificationPublisher)
+        GovernanceEvidenceNotificationPublisher notificationPublisher,
+        GovernanceTelemetryProjection telemetryProjection)
     {
         ArgumentNullException.ThrowIfNull(dbContextFactory);
         ArgumentNullException.ThrowIfNull(loggerFactory);
         ArgumentNullException.ThrowIfNull(notificationPublisher);
+        ArgumentNullException.ThrowIfNull(telemetryProjection);
 
         _dbContextFactory = dbContextFactory;
         _loggerFactory = loggerFactory;
         _notificationPublisher = notificationPublisher;
+        _telemetryProjection = telemetryProjection;
     }
 
     /// <inheritdoc />
@@ -211,6 +220,8 @@ public sealed class AsiBackboneAuditCompletionPublisher : IApplicationAuditCompl
                 GovernanceEvidenceNotificationKinds.LifecycleEvent,
                 lifecycleEvent.EventId));
         }
+
+        await _telemetryProjection.ProjectLifecycleEventAsync(lifecycleEvent).ConfigureAwait(false);
 
         return ApplicationAuditCompletionPublishResult.Success();
     }

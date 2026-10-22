@@ -8,6 +8,7 @@
     <PackageVersion Include="AsiBackbone.AspNetCore" Version="7.5.0" />
     <PackageVersion Include="AsiBackbone.Core" Version="7.5.0" />
     <PackageVersion Include="AsiBackbone.EntityFrameworkCore" Version="7.5.0" />
+    <PackageVersion Include="AsiBackbone.OpenTelemetry" Version="7.5.0" />
     <PackageVersion Include="AsiBackbone.Signing.LocalDevelopment" Version="7.5.0" />
     <PackageVersion Include="AsiBackbone.Signing.ManagedKey" Version="7.5.0" />
     <PackageVersion Include="AsiBackbone.Storage.InMemory" Version="7.5.0" />

@@ -46,6 +46,14 @@ public sealed class ApplicationOpenTelemetryOptions
     public bool EnableHttpClientInstrumentation { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether governance telemetry is collected: AsiBackbone's governance emitter
+    /// projects each persisted decision and lifecycle event as a span and as metrics, and the host's
+    /// <c>ReferenceApplication.AuditReconciliation</c> gauges are exported. Tracing and metrics must also be enabled for
+    /// spans and metrics respectively.
+    /// </summary>
+    public bool EnableGovernanceInstrumentation { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets OTLP exporter options.
     /// </summary>
     public ApplicationOtlpExporterOptions Otlp { get; set; } = new();

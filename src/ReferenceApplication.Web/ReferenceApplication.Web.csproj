@@ -12,6 +12,7 @@
     <PackageReference Include="AsiBackbone.Analyzers" PrivateAssets="all" />
     <PackageReference Include="AsiBackbone.AspNetCore" />
     <PackageReference Include="AsiBackbone.Core" />
+    <PackageReference Include="AsiBackbone.OpenTelemetry" />
     <PackageReference Include="AsiBackbone.Signing.LocalDevelopment" />
     <PackageReference Include="AsiBackbone.Signing.ManagedKey" />
     <PackageReference Include="Asp.Versioning.Mvc" />
