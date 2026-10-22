@@ -211,14 +211,29 @@ public sealed class FailureScenarioSaveChangesInterceptor(
         httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
     private readonly FailureScenarioRegistry _registry = registry ?? throw new ArgumentNullException(nameof(registry));
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Fails the save, before EF Core persists the tracked changes, when it is the write an armed scenario targets.
+    /// Every other save passes through unchanged.
+    /// </summary>
+    /// <param name="eventData">Contextual information about the save operation.</param>
+    /// <param name="result">The current interception result, returned unchanged.</param>
+    /// <returns>The <paramref name="result" /> supplied by EF Core.</returns>
+    /// <exception cref="DbUpdateException">The save is the write an armed scenario targets.</exception>
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
     {
         ThrowIfArmed(eventData);
         return base.SavingChanges(eventData, result);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Fails the save, before EF Core asynchronously persists the tracked changes, when it is the write an armed
+    /// scenario targets. Every other save passes through unchanged.
+    /// </summary>
+    /// <param name="eventData">Contextual information about the save operation.</param>
+    /// <param name="result">The current interception result, returned unchanged.</param>
+    /// <param name="cancellationToken">A token that can cancel the operation.</param>
+    /// <returns>The <paramref name="result" /> supplied by EF Core.</returns>
+    /// <exception cref="DbUpdateException">The save is the write an armed scenario targets.</exception>
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData,
         InterceptionResult<int> result,
