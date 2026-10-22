@@ -11,7 +11,7 @@ The AsiBackbone Reference Application is an ASP.NET Core host built from the [.N
 ## Status
 
 The eight-step [Integration Walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) is complete,
-including an operational evidence explorer and governance-overhead benchmarks:
+including an operational evidence explorer, a Development-only governance sandbox, and governance-overhead benchmarks:
 
 | Step | Status |
 |:---|:---|
@@ -180,6 +180,12 @@ If evidence can be written by other replicas, place a shared backplane (for exam
 notifications produced by another process. A missed hint never invalidates the ledger; the next re-query returns the
 authoritative persisted timeline.
 
+`POST /Account/Logout` and all Step 5 governed operations require an authenticated user and a valid antiforgery token. Restrict production access to the health endpoints at the ingress, firewall, or proxy layer.
+
+### Governance sandbox (Development only)
+
+The explorer also offers a local [governance sandbox](https://asibackbone.github.io/ReferenceApplication/walkthrough/07-observe-governance.html#governance-sandbox) for experimenting with the governance mechanics: simulating and replaying decisions, following background delivery, and triggering failure paths. It is a learning aid, **not a production feature**. Each tool has its own switch, is registered only when the environment is exactly `Development`, is administrator-only with antiforgery protection on every state-changing request, and never edits or deletes persisted evidence. Tests prove every tool is absent in Staging and Production.
+
 In Development, `ReferenceApplication:GovernanceLoadDemonstration:Enabled` adds an administrator-only bounded run to the explorer. It evaluates the production policy composition in-process, permits only one cancellable run at a time, and enforces both iteration and duration ceilings. The streamed throughput and latency histogram are transient demonstration feedback—not benchmark results—and the run persists no synthetic evidence. Use the [published BenchmarkDotNet results](https://asibackbone.github.io/ReferenceApplication/benchmarks/governance-overhead.html) for repeatable measurements.
 
 In Development, `ReferenceApplication:PolicySimulator:Enabled` adds an administrator-only policy simulator to the explorer. It runs AsiBackbone's endpoint governance pipeline against a simulated request for a sample operation and shows each constraint, the decision-policy step, the capability-grant check, and the receipt that would be appended. It persists nothing and never shows signing key material.
@@ -189,8 +195,6 @@ In Development, `ReferenceApplication:DecisionReplay:Enabled` adds an administra
 In Development, `ReferenceApplication:PipelineInspector:Enabled` adds an administrator-only pipeline inspector to the explorer. It times one governed request's stages from timestamps the pipeline already stores, marking where the response ends and background delivery begins, and shows the audit-completion outbox, reconciliation findings, and in-process telemetry. Its timings are demonstration, not benchmark results; it adds nothing to the governed request path and never writes. While active, it also registers NCAT audit reconciliation for Development.
 
 In Development, with the demo identity's demonstration database in use, `ReferenceApplication:FailureScenarios:Enabled` adds administrator-only failure scenarios to the explorer. Eight presets trigger failure and attack paths against the real governed endpoints: a missing capability grant, a throwing constraint, a failed ledger append, a failed outbox delivery, an execution failure after approval, evidence tampering, and, with signed tokens enabled, payload tampering and an expired token. Each shows the HTTP outcome, the decision and reason codes, and the evidence left behind. Faults are injected only into the one request a run is armed for, and nothing is registered outside Development.
-
-`POST /Account/Logout` and all Step 5 governed operations require an authenticated user and a valid antiforgery token. Restrict production access to the health endpoints at the ingress, firewall, or proxy layer.
 
 ### Data Protection keys
 

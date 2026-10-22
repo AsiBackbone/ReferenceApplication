@@ -6,8 +6,8 @@ description: Use the Development governance explorer to run the real governed en
 # Step 7: Observe governance in action
 
 **Status:** Complete. The explorer combines evidence query, live notifications, verification, a resettable demonstration
-database, a bounded in-process load demonstration, a policy simulator, decision replay, a pipeline inspector, and
-preset failure scenarios.
+database, and a Development-only [governance sandbox](#governance-sandbox): a bounded in-process load demonstration, a
+policy simulator, decision replay, a pipeline inspector, and preset failure scenarios.
 
 Step 6 established the durable evidence chain. Step 7 presents that same production-shaped governance path as an
 interactive walkthrough: one panel calls the governed endpoints, and the other queries and verifies the decision,
@@ -57,6 +57,43 @@ A tab appears only when its feature is available, so outside Development the exp
 explorer remembers the selected tab for the browser session, except after a database reset, which returns to
 **Actions**. **Send for real** in the simulator switches the right-hand panel to the evidence timeline; select the
 **Policy simulator** tab again to return to the simulated receipt.
+
+## Governance sandbox
+
+The explorer's **Actions** tab is a walkthrough of the happy path: four fixed sample requests and the evidence they
+leave. The other administrator tabs turn it into a local sandbox for the governance mechanics, so you can experiment
+instead of only watching. You can evaluate a request you have not sent, ask what a past decision would be under another
+policy, follow the asynchronous half of the pipeline, and trigger the failure paths the tests prove.
+
+> **The sandbox is a Development learning aid, not a production feature.** None of it is registered in Staging or
+> Production, and tests prove its absence there. Production governance is the endpoint pipeline, ledger, outbox, and
+> reconciliation that Steps 5 and 6 describe. The sandbox only observes, simulates, or deliberately breaks that pipeline
+> on a developer's machine.
+
+| Tool | What it teaches | What it deliberately does not do |
+| --- | --- | --- |
+| [Load demonstration](#bounded-live-load-demonstration) | How the composed policy evaluator behaves under repeated evaluation | Call the HTTP endpoints, persist synthetic evidence, or produce benchmark results |
+| [Policy simulator](#policy-simulator) | How each constraint, the decision policy, and the capability check build one decision | Persist a receipt, consume a token use, or reimplement governance |
+| [Decision replay](#decision-replay) | What the minimized ledger can and cannot reconstruct, and what a policy change would alter | Write or edit a ledger row, re-verify a token, or invent an input the ledger did not record |
+| [Pipeline inspector](#pipeline-inspector) | Where the synchronous request path ends and background delivery begins | Lengthen the request path, add a write path, or read back from the OTLP exporter |
+| [Failure scenarios](#failure-scenarios) | That every failure and attack path fails closed, and what evidence each one leaves | Fault any request but the one a run is armed for, or modify a stored row |
+
+Every tool keeps the boundaries the explorer already established:
+
+- **Development only, behind its own switch.** Each tool's services and routes are registered only when the
+  environment is exactly `Development` and its `ReferenceApplication:<Tool>:Enabled` switch is on. The failure
+  scenarios also require the disposable demonstration database. Tests prove each tool is absent otherwise.
+- **Administrator only, antiforgery-protected.** Every route requires the administrator policy, and every
+  state-changing request also requires an antiforgery token.
+- **Persisted evidence stays authoritative and immutable.** No tool edits or deletes a ledger row. The load
+  demonstration, simulator, and replay never invoke the decision-receipt sink. Tampering works on in-memory copies. The
+  only evidence the sandbox writes is what real governed requests write, in the demonstration database, which you can
+  reset.
+- **Demonstration, not a benchmark.** Timings are labelled as such and link to the
+  [governance-overhead benchmarks](../benchmarks/governance-overhead.md).
+- **No inline script or style**, so the Content Security Policy is unchanged. Tabs are keyboard-operable, focus is
+  visible, and each tool announces its status through an `aria-live` region. A test renders the explorer with every
+  tool enabled and checks all of this.
 
 ## Disposable Development database
 
@@ -432,6 +469,28 @@ request:
 
 Runs are kept in memory, bounded to the 32 most recent. Their evidence is whatever the governed requests wrote to the
 demonstration database; reset it from the **Demo identity** tab.
+
+### What the scenarios never do
+
+Each scenario breaks one thing, on purpose, and leaves the rest of the pipeline as it is:
+
+1. **Missing capability grant** withholds the claim from one request. It does not change the actor's sign-in or the
+   validator.
+2. **Constraint throws** adds no rule to the real policy set. The throwing constraint does not apply unless armed, and
+   is never registered outside Development.
+3. **Ledger append fails** does not touch the sink, the ledger store, or any existing row. The save fails before anything
+   is written.
+4. **Outbox delivery fails** does not alter the outbox entry or its retry policy. Only the lifecycle append for that
+   request fails, and clearing the fault restores normal delivery.
+5. **Execution fails after approval** does not remove or rewrite the allowed decision. That decision staying in the
+   ledger is the point of the scenario.
+6. **Evidence tampering** never writes. Both copies live in memory, and the stored row is verified again afterwards.
+7. **Payload tampering under a valid token** and 8. **Expired token replay** use genuine tokens from the real issuer,
+   after its entitlement check, and do not weaken validation. Only the posted payload (7) or the issuance clock (8)
+   differs from an honest request.
+
+None of the scenarios bypasses authorization, disables a check, or demonstrates an attack that succeeds. Each one
+shows a defense holding.
 
 ### Configure
 

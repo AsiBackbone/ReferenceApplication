@@ -32,6 +32,16 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
 
 ### Added
 
+* The governance sandbox is complete (#57): the load demonstration, policy simulator (#59), decision replay (#60),
+  pipeline inspector (#61), and failure scenarios (#62), with signed capability tokens (#58) as their prerequisite.
+  * Step 7 has a new *Governance sandbox* section. It says what each tool teaches and what it deliberately does not do,
+    and lists the boundaries every tool keeps: Development only behind its own switch, administrator only with
+    antiforgery protection, persisted evidence immutable, demonstration rather than benchmark, and no inline script or
+    style. The failure scenarios also list what each one never does.
+  * The documentation landing page, walkthrough index, and README describe the sandbox as a Development-only learning
+    aid, not a production feature.
+  * A new explorer test renders every sandbox tool together and checks that each is a labelled tab with its own output
+    view and live status region, and that the page still has no inline script or style.
 * Development-only, administrator-only failure scenarios in the governance explorer (#62), behind
   `ReferenceApplication:FailureScenarios:Enabled`, on a new **Failure scenarios** tab. They are registered only while
   the Development demo identity has selected the disposable demonstration database.
