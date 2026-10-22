@@ -2,6 +2,8 @@
   items:
     - name: Integration Walkthrough
       href: walkthrough/
+    - name: Stable Release Policy v1
+      href: stable-release-policy-v1.md
     - name: Governance Benchmarks
       href: benchmarks/governance-overhead.md
     - name: API Reference
