@@ -68,6 +68,10 @@
             "integration_id": 15368
           },
           {
+            "context": "Release upgrade test",
+            "integration_id": 15368
+          },
+          {
             "context": "Build documentation",
             "integration_id": 15368
           },

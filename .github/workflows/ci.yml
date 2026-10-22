@@ -241,6 +241,119 @@ jobs:
           fi
           rm -rf "$RUNNER_TEMP/production-secrets"
 
+  # Release-to-release upgrade (#73): a database created by the oldest supported release's own migration bundle and
+  # seeded with that release's captured evidence is upgraded by this commit's bundle. The deep checks then run against
+  # the upgraded file. Keep PREVIOUS_RELEASE equal to ReleaseUpgradeEvidence.BoundaryRelease; a test enforces it.
+  release-upgrade:
+    name: Release upgrade test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+
+    env:
+      PREVIOUS_RELEASE: v0.1.0-alpha.11
+      FIXTURE: tests/ReferenceApplication.Web.Tests/Upgrades/v0.1.0-alpha.11/evidence.sql
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Build the previous release's migration bundle
+        run: |
+          git fetch --no-tags --depth 1 origin "refs/tags/$PREVIOUS_RELEASE:refs/tags/$PREVIOUS_RELEASE"
+          git worktree add "$RUNNER_TEMP/previous-release" "$PREVIOUS_RELEASE"
+          docker build --target migrations --tag referenceapplication-migrations:previous "$RUNNER_TEMP/previous-release"
+
+      - name: Build this commit's images
+        run: |
+          docker build --target migrations --tag referenceapplication-migrations:current .
+          docker build --tag referenceapplication-web:current .
+
+      - name: Create and seed the previous release's database
+        run: |
+          data="$RUNNER_TEMP/upgrade-data"
+          mkdir -p "$data"
+          chmod 0777 "$data"
+          docker run --rm --volume "$data:/app/data" \
+            --env ASPNETCORE_ENVIRONMENT=Development \
+            --env ReferenceApplication__DemoIdentity__Enabled=false \
+            --env "ConnectionStrings__ApplicationDatabase=Data Source=/app/data/upgrade.db" \
+            referenceapplication-migrations:previous
+          # The database belongs to the container user, so the seed runs as root and then opens the file to both.
+          sudo python3 -c 'import sqlite3, sys; c = sqlite3.connect(sys.argv[1]); c.executescript(open(sys.argv[2], encoding="utf-8").read()); c.close()' \
+            "$data/upgrade.db" "$FIXTURE"
+          sudo chmod 0666 "$data"/upgrade.db*
+
+      - name: Upgrade with this commit's migration bundle
+        run: |
+          data="$RUNNER_TEMP/upgrade-data"
+          upgrade() {
+            docker run --rm --volume "$data:/app/data" \
+              --env ASPNETCORE_ENVIRONMENT=Development \
+              --env ReferenceApplication__DemoIdentity__Enabled=false \
+              --env "ConnectionStrings__ApplicationDatabase=Data Source=/app/data/upgrade.db" \
+              referenceapplication-migrations:current
+          }
+          # Every row and the migration history, without EF Core's migration lock table, which each run touches.
+          dump() {
+            sudo python3 -c 'import sqlite3, sys; c = sqlite3.connect(sys.argv[1]); print("\n".join(line for line in c.iterdump() if "__EFMigrationsLock" not in line)); c.close()' \
+              "$data/upgrade.db"
+          }
+          upgrade
+          dump > "$RUNNER_TEMP/after-first-upgrade.sql"
+          # A second application of the same bundle must change nothing.
+          upgrade
+          dump > "$RUNNER_TEMP/after-second-upgrade.sql"
+          diff "$RUNNER_TEMP/after-first-upgrade.sql" "$RUNNER_TEMP/after-second-upgrade.sql"
+          sudo chmod 0666 "$data"/upgrade.db*
+          # The deep checks read the database exactly as the upgrade left it. Once the application runs, its own
+          # background work, such as a reconciliation pass re-observing findings, legitimately updates rows.
+          cp "$data/upgrade.db" "$RUNNER_TEMP/upgraded.db"
+
+      - name: Serve the upgraded database
+        run: |
+          data="$RUNNER_TEMP/upgrade-data"
+          docker run --detach --name referenceapplication-upgraded --publish 127.0.0.1:8080:8080 \
+            --volume "$data:/app/data" \
+            --env ASPNETCORE_ENVIRONMENT=Development \
+            --env ReferenceApplication__DemoIdentity__Enabled=false \
+            --env ReferenceApplication__HealthChecks__DatabaseReadinessCheckEnabled=true \
+            --env "ConnectionStrings__ApplicationDatabase=Data Source=/app/data/upgrade.db" \
+            referenceapplication-web:current
+          curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors http://127.0.0.1:8080/health/ready
+          docker stop referenceapplication-upgraded
+
+      - name: Verify the upgraded evidence
+        env:
+          REFERENCEAPPLICATION_UPGRADED_DATABASE: ${{ runner.temp }}/upgraded.db
+        run: |
+          dotnet restore ${{ env.SOLUTION_FILE }} --locked-mode
+          dotnet test ${{ env.SOLUTION_FILE }} --configuration ${{ env.CONFIGURATION }} --no-restore \
+            --filter "FullyQualifiedName~ReleaseUpgradeTests.DeployedUpgrade_PreservesTheBoundaryEvidence" \
+            | tee "$RUNNER_TEMP/deployed-upgrade-test.log"
+          # The test skips itself without the database; make sure it ran.
+          grep --extended-regexp 'succeeded: 1\b' "$RUNNER_TEMP/deployed-upgrade-test.log"
+
+      - name: Show container logs
+        if: failure()
+        run: docker logs referenceapplication-upgraded || true
+
+      - name: Remove the upgrade container, data, and worktree
+        if: always()
+        run: |
+          docker rm --force referenceapplication-upgraded || true
+          sudo rm -rf "$RUNNER_TEMP/upgrade-data" "$RUNNER_TEMP/upgraded.db"
+          git worktree remove --force "$RUNNER_TEMP/previous-release" || true
+
   codeql-actions:
     name: CodeQL analysis (actions, none)
     runs-on: ubuntu-24.04

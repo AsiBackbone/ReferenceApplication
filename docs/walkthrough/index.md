@@ -52,6 +52,8 @@ These procedures support the walkthrough without adding new AsiBackbone integrat
 - After Step 8, [Run outside Development](run-in-production.md) collects every production deployment decision in one
   checklist. It also explains the production-shaped reference configuration that CI starts in `Production` on every
   pull request.
+- After Step 8, [Upgrade between releases](upgrade-between-releases.md) states the supported database upgrade
+  boundary, how upgrades are tested from a real earlier release, and the backup, recovery, and rollback rules.
 
 ## Test inheritance rule used throughout
 

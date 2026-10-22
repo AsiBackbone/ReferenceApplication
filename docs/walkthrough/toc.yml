@@ -26,3 +26,5 @@
   href: 08-benchmarks.md
 - name: Supplemental - Run outside Development
   href: run-in-production.md
+- name: Supplemental - Upgrade between releases
+  href: upgrade-between-releases.md

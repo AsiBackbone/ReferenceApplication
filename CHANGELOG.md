@@ -11,6 +11,28 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
 
 ### Added
 
+* Release-to-release database upgrade tests and an upgrade, backup, and recovery procedure (#73). Upgrades are supported
+  from `v0.1.0-alpha.11`.
+  * `tests/ReferenceApplication.Web.Tests/Upgrades/v0.1.0-alpha.11/` holds two files:
+    * `evidence.sql`, that release's representative evidence, captured through its own application paths: allowed and
+      denied decisions, governed records with mutation audit, a delivered completion with its lifecycle event,
+      reconciliation findings, and a used capability token; and
+    * `migrations.sha256`, the hashes of the migrations it shipped.
+  * `ReleaseUpgradeTests` check the following:
+    * shipped migrations are unchanged;
+    * a database at the boundary, loaded with the fixture and upgraded, keeps every table, column, row, and value;
+    * a second upgrade changes nothing;
+    * the upgraded schema matches a clean install; and
+    * the upgraded application becomes ready and still verifies record hashes, links mutation audit and completions to
+      decisions, keeps lifecycle events and capability-grant uses, and reconciles with nothing new.
+
+    Destructive stand-ins are each detected: lost rows, a changed value that breaks a hash, and a dropped column.
+  * The new CI job **Release upgrade test** builds the `v0.1.0-alpha.11` migration bundle from its tag and creates and
+    seeds a database with it. It then upgrades the database twice with the current bundle, checks that the second run
+    changes nothing, serves the database with the current image until ready, and runs the deep checks against it.
+  * The new supplemental walkthrough page *Upgrade between releases* gives the supported boundary, the backup procedure
+    (database and key ring), the upgrade steps, recovery from a failed upgrade, and rollback limits. Migrations are
+    forward-only: never run older binaries against an upgraded database. The README links to it.
 * A validated production deployment path (#72).
   * `docker-compose.production.yml` is a production-shaped reference configuration, applied on top of the base Compose
     file. It runs both services in `Production`, with these settings:
