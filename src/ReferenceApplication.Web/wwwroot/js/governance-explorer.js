@@ -75,6 +75,8 @@
             appendDetail(details, "Mutation batch", entry.mutationBatchId);
             appendDetail(details, "Execution", entry.operationExecutionId);
             appendDetail(details, "Evidence hash", entry.evidenceHash);
+            appendDetail(details, "Handshake", entry.handshakeId);
+            appendDetail(details, "Acknowledgment", entry.acknowledgmentId);
             item.append(heading, details);
             timeline.append(item);
         });
@@ -109,17 +111,20 @@
         }
     };
 
-    const readResponseSummary = async (response) => {
+    const readResponse = async (response) => {
         const contentType = response.headers.get("content-type") || "";
         if (contentType.includes("json")) {
             const payload = await response.json();
-            return payload.message || payload.title || payload.detail || `HTTP ${response.status}`;
+            return {
+                summary: payload.message || payload.title || payload.detail || `HTTP ${response.status}`,
+                payload
+            };
         }
 
-        return `HTTP ${response.status}`;
+        return { summary: `HTTP ${response.status}`, payload: null };
     };
 
-    const sendGovernedAction = async (action, fields, report = setStatus) => {
+    const sendGovernedAction = async (action, fields, report = setStatus, acknowledgmentHeader = null) => {
         if (!requestToken) {
             report("The antiforgery token is unavailable. Reload the page and try again.");
             return;
@@ -148,20 +153,27 @@
         report(`Running ${action}…`);
 
         try {
+            const headers = { "Accept": "application/json" };
+            if (acknowledgmentHeader) {
+                headers[acknowledgmentHeader.name] = acknowledgmentHeader.value;
+            }
+
             const response = await fetch(`/api/v1/governed-operations/${action}`, {
                 method: "POST",
                 body: formData,
-                headers: { "Accept": "application/json" },
+                headers,
                 credentials: "same-origin"
             });
-            const summary = await readResponseSummary(response);
-            report(`${action}: ${summary} (HTTP ${response.status}).`);
+            const result = await readResponse(response);
+            report(`${action}: ${result.summary} (HTTP ${response.status}).`);
             if (!canViewEvidence) {
                 awaitingDecision = false;
             }
+            return { response, payload: result.payload };
         } catch {
             awaitingDecision = false;
             report(`${action} could not be requested.`);
+            return null;
         } finally {
             setActionsDisabled(false);
         }
@@ -177,6 +189,39 @@
         const fields = {};
         if (button.dataset.includesTitle === "true") {
             fields.Title = recordTitle?.value || "Governance explorer record";
+        }
+
+        if (button.dataset.requiresAcknowledgment === "true") {
+            const challenged = await sendGovernedAction(button.dataset.governedAction, fields);
+            if (!challenged || challenged.response.status !== 428 || !challenged.payload?.handshakeId) {
+                return;
+            }
+
+            const acknowledgmentForm = new FormData();
+            acknowledgmentForm.append("__RequestVerificationToken", requestToken.value);
+            acknowledgmentForm.append("HandshakeId", challenged.payload.handshakeId);
+            acknowledgmentForm.append("AcknowledgmentCode", challenged.payload.requiredAcknowledgmentCode);
+            acknowledgmentForm.append("Acknowledged", "true");
+
+            const acceptedResponse = await fetch("/api/v1/acknowledgments", {
+                method: "POST",
+                body: acknowledgmentForm,
+                headers: { "Accept": "application/json" },
+                credentials: "same-origin"
+            });
+            const accepted = await readResponse(acceptedResponse);
+            if (!acceptedResponse.ok || !accepted.payload?.acknowledgmentId || !accepted.payload?.headerName) {
+                setStatus(`acknowledgment: ${accepted.summary} (HTTP ${acceptedResponse.status}).`);
+                return;
+            }
+
+            setStatus("Acknowledgment recorded; retrying the consequential action through governance.");
+            await sendGovernedAction(
+                button.dataset.governedAction,
+                fields,
+                setStatus,
+                { name: accepted.payload.headerName, value: accepted.payload.acknowledgmentId });
+            return;
         }
 
         await sendGovernedAction(button.dataset.governedAction, fields);

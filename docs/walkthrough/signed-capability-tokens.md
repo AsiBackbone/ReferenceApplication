@@ -126,7 +126,10 @@ Causes AsiBackbone's core validator would defer or escalate, such as a not-yet-v
 
 As with claims, only an existing denial is preserved. A valid token keeps an acknowledgment-required decision as a
 challenge, so a token never bypasses acknowledgment. The challenge consumes no use, so the acknowledged retry can
-present the same single-use token.
+present the same single-use token. The Reference Application now exercises that complete path: it persists the
+challenge, accepts the actor-bound response through `POST /api/v1/acknowledgments`, and retries the consequential
+endpoint with both the original capability token and the returned acknowledgment identifier. AsiBackbone validates
+the token again on that retry and consumes its single use only when the acknowledged decision can proceed.
 
 ## Evidence
 

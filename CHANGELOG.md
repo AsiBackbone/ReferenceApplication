@@ -11,6 +11,19 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
 
 ### Added
 
+* A complete host-owned acknowledgment workflow for the consequential operation (#79).
+  * HTTP 428 challenges are persisted in the existing AsiBackbone acknowledgment tables with a five-minute validity
+    window. `POST /api/v1/acknowledgments` accepts the same actor's response and returns the one-time acknowledgment
+    identifier used on the consequential retry.
+  * Retry middleware binds the accepted acknowledgment to the same actor and endpoint operation and rejects malformed,
+    expired, foreign, mismatched, or replayed uses with stable reason codes.
+  * The acknowledged retry still passes through ordinary endpoint governance and capability validation. Signed
+    single-use capability tokens are verified but not consumed by the initial challenge, then revalidated and consumed
+    exactly once by the acknowledged retry.
+  * The accepted decision ledger record carries `HandshakeId` and `AcknowledgmentId`; both participate in the canonical
+    record hash and are exposed on the governance evidence timeline.
+  * The governance explorer's Actions tab now performs the challenge, acknowledgment, and retry sequence rather than
+    stopping at the challenge.
 * Governance telemetry exported through OpenTelemetry (#78).
   * The host references `AsiBackbone.OpenTelemetry` `7.5.0` and registers its governance emitter with
     `UseOpenTelemetryEmission`. `GovernanceTelemetryProjection` projects each decision once its receipt is appended to

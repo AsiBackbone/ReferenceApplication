@@ -119,7 +119,9 @@ internal sealed class GovernanceEvidenceQuery(IDbContextFactory<ApplicationDbCon
             RecordCount: null,
             EvidenceHash: decision.RecordHash,
             EvidenceHashAlgorithm: null,
-            CapabilityTokenId: decision.CapabilityTokenId)));
+            CapabilityTokenId: decision.CapabilityTokenId,
+            HandshakeId: decision.HandshakeId,
+            AcknowledgmentId: decision.AcknowledgmentId)));
 
         entries.AddRange(applicationRecords.Select(record => new GovernanceEvidenceTimelineEntry(
             Kind: _applicationRecordKind,
@@ -340,6 +342,8 @@ public sealed record GovernanceEvidenceTimelineResponse(
 /// <param name="EvidenceHash">The ledger record or mutation manifest hash.</param>
 /// <param name="EvidenceHashAlgorithm">The evidence hash algorithm, when recorded.</param>
 /// <param name="CapabilityTokenId">The capability token that authorized a decision, when one did.</param>
+/// <param name="HandshakeId">The acknowledgment handshake linked to a decision, when one did.</param>
+/// <param name="AcknowledgmentId">The accepted acknowledgment linked to a decision, when one did.</param>
 public sealed record GovernanceEvidenceTimelineEntry(
     string Kind,
     DateTimeOffset OccurredUtc,
@@ -359,4 +363,6 @@ public sealed record GovernanceEvidenceTimelineEntry(
     int? RecordCount,
     string? EvidenceHash,
     string? EvidenceHashAlgorithm,
-    string? CapabilityTokenId = null);
+    string? CapabilityTokenId = null,
+    string? HandshakeId = null,
+    string? AcknowledgmentId = null);
