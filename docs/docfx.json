@@ -18,6 +18,7 @@
         "files": [
           "index.md",
           "**/toc.yml",
+          "stable-release-policy-v1.md",
           "benchmarks/**/*.md",
           "walkthrough/**/*.md",
           "api/index.md",

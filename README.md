@@ -45,7 +45,9 @@ The desired branch rulesets for `main` and `ncat-baseline` are versioned under `
 
 `main` remains open for ongoing integration through pull requests. A stable commit is marked with a semantic-version tag such as `v1.0.0` and published as a GitHub release; development then continues on `main` toward the next release.
 
-The release version is set by `VersionPrefix` and `VersionSuffix` in `Directory.Build.props` and matches the tag, for example `0.1.0` and `alpha.1` for `v0.1.0-alpha.1`. Completing the walkthrough does not by itself declare a stable public contract; releases remain `0.x` pre-releases until the repository's release-readiness criteria are met. The release version is independent of the NCAT version, which the `ncat-v<version>` tags record.
+The release version is set by `VersionPrefix` and `VersionSuffix` in `Directory.Build.props` and matches the tag, for example `0.1.0` and `alpha.1` for `v0.1.0-alpha.1`. Completing the walkthrough does not by itself declare a stable public contract; releases remain `0.x` pre-releases until the repository's release-readiness criteria are met. The versioned [Stable Release Policy v1](docs/stable-release-policy-v1.md) defines the compatibility contract, supported environment matrix, graduation gates, exception process, release-candidate soak, release procedure, and mechanical validation required before the first stable release. The release version is independent of the NCAT version, which the `ncat-v<version>` tags record.
+
+Run `./scripts/Validate-StableRelease.ps1` during prerelease development to validate release metadata. The final stable tagged commit must pass `./scripts/Validate-StableRelease.ps1 -RequireStable -Tag vX.Y.Z` in addition to the hosted evidence required by the policy.
 
 The `ncat-baseline` branch is updated separately through a pull request containing only the raw scaffold generated from the selected NCAT version. Bringing a new baseline into the Reference Application is a second, deliberate integration change targeting `main`.
 
