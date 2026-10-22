@@ -278,13 +278,13 @@ internal sealed class PipelineInspector(
         }
 
         string decisionRecordId = decision.RecordId;
-        var mutationAudits = await dbContext.AuditRecords
+        List<DateTime> mutationSavedTimes = await dbContext.AuditRecords
             .AsNoTracking()
             .Where(record => record.CorrelationId == correlationId || record.DecisionAuditRecordId == decisionRecordId)
-            .Select(static record => new { record.ModifiedOnUtc, record.SpanId })
+            .Select(static record => record.ModifiedOnUtc)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
-        DateTime? mutationSavedUtc = mutationAudits.Count == 0 ? null : mutationAudits.Min(static audit => audit.ModifiedOnUtc);
+        DateTime? mutationSavedUtc = mutationSavedTimes.Count == 0 ? null : mutationSavedTimes.Min();
         ApplicationAuditCompletionOutboxEntry? completion = (await dbContext.ApplicationAuditCompletionOutboxEntries
                 .AsNoTracking()
                 .Where(entry => entry.CorrelationId == correlationId || entry.DecisionAuditRecordId == decisionRecordId)
@@ -300,14 +300,9 @@ internal sealed class PipelineInspector(
             .AnyAsync(lifecycleEvent => lifecycleEvent.EventId == lifecycleEventId, cancellationToken)
             .ConfigureAwait(false);
 
-        // A decision returned by a policy evaluator carries no trace identifier, because AsiBackbone's evaluation
-        // context has none. The mutation audit records the span that saved the change, so its trace is looked up there.
-        string? traceId = ParseTraceId(decision.TraceId) ?? mutationAudits
-            .Select(static audit => audit.SpanId)
-            .OfType<string>()
-            .Select(_telemetryRecorder.FindTraceId)
-            .OfType<string>()
-            .FirstOrDefault();
+        // Since AsiBackbone 7.5.0 every endpoint decision, including one returned by a policy evaluator, records the
+        // request's trace identifier, so the decision's own ledger record links it to the request's spans.
+        string? traceId = ParseTraceId(decision.TraceId);
         IReadOnlyList<PipelineSpan> spans = traceId is null ? [] : _telemetryRecorder.GetSpans(traceId);
         PipelineSpan? serverSpan = spans.FirstOrDefault(static span =>
             string.Equals(span.Kind, "Server", StringComparison.Ordinal) &&
@@ -339,7 +334,7 @@ internal sealed class PipelineInspector(
         const string spanSource = "ASP.NET Core server span, seen by the in-process listener";
         const string noSpanNote =
             "No server span was linked. OpenTelemetry tracing is off, the span had not ended when this was read, or the " +
-            "decision has neither a trace identifier nor a mutation audit to link it through.";
+            "decision records no W3C trace identifier.";
         const string noMutationNote = "This operation changes no data, so it stages no audit-completion entry.";
 
         List<StageDraft> drafts =

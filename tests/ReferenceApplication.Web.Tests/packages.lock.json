@@ -4,13 +4,13 @@
     "net10.0": {
       "AsiBackbone.Testing": {
         "type": "Direct",
-        "requested": "[7.4.0, )",
-        "resolved": "7.4.0",
-        "contentHash": "VrqKTq6VQWl5q5ghtimOIhNSo/vR+1dkt1U3i3rkpLSlDeOgZu20n9FSLso8jy2iBwH3TcvLx8t/fXqrQhLQiA==",
+        "requested": "[7.5.0, )",
+        "resolved": "7.5.0",
+        "contentHash": "HOy4l1FoPKLE3TmKMP0864XpwZbhl9kTseG0YDovCfAluRYeRUEwPl9G9w/n7bCwx0gw2jmMuAI8zU2qzSt8ZA==",
         "dependencies": {
-          "AsiBackbone.AspNetCore": "7.4.0",
-          "AsiBackbone.Core": "7.4.0",
-          "AsiBackbone.Storage.InMemory": "7.4.0"
+          "AsiBackbone.AspNetCore": "7.5.0",
+          "AsiBackbone.Core": "7.5.0",
+          "AsiBackbone.Storage.InMemory": "7.5.0"
         }
       },
       "coverlet.MTP": {
@@ -93,8 +93,8 @@
       },
       "AsiBackbone.DependencyInjection": {
         "type": "Transitive",
-        "resolved": "7.4.0",
-        "contentHash": "AlPBmjU9Pwle497hVKzpWqoJi4gLay6JolKFpdNL9zcyghr0WsnsU7jC+4wblEzgmjJ44yv3dCDFnif5tI/udg==",
+        "resolved": "7.5.0",
+        "contentHash": "9ZkLTJzTjxARDxKoa13hNfuk68970MtI/OcaNxdqDKsB56FXtJseDtUTQJAJAMP0DK2HmavF0u2ArEmmlAfNnA==",
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection": "10.0.13"
         }
@@ -952,8 +952,8 @@
       "referenceapplication.infrastructure": {
         "type": "Project",
         "dependencies": {
-          "AsiBackbone.Core": "[7.4.0, )",
-          "AsiBackbone.EntityFrameworkCore": "[7.4.0, )",
+          "AsiBackbone.Core": "[7.5.0, )",
+          "AsiBackbone.EntityFrameworkCore": "[7.5.0, )",
           "Microsoft.EntityFrameworkCore": "[10.0.13, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[10.0.13, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[10.0.13, )",
@@ -965,10 +965,10 @@
       "referenceapplication.web": {
         "type": "Project",
         "dependencies": {
-          "AsiBackbone.AspNetCore": "[7.4.0, )",
-          "AsiBackbone.Core": "[7.4.0, )",
-          "AsiBackbone.Signing.LocalDevelopment": "[7.4.0, )",
-          "AsiBackbone.Signing.ManagedKey": "[7.4.0, )",
+          "AsiBackbone.AspNetCore": "[7.5.0, )",
+          "AsiBackbone.Core": "[7.5.0, )",
+          "AsiBackbone.Signing.LocalDevelopment": "[7.5.0, )",
+          "AsiBackbone.Signing.ManagedKey": "[7.5.0, )",
           "Asp.Versioning.Mvc": "[10.2.1, )",
           "AspNet.Security.OAuth.GitHub": "[10.0.0, )",
           "Microsoft.AspNetCore.Authentication.Google": "[10.0.13, )",
@@ -991,19 +991,19 @@
       },
       "AsiBackbone.AspNetCore": {
         "type": "CentralTransitive",
-        "requested": "[7.4.0, )",
-        "resolved": "7.4.0",
-        "contentHash": "X+9FD2p3fpEmAS5daxvmklnrPL7pVpe+jBnVA0vbxpPV68iOJgrzJ56jnIWfH2KpL/R+oguPBwTfGCGDttbjhQ==",
+        "requested": "[7.5.0, )",
+        "resolved": "7.5.0",
+        "contentHash": "F0T3ISn3xfsFOkI8PrLG935aQQPqzNs/6esPYLmhVr43Ce4nHSZ903dhIsomLzWRLLYYTaA1Nho7dfhlHp/F0w==",
         "dependencies": {
-          "AsiBackbone.Core": "7.4.0",
-          "AsiBackbone.DependencyInjection": "7.4.0"
+          "AsiBackbone.Core": "7.5.0",
+          "AsiBackbone.DependencyInjection": "7.5.0"
         }
       },
       "AsiBackbone.Core": {
         "type": "CentralTransitive",
-        "requested": "[7.4.0, )",
-        "resolved": "7.4.0",
-        "contentHash": "09eS5gPRygrm3ieNDauwe0wcmHvcFlAgE08SpHi3ABC195azsM0V2sUMbh1YPlFMb03KJTz4VYDziWOHZDN6GQ==",
+        "requested": "[7.5.0, )",
+        "resolved": "7.5.0",
+        "contentHash": "DduxrFxsna78iw+vvmxc+TPUWdmcnkBlRwCKag3AaaOD7kLuQ2RNnxD/v9pc1H5KtnbKZQ4mO8QnGXq2lfSCxA==",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "10.0.13",
           "Microsoft.Extensions.Options": "10.0.13"
@@ -1011,12 +1011,12 @@
       },
       "AsiBackbone.EntityFrameworkCore": {
         "type": "CentralTransitive",
-        "requested": "[7.4.0, )",
-        "resolved": "7.4.0",
-        "contentHash": "WP/pL/FDsHotTxDKNBuzXmYEb+XX4vv18UpFPxRJsnbclLOntdwFlDLT7fko5UxWv2cESUEAA53ULqSPap5SkA==",
+        "requested": "[7.5.0, )",
+        "resolved": "7.5.0",
+        "contentHash": "YB9KWTP3UBGb4vO1fIkcBDmaPemxXtFsaXmSnhB1lS5jouWTTXVOh4s0K7oXc1fi7rt8vvHrE35xxf0wZP6VZw==",
         "dependencies": {
-          "AsiBackbone.Core": "7.4.0",
-          "AsiBackbone.DependencyInjection": "7.4.0",
+          "AsiBackbone.Core": "7.5.0",
+          "AsiBackbone.DependencyInjection": "7.5.0",
           "Microsoft.EntityFrameworkCore": "10.0.13",
           "Microsoft.EntityFrameworkCore.Relational": "10.0.13",
           "Microsoft.Extensions.Logging.Abstractions": "10.0.13"
@@ -1024,33 +1024,33 @@
       },
       "AsiBackbone.Signing.LocalDevelopment": {
         "type": "CentralTransitive",
-        "requested": "[7.4.0, )",
-        "resolved": "7.4.0",
-        "contentHash": "BVO1EeQk6xDQecsRtNKw2hpMeT2dSOgctzaFBVNtg8NO64wQm3uVRMuR/cAWV3aOQ+f6Ll2WGDjd+d1VXTJjUA==",
+        "requested": "[7.5.0, )",
+        "resolved": "7.5.0",
+        "contentHash": "PZrk063wkidJVhNW8f9TmPFOsR1hjrP6MOGmIl6efXJl2f5cZNOyyhsszgKD2/UD64dDPYzs3JuT6/RlHYGMJw==",
         "dependencies": {
-          "AsiBackbone.Core": "7.4.0",
-          "AsiBackbone.DependencyInjection": "7.4.0"
+          "AsiBackbone.Core": "7.5.0",
+          "AsiBackbone.DependencyInjection": "7.5.0"
         }
       },
       "AsiBackbone.Signing.ManagedKey": {
         "type": "CentralTransitive",
-        "requested": "[7.4.0, )",
-        "resolved": "7.4.0",
-        "contentHash": "QWTVCeXp61RXIHjorHOXAyEggAdiujoHYrcUnn2gvCZIDNWxaQj75szTXd21zG29bhsgbemS6HJ132sbO4cLbQ==",
+        "requested": "[7.5.0, )",
+        "resolved": "7.5.0",
+        "contentHash": "ozCMSLZkuuOr77PZLJcvtii6U3R1tvT2m29alUdC8IAYTGDmDybOLWUWXVXcBM7J6eFoEsOdp2bjqviyc7ygSg==",
         "dependencies": {
-          "AsiBackbone.Core": "7.4.0",
-          "AsiBackbone.DependencyInjection": "7.4.0",
+          "AsiBackbone.Core": "7.5.0",
+          "AsiBackbone.DependencyInjection": "7.5.0",
           "Microsoft.Extensions.DependencyInjection": "10.0.13"
         }
       },
       "AsiBackbone.Storage.InMemory": {
         "type": "CentralTransitive",
-        "requested": "[7.4.0, )",
-        "resolved": "7.4.0",
-        "contentHash": "D++d1//z8kRmTFk1yBwIkcaszZ2TbpdeSufHHBUWRCT0aIm9py0bY/71ckByvwrRglqSmodWwx7WUoeE3ZSqgQ==",
+        "requested": "[7.5.0, )",
+        "resolved": "7.5.0",
+        "contentHash": "fLN1qfy2iyCicbJrfPX8WEHsGCPBWklpsaaDqPoGX0kPKEFZnrwxl5akSbapzdYiTXdJgnYvXofrKV6ibmt3kw==",
         "dependencies": {
-          "AsiBackbone.Core": "7.4.0",
-          "AsiBackbone.DependencyInjection": "7.4.0"
+          "AsiBackbone.Core": "7.5.0",
+          "AsiBackbone.DependencyInjection": "7.5.0"
         }
       },
       "Asp.Versioning.Mvc": {
