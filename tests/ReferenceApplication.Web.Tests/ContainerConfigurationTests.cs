@@ -64,6 +64,55 @@ public sealed partial class ContainerConfigurationTests
         Assert.Single(ApplicationDatabaseRegex().Matches(compose));
     }
 
+    /// <summary>
+    /// Verifies that the production-shaped override selects <c>Production</c> for both services, turns every
+    /// Development-only component and trust relaxation off, and takes every secret and deployment-specific value from
+    /// the environment or a file secret, never from the file itself.
+    /// </summary>
+    [Fact]
+    public void ProductionCompose_ConfiguresBothServicesWithoutDevelopmentComponentsOrCheckedInSecrets()
+    {
+        string compose = RepositoryFiles.ReadAllText("docker-compose.production.yml");
+        string migrations = GetServiceBlock(compose, _migrationsService);
+        string web = GetServiceBlock(compose, _webService);
+
+        Assert.Contains("ASPNETCORE_ENVIRONMENT: Production", compose, StringComparison.Ordinal);
+        Assert.Contains("environment: *production-environment", migrations, StringComparison.Ordinal);
+        Assert.Contains("<<: *production-environment", web, StringComparison.Ordinal);
+        Assert.Contains("- dataprotection-certificate", migrations, StringComparison.Ordinal);
+        Assert.Contains("- dataprotection-certificate", web, StringComparison.Ordinal);
+
+        foreach (string component in new[]
+        {
+            "DemoIdentity", "GovernanceLoadDemonstration", "PolicySimulator", "DecisionReplay", "PipelineInspector",
+            "FailureScenarios", "CapabilityTokens"
+        })
+        {
+            Assert.Contains($"ReferenceApplication__{component}__Enabled: \"false\"", compose, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("ReferenceApplication__ForwardedHeaders__ClearKnownNetworksAndProxies: \"false\"", compose, StringComparison.Ordinal);
+        Assert.Contains(
+            "ReferenceApplication__DataProtection__KeyEncryptionCertificatePath: /run/secrets/dataprotection-certificate",
+            compose,
+            StringComparison.Ordinal);
+
+        // Each of these must be required from the environment, so Compose refuses to start without it.
+        foreach (string setting in new[]
+        {
+            "AllowedHosts",
+            "ReferenceApplication__ForwardedHeaders__KnownNetworks__0",
+            "ReferenceApplication__DataProtection__KeyEncryptionCertificatePassword",
+            "ReferenceApplication__Authentication__Providers__OpenIdConnect__Authority",
+            "ReferenceApplication__Authentication__Providers__OpenIdConnect__ClientId",
+            "ReferenceApplication__Authentication__Providers__OpenIdConnect__ClientSecret",
+            "file"
+        })
+        {
+            Assert.Matches(new Regex($@"^\s*{Regex.Escape(setting)}: \$\{{[A-Z_]+:\?", RegexOptions.Multiline), compose);
+        }
+    }
+
     private static Dictionary<string, string> SplitStages(string dockerfile)
     {
         MatchCollection matches = StageRegex().Matches(dockerfile);

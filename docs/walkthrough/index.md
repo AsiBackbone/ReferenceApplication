@@ -49,6 +49,9 @@ These procedures support the walkthrough without adding new AsiBackbone integrat
 - After Step 5, [Bind capabilities to signed tokens](signed-capability-tokens.md) replaces the claim-backed grant
   check with AsiBackbone's signed capability grant validator: short-lived, single-use tokens bound to one actor,
   operation, and request payload. It is disabled by default and records the authorizing token in the decision evidence.
+- After Step 8, [Run outside Development](run-in-production.md) collects every production deployment decision in one
+  checklist. It also explains the production-shaped reference configuration that CI starts in `Production` on every
+  pull request.
 
 ## Test inheritance rule used throughout
 

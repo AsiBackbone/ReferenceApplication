@@ -142,6 +142,9 @@ jobs:
         run: |
           docker compose up --detach --force-recreate --no-deps referenceapplication.web
           curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors http://127.0.0.1:8080/health/ready
+          # The startup posture line reports the host's own registrations; in Development the demo identity is one.
+          docker compose logs --no-color referenceapplication.web \
+            | grep --fixed-strings 'Security posture: Development-only components are registered: demo identity'
 
       - name: Show container logs
         if: failure()
@@ -150,6 +153,93 @@ jobs:
       - name: Remove containers and volumes
         if: always()
         run: docker compose down --volumes
+
+      # Production-shaped pass (#72): docker-compose.production.yml on top of the base file. Every required secret is a
+      # throwaway generated here, kept in the runner's temporary directory, and never committed or uploaded.
+      - name: Prepare test-only Production secrets
+        run: |
+          secrets="$RUNNER_TEMP/production-secrets"
+          mkdir -p "$secrets"
+          certificate_password="$(openssl rand -hex 24)"
+          client_secret="$(openssl rand -hex 24)"
+          echo "::add-mask::$certificate_password"
+          echo "::add-mask::$client_secret"
+          openssl req -x509 -newkey rsa:2048 -nodes -days 2 \
+            -subj '/CN=ReferenceApplication CI Data Protection' \
+            -keyout "$secrets/key.pem" -out "$secrets/certificate.pem"
+          openssl pkcs12 -export -inkey "$secrets/key.pem" -in "$secrets/certificate.pem" \
+            -out "$secrets/dataprotection.pfx" -passout "pass:$certificate_password"
+          rm "$secrets/key.pem"
+          # Compose bind-mounts file secrets outside Swarm, so the non-root container user must be able to read it.
+          chmod 0444 "$secrets/dataprotection.pfx"
+          {
+            echo "REFERENCEAPPLICATION_ALLOWEDHOSTS=localhost"
+            echo "REFERENCEAPPLICATION_FORWARDEDHEADERS_KNOWNNETWORK=172.31.250.0/24"
+            echo "REFERENCEAPPLICATION_DATAPROTECTION_CERTIFICATE_FILE=$secrets/dataprotection.pfx"
+            echo "REFERENCEAPPLICATION_DATAPROTECTION_CERTIFICATE_PASSWORD=$certificate_password"
+            # The provider is never contacted: no sign-in is attempted, and metadata is fetched only on a challenge.
+            echo "REFERENCEAPPLICATION_OIDC_AUTHORITY=https://identity.example.invalid"
+            echo "REFERENCEAPPLICATION_OIDC_CLIENTID=referenceapplication-ci"
+            echo "REFERENCEAPPLICATION_OIDC_CLIENTSECRET=$client_secret"
+          } > "$secrets/production.env"
+
+      - name: Migrate and serve in Production
+        run: |
+          compose=(docker compose --env-file "$RUNNER_TEMP/production-secrets/production.env" \
+            -f docker-compose.yml -f docker-compose.production.yml)
+          "${compose[@]}" up --build --detach
+          test "$(docker inspect --format '{{.State.ExitCode}}' referenceapplication-migrations)" = "0"
+          curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8080/health/ready
+
+      - name: Verify the Production posture
+        run: |
+          compose=(docker compose --env-file "$RUNNER_TEMP/production-secrets/production.env" \
+            -f docker-compose.yml -f docker-compose.production.yml)
+          logs="$("${compose[@]}" logs --no-color referenceapplication.web)"
+
+          # `! grep` would not fail the step under `bash -e`, so absence is checked explicitly.
+          refuse() {
+            if grep --quiet --fixed-strings "$1" <<< "$2"; then
+              echo "::error::Unexpected in the Production pass: $1"
+              exit 1
+            fi
+          }
+
+          # Running as Production, with no Development-only component registered in the host's service provider.
+          grep --fixed-strings 'anonymous access in Production' <<< "$logs"
+          grep --fixed-strings 'Security posture: no Development-only components are registered.' <<< "$logs"
+          refuse 'Development-only demo identity controls are active' "$logs"
+
+          # Explicit host and proxy trust, and an encrypted, durable key ring: none of the relaxed-posture warnings.
+          refuse 'allows every host' "$logs"
+          refuse 'is stored under the application content root' "$logs"
+          refuse 'key-ring files are not encrypted' "$logs"
+
+          # Host filtering rejects a Host header outside AllowedHosts.
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/health/live)" = "400"
+
+          # Sign-in offers the configured external provider and no demo identity.
+          login="$(curl --fail --silent --show-error http://localhost:8080/Account/Login)"
+          grep --fixed-strings 'OpenID Connect' <<< "$login"
+          refuse '/Account/DemoSignIn' "$login"
+
+          # The sign-in page issued an antiforgery token, so the key ring holds a key, encrypted with the certificate.
+          docker exec referenceapplication-web sh -c 'grep -l encryptedSecret /app/data-protection-keys/key-*.xml'
+
+      - name: Show Production container logs
+        if: failure()
+        run: |
+          docker compose --env-file "$RUNNER_TEMP/production-secrets/production.env" \
+            -f docker-compose.yml -f docker-compose.production.yml logs --no-color
+
+      - name: Remove Production containers, volumes, and secrets
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/production-secrets/production.env" ]; then
+            docker compose --env-file "$RUNNER_TEMP/production-secrets/production.env" \
+              -f docker-compose.yml -f docker-compose.production.yml down --volumes
+          fi
+          rm -rf "$RUNNER_TEMP/production-secrets"
 
   codeql-actions:
     name: CodeQL analysis (actions, none)

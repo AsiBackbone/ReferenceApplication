@@ -1,10 +1,13 @@
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ReferenceApplication.Web.Authentication.Demo;
 using ReferenceApplication.Web.Authentication.Options;
 using ReferenceApplication.Web.Extensions;
+using ReferenceApplication.Web.Governance.FailureScenarios;
+using ReferenceApplication.Web.Governance.Pipeline;
 using ReferenceApplication.Web.Options;
 
 namespace ReferenceApplication.Web.Tests;
@@ -277,6 +280,46 @@ public sealed class StartupSecurityPostureExtensionsTests
         return new ConfigurationBuilder()
             .AddInMemoryCollection(values)
             .Build();
+    }
+
+    [Fact]
+    public void LogDevelopmentOnlyComponents_NoneRegistered_EmitsInformation()
+    {
+        TestLogger logger = new();
+        using ServiceProvider services = new ServiceCollection().BuildServiceProvider();
+
+        StartupSecurityPostureExtensions.LogDevelopmentOnlyComponents(logger, services);
+
+        LogEntry entry = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Information, entry.Level);
+        Assert.Equal("Security posture: no Development-only components are registered.", entry.Message);
+    }
+
+    [Fact]
+    public void LogDevelopmentOnlyComponents_SomeRegistered_NamesThemInAWarning()
+    {
+        TestLogger logger = new();
+        ServiceCollection collection = new();
+        collection.AddSingleton<IDemoIdentityService, DemoIdentityService>();
+        collection.AddScoped(static _ => Substitute<IPipelineInspector>());
+        collection.AddScoped(static _ => Substitute<IFailureScenarioService>());
+        using ServiceProvider services = collection.BuildServiceProvider();
+
+        StartupSecurityPostureExtensions.LogDevelopmentOnlyComponents(logger, services);
+
+        Assert.Equal(
+            ["demo identity", "pipeline inspector", "failure scenarios"],
+            StartupSecurityPostureExtensions.GetRegisteredDevelopmentOnlyComponents(services));
+        LogEntry entry = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Warning, entry.Level);
+        Assert.Contains("demo identity, pipeline inspector, failure scenarios", entry.Message, StringComparison.Ordinal);
+    }
+
+    // Only the registration is inspected; the components are never resolved.
+    private static T Substitute<T>()
+        where T : class
+    {
+        throw new InvalidOperationException($"{typeof(T).Name} must not be resolved.");
     }
 
     private sealed class TestHostEnvironment(string environmentName) : IHostEnvironment
