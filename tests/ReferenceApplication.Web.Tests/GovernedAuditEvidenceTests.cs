@@ -324,8 +324,8 @@ public sealed class GovernedAuditEvidenceTests : IDisposable
             telemetry.Spans,
             static span => span.Source == OpenTelemetryGovernanceInstrumentation.ActivitySourceName);
         Assert.DoesNotContain(telemetry.MetricPoints, static point =>
-            point.Meter == OpenTelemetryGovernanceInstrumentation.MeterName ||
-            point.Meter == ApplicationAuditReconciliationMetrics.MeterName);
+            point.Meter is OpenTelemetryGovernanceInstrumentation.MeterName or
+            ApplicationAuditReconciliationMetrics.MeterName);
 
         static bool IsServerSpan(InMemoryTelemetryExporters.ExportedSpan span)
         {
