@@ -311,9 +311,19 @@ public sealed class ApplicationAuditReconciler(
                 "Retain the row, investigate the originating save path, and append remediation evidence."));
         }
 
+        // Releases up to 0.1.0-alpha.11 audited the outbox's own saves, each in a batch that can never have a completion.
+        // Those retained batches are bookkeeping, not governed mutations, so they are not evaluated; an open finding
+        // already reported for one is resolved because it is no longer a candidate.
+        HashSet<string> bookkeepingTables = AuditBookkeepingRecordTypes.GetTableNames(_dbContext.Model);
+
         foreach (IGrouping<string, AuditRecord> batch in auditBatches)
         {
             List<AuditRecord> records = [.. batch];
+            if (records.TrueForAll(record => bookkeepingTables.Contains(record.Entity)))
+            {
+                continue;
+            }
+
             List<ApplicationAuditCompletionOutboxEntry> completions = [.. completionBatches[batch.Key]];
             DateTime newestRecordUtc = records.Max(record => record.ModifiedOnUtc);
 
