@@ -332,10 +332,11 @@ the host's reconciliation gauges, which it reads on demand. Measurements carry n
 duration measurement is matched by route, method, and time. Spans and measurements are held in bounded buffers of 512
 each.
 
-A request's spans are found by trace identifier. A decision made by a policy evaluator records none, because
-AsiBackbone's `GovernanceEvaluationContext` carries no trace identifier, so the decision's ledger record has no
-`TraceId`. The inspector then links through the NCAT mutation audit, which records the span that saved the change. A
-decision that changes no data and records no trace identifier shows its request and response stages as not captured.
+A request's spans are found by the trace identifier on the decision's ledger record. Since AsiBackbone `7.5.0`, every
+endpoint decision records the request's trace identifier, including a decision returned by a policy evaluator
+([AsiBackbone/AsiBackbone#897](https://github.com/AsiBackbone/AsiBackbone/issues/897)), so the decision alone links the
+request to its spans, whether or not the operation changes data. A decision recorded with no W3C trace identifier, such
+as one recorded before the upgrade or while tracing was off, shows its request and response stages as not captured.
 
 The inspector shows two gaps in the host's telemetry. The host does not use `AsiBackbone.OpenTelemetry`, so governance
 itself emits no spans or metrics; only ASP.NET Core and HttpClient instrumentation is collected. And the

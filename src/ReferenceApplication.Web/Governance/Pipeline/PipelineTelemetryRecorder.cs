@@ -123,21 +123,6 @@ internal sealed class PipelineTelemetryRecorder(
     }
 
     /// <summary>
-    /// Finds the trace that an observed span belongs to.
-    /// </summary>
-    /// <param name="spanId">The W3C span identifier, as 16 hexadecimal characters.</param>
-    /// <returns>The trace identifier, or <see langword="null" /> when no observed span has that identifier.</returns>
-    public string? FindTraceId(string spanId)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(spanId);
-
-        lock (_gate)
-        {
-            return _spans.FirstOrDefault(span => string.Equals(span.SpanId, spanId, StringComparison.OrdinalIgnoreCase))?.TraceId;
-        }
-    }
-
-    /// <summary>
     /// Gets the observed measurements of one instrument, oldest first.
     /// </summary>
     /// <param name="meterName">The meter name.</param>

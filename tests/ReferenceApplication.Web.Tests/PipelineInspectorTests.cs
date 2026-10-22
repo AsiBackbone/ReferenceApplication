@@ -246,6 +246,19 @@ public sealed class PipelineInspectorTests : IDisposable
             static tag => tag.Value.GetString()!.Contains("governed-operations/records", StringComparison.Ordinal));
         Assert.Equal(PipelineStageStatuses.Recorded, FindStage(observed, "request-received").GetProperty("status").GetString());
 
+        // AsiBackbone 7.5.0 records the request's trace on the policy-evaluated decision, which is what links the spans.
+        string traceId = span.GetProperty("traceId").GetString()!;
+        Assert.Equal(traceId, observed.GetProperty("traceId").GetString());
+        await using (AsyncServiceScope scope = factory.Services.CreateAsyncScope())
+        {
+            AuditLedgerRecordEntity decision = await scope.ServiceProvider
+                .GetRequiredService<ApplicationDbContext>()
+                .AsiBackboneAuditLedgerRecords
+                .AsNoTracking()
+                .SingleAsync(TestContext.Current.CancellationToken);
+            Assert.Contains(traceId, decision.TraceId, StringComparison.OrdinalIgnoreCase);
+        }
+
         JsonElement aspNetCore = telemetry.GetProperty("activitySources").EnumerateArray()
             .Single(static source => source.GetProperty("name").GetString() == "Microsoft.AspNetCore");
         Assert.True(aspNetCore.GetProperty("addedToOpenTelemetry").GetBoolean());

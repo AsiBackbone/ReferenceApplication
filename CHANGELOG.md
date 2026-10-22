@@ -136,6 +136,12 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
 
 ### Changed
 
+* Updated the AsiBackbone packages from 7.4.0 to 7.5.0 and refreshed the package lock files. Policy-evaluated endpoint
+  decisions now record the request's trace identifier
+  ([AsiBackbone/AsiBackbone#897](https://github.com/AsiBackbone/AsiBackbone/issues/897)), so the pipeline inspector
+  (#61) links a request to its spans through the decision's own ledger record. The workaround that looked up the trace
+  through the span recorded by the NCAT mutation audit is removed, and a governed request that changes no data is now
+  linked to its spans too.
 * The governance evidence notification stream now writes a `: keep-alive` comment every 15 seconds while idle, so
   proxies and load balancers do not close an open explorer's stream. Heartbeats and events share one writer lock, so
   SSE frames never interleave.
