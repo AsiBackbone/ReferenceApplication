@@ -48,6 +48,19 @@ accountability evidence. The save pipeline skips canonicalization, timestamp nor
 them, and the model's UTC-precision convention leaves AsiBackbone's column configuration to AsiBackbone. Application
 data, including `GovernedOperationRecord`, is normalized and audited exactly as before.
 
+`AuditBookkeepingRecordTypes` covers a second, narrower case: rows that track mutation-audit evidence itself. These
+are audit-completion outbox entries, reconciliation findings, and remediations. They are not governed mutations, so
+the save pipeline does not write mutation audit for them. It still normalizes them like application data. If the outbox
+entry were audited, staging it and marking it delivered would each open a mutation-audit batch that can never have a
+completion of its own, and reconciliation would report both as missing completions. The exclusion is made where the
+audit rows are written, not where reconciliation reads them, so the mutation-audit table holds only governed changes
+and every batch in it is expected to have a completion. Each outbox entry keeps its own status, attempt, and delivery
+timestamps as its history.
+
+Releases up to 0.1.0-alpha.11 did audit the outbox's saves. Those audit rows stay as retained evidence, but
+reconciliation does not evaluate a batch made only of bookkeeping rows. When it next runs on an upgraded database, it
+resolves the missing-completion findings it reported for them.
+
 ### Apply the host-owned migration
 
 The repository already contains the Step 6 migration,

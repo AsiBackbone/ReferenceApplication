@@ -51,6 +51,126 @@ public sealed class ApplicationAuditReconciliationTests
     }
 
     [Fact]
+    public async Task ReconcileAsync_DeliveredGovernedRecord_HasNoFindingWhileMissingCompletionIsReported()
+    {
+        // Audit every save through the real pipeline, and reconcile after the records' real timestamps.
+        await using TestDatabase database = await TestDatabase.CreateAsync(
+            auditingEnabled: true,
+            now: DateTime.UtcNow.AddHours(1));
+        var outbox = new ApplicationAuditCompletionOutbox(
+            database.Context,
+            Microsoft.Extensions.Options.Options.Create(new ApplicationAuditCompletionOutboxOptions()),
+            [new DeliveringPublisher()],
+            TimeProvider.System);
+        var transaction = new ApplicationAuditedTransaction(database.Context, database.Pipeline);
+
+        // A governed record whose completion is staged in its transaction and then delivered.
+        ApplicationAuditedTransactionResult delivered = await transaction.ExecuteAsync(
+            (context, _) => AddGovernedRecordAsync(context, "delivered"),
+            async (context, receipt, cancellationToken) =>
+                await outbox.StageAsync(context, receipt, cancellationToken: cancellationToken),
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(1, (await outbox.DispatchReadyAsync(TestContext.Current.CancellationToken)).DeliveredCount);
+
+        // A governed record whose completion is never staged.
+        ApplicationAuditedTransactionResult missing = await transaction.ExecuteAsync(
+            (context, _) => AddGovernedRecordAsync(context, "missing"),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        // Staging and delivering the completion are bookkeeping, so only the governed records were audited.
+        List<AuditRecord> auditRecords = await database.Context.AuditRecords
+            .AsNoTracking()
+            .ToListAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(2, auditRecords.Count);
+        Assert.All(auditRecords, record => Assert.Equal("GovernedOperationRecords", record.Entity));
+
+        ApplicationAuditReconciliationSummary summary = await database.Reconciler.ReconcileAsync(
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, summary.MissingCompletionCount);
+        ApplicationAuditReconciliationFinding finding = Assert.Single(
+            await database.Context.ApplicationAuditReconciliationFindings
+                .AsNoTracking()
+                .ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(ApplicationAuditReconciliationReasonCodes.MissingCompletion, finding.ReasonCode);
+        Assert.Equal(ApplicationAuditReconciliationSeverities.Critical, finding.Severity);
+        Assert.Equal(missing.AuditReceipt?.MutationBatchId, finding.MutationBatchId);
+        Assert.NotEqual(delivered.AuditReceipt?.MutationBatchId, finding.MutationBatchId);
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_RetainedOutboxBookkeepingBatches_ResolveTheirFindings()
+    {
+        // Simulates a database upgraded from 0.1.0-alpha.11, which audited the outbox entry's staging and delivery saves
+        // in batches of their own and reported each as a missing completion.
+        await using TestDatabase database = await TestDatabase.CreateAsync();
+        database.Context.AuditRecords.AddRange(
+            CreateAuditRecord("outbox-staged-batch", "ApplicationAuditCompletionOutbox"),
+            CreateAuditRecord("outbox-delivered-batch", "ApplicationAuditCompletionOutbox"),
+            CreateAuditRecord("governed-missing-batch", "GovernedOperationRecords"));
+        _ = await database.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        foreach (string batchId in new[] { "outbox-staged-batch", "outbox-delivered-batch" })
+        {
+            database.Context.ApplicationAuditReconciliationFindings.Add(new ApplicationAuditReconciliationFinding
+            {
+                Id = Guid.NewGuid(),
+                SchemaVersion = ApplicationAuditReconciliationFinding.CurrentSchemaVersion,
+                FindingKey = $"legacy-{batchId}",
+                ReasonCode = ApplicationAuditReconciliationReasonCodes.MissingCompletion,
+                Severity = ApplicationAuditReconciliationSeverities.Critical,
+                MutationBatchId = batchId,
+                Guidance = "legacy",
+                RemediationStatus = ApplicationAuditReconciliationRemediationStatuses.Open,
+                FirstObservedUtc = _now.AddMinutes(-5),
+                LastObservedUtc = _now.AddMinutes(-5)
+            });
+        }
+
+        _ = await database.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        ApplicationAuditReconciliationSummary summary = await database.Reconciler.ReconcileAsync(
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, summary.OpenFindingCount);
+        Assert.Equal(1, summary.MissingCompletionCount);
+        List<ApplicationAuditReconciliationFinding> findings = await database.Context
+            .ApplicationAuditReconciliationFindings
+            .AsNoTracking()
+            .ToListAsync(TestContext.Current.CancellationToken);
+        ApplicationAuditReconciliationFinding open = Assert.Single(
+            findings,
+            finding => finding.RemediationStatus != ApplicationAuditReconciliationRemediationStatuses.Resolved);
+        Assert.Equal("governed-missing-batch", open.MutationBatchId);
+        Assert.Equal(ApplicationAuditReconciliationReasonCodes.MissingCompletion, open.ReasonCode);
+        Assert.All(
+            findings.Where(finding => finding.MutationBatchId.StartsWith("outbox-", StringComparison.Ordinal)),
+            finding =>
+            {
+                Assert.Equal(ApplicationAuditReconciliationRemediationStatuses.Resolved, finding.RemediationStatus);
+                Assert.Equal(_now, finding.ResolvedUtc);
+            });
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_GovernedBatchContainingBookkeepingRow_StillRequiresCompletion()
+    {
+        await using TestDatabase database = await TestDatabase.CreateAsync();
+        database.Context.AuditRecords.AddRange(
+            CreateAuditRecord("mixed-batch", "GovernedOperationRecords"),
+            CreateAuditRecord("mixed-batch", "ApplicationAuditCompletionOutbox"));
+        _ = await database.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        _ = await database.Reconciler.ReconcileAsync(TestContext.Current.CancellationToken);
+
+        ApplicationAuditReconciliationFinding finding = Assert.Single(
+            await database.Context.ApplicationAuditReconciliationFindings
+                .AsNoTracking()
+                .ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(ApplicationAuditReconciliationReasonCodes.MissingCompletion, finding.ReasonCode);
+        Assert.Equal("mixed-batch", finding.MutationBatchId);
+    }
+
+    [Fact]
     public async Task ReconcileAsync_CountMismatch_IsDetected()
     {
         await using TestDatabase database = await TestDatabase.CreateAsync();
@@ -493,7 +613,18 @@ public sealed class ApplicationAuditReconciliationTests
         Assert.Equal(original.ConcurrencyStamp, current.ConcurrencyStamp);
     }
 
-    private static AuditRecord CreateAuditRecord(string batchId)
+    private static Task AddGovernedRecordAsync(ApplicationDbContext context, string title)
+    {
+        _ = context.GovernedOperationRecords.Add(new GovernedOperationRecord
+        {
+            OperationName = "tests.governed-operation",
+            Title = title,
+            CreatedUtc = DateTimeOffset.UtcNow
+        });
+        return Task.CompletedTask;
+    }
+
+    private static AuditRecord CreateAuditRecord(string batchId, string entity = "Example")
     {
         return new()
         {
@@ -503,7 +634,7 @@ public sealed class ApplicationAuditReconciliationTests
             ActorType = "System",
             ModifiedOnUtc = _now.AddMinutes(-10),
             Application = "tests",
-            Entity = "Example",
+            Entity = entity,
             State = "Modified",
             MutationBatchId = batchId,
             KeyValues = /*lang=json,strict*/ "{\"Id\":\"1\"}",
@@ -542,17 +673,21 @@ public sealed class ApplicationAuditReconciliationTests
             SqliteConnection connection,
             ApplicationDbContext context,
             ApplicationAuditReconciler reconciler,
-            ApplicationAuditReconciliationMetrics metrics)
+            ApplicationAuditReconciliationMetrics metrics,
+            ApplicationSaveChangesPipeline pipeline)
         {
             Connection = connection;
             Context = context;
             Reconciler = reconciler;
             Metrics = metrics;
+            Pipeline = pipeline;
         }
 
         public SqliteConnection Connection { get; }
 
         public ApplicationDbContext Context { get; }
+
+        public ApplicationSaveChangesPipeline Pipeline { get; }
 
         public ApplicationAuditReconciler Reconciler { get; }
 
@@ -561,7 +696,9 @@ public sealed class ApplicationAuditReconciliationTests
         public static async Task<TestDatabase> CreateAsync(
             bool enabled = true,
             IInterceptor? interceptor = null,
-            int maximumMalformedRecordsPerRun = 1_000)
+            int maximumMalformedRecordsPerRun = 1_000,
+            bool auditingEnabled = false,
+            DateTime? now = null)
         {
             var connection = new SqliteConnection("Data Source=:memory:");
             await connection.OpenAsync(TestContext.Current.CancellationToken);
@@ -578,7 +715,7 @@ public sealed class ApplicationAuditReconciliationTests
                 new TestCurrentActorAccessor(),
                 Microsoft.Extensions.Options.Options.Create(new DataAccessOptions
                 {
-                    Auditing = new DataAuditingOptions { Enabled = false }
+                    Auditing = new DataAuditingOptions { Enabled = auditingEnabled }
                 }));
 
             var interceptorForSavePipeline = new ApplicationSaveChangesInterceptor(pipeline);
@@ -604,8 +741,8 @@ public sealed class ApplicationAuditReconciliationTests
                     MaximumMalformedRecordsPerRun = maximumMalformedRecordsPerRun
                 }),
                 metrics,
-                new FixedTimeProvider(_now));
-            return new(connection, context, reconciler, metrics);
+                new FixedTimeProvider(now ?? _now));
+            return new(connection, context, reconciler, metrics, pipeline);
         }
 
         public async ValueTask DisposeAsync()
@@ -640,6 +777,18 @@ public sealed class ApplicationAuditReconciliationTests
             }
 
             return result;
+        }
+    }
+
+    private sealed class DeliveringPublisher : IApplicationAuditCompletionPublisher
+    {
+        public string Destination => "default";
+
+        public ValueTask<ApplicationAuditCompletionPublishResult> PublishAsync(
+            ApplicationAuditCompletionMessage message,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult(ApplicationAuditCompletionPublishResult.Success());
         }
     }
 

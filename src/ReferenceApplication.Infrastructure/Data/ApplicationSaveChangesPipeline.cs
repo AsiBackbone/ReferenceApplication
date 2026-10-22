@@ -336,6 +336,7 @@ public sealed class ApplicationSaveChangesPipeline :
         foreach (EntityEntry entry in entries)
         {
             if (AccountabilityRecordTypes.IsAccountabilityRecord(entry.Entity) ||
+                AuditBookkeepingRecordTypes.IsAuditBookkeepingRecord(entry.Entity) ||
                 entry.State == EntityState.Detached ||
                 entry.State == EntityState.Unchanged)
             {

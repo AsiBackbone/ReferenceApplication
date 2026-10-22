@@ -63,6 +63,20 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
     telemetry, evidence notifications, and capability-token signing. It also says what the reference configuration
     deliberately does not cover. The README links to it.
 
+### Fixed
+
+* Reconciliation no longer reports the audit-completion outbox's own saves as missing completions (#87).
+  * Before this fix, the NCAT save pipeline audited the outbox entry when it was staged and again when the dispatcher
+    marked it delivered. Each save opened a mutation-audit batch that could never have a completion, so every
+    delivered governed record produced two false Critical `MissingCompletion` findings.
+  * The new `AuditBookkeepingRecordTypes` classifies outbox entries and reconciliation findings and remediations as
+    audit bookkeeping. The save pipeline no longer writes mutation audit for them. It still canonicalizes and
+    normalizes them, so no schema or migration changes.
+  * Reconciliation skips retained batches that hold only bookkeeping rows, which earlier releases wrote. On a
+    database upgraded from 0.1.0-alpha.11 it resolves the findings it reported for them the next time it runs.
+    Missing completions for governed batches are still reported.
+  * Step 6 of the walkthrough describes the exclusion and why it is made where audit rows are written.
+
 ## 0.1.0-alpha.11 - 2026-10-22
 
 ### Fixed
