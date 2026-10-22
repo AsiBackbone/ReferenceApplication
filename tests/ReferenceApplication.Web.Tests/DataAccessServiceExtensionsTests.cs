@@ -35,24 +35,49 @@ public sealed class DataAccessServiceExtensionsTests
     }
 
     /// <summary>
-    /// Verifies that SQL Server can be selected through configuration.
+    /// Verifies that selecting SQL Server fails during service registration with an explicit unsupported message,
+    /// because this reference application ships and tests a SQLite migration history only.
     /// </summary>
-    [Fact]
-    public void AddApplicationDataAccess_SqlServerProvider_UsesSqlServerProvider()
+    [Theory]
+    [InlineData("SqlServer")]
+    [InlineData("sqlserver")]
+    [InlineData("SQLSERVER")]
+    [InlineData(" SqlServer ")]
+    public void AddApplicationDataAccess_SqlServerProvider_ThrowsExplicitUnsupportedMessage(string provider)
     {
         IConfiguration configuration = CreateConfiguration(
             new Dictionary<string, string?>
             {
                 ["ConnectionStrings:ApplicationSqlServer"] = "Server=(localdb)\\MSSQLLocalDB;Database=ApplicationApplicationTests;Trusted_Connection=True;TrustServerCertificate=True",
-                ["ReferenceApplication:DataAccess:Provider"] = "SqlServer",
+                ["ReferenceApplication:DataAccess:Provider"] = provider,
                 ["ReferenceApplication:DataAccess:ConnectionStringName"] = "ApplicationSqlServer"
             });
 
-        using ServiceProvider serviceProvider = CreateServiceProvider(configuration);
+        ServiceCollection services = new();
+        services.AddLogging();
 
-        using ApplicationDbContext context = serviceProvider.GetRequiredService<ApplicationDbContext>();
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddApplicationDataAccess(configuration));
 
-        Assert.Equal("Microsoft.EntityFrameworkCore.SqlServer", context.Database.ProviderName);
+        Assert.Contains(
+            "Data access provider 'SqlServer' is not supported",
+            exception.Message,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "target SQLite only",
+            exception.Message,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "your own SQL Server migration history",
+            exception.Message,
+            StringComparison.Ordinal);
+
+        Assert.EndsWith(
+            "Supported providers: Sqlite, None.",
+            exception.Message,
+            StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -61,8 +86,6 @@ public sealed class DataAccessServiceExtensionsTests
     [Theory]
     [InlineData("sqlite", "Microsoft.EntityFrameworkCore.Sqlite")]
     [InlineData("SQLITE", "Microsoft.EntityFrameworkCore.Sqlite")]
-    [InlineData("sqlserver", "Microsoft.EntityFrameworkCore.SqlServer")]
-    [InlineData("SQLSERVER", "Microsoft.EntityFrameworkCore.SqlServer")]
     public void AddApplicationDataAccess_ProviderNameMatching_IsCaseInsensitive(
         string provider,
         string expectedProviderName)
@@ -71,11 +94,8 @@ public sealed class DataAccessServiceExtensionsTests
             new Dictionary<string, string?>
             {
                 ["ConnectionStrings:ApplicationDatabase"] = "Data Source=:memory:",
-                ["ConnectionStrings:ApplicationSqlServer"] = "Server=(localdb)\\MSSQLLocalDB;Database=ApplicationApplicationTests;Trusted_Connection=True;TrustServerCertificate=True",
                 ["ReferenceApplication:DataAccess:Provider"] = provider,
-                ["ReferenceApplication:DataAccess:ConnectionStringName"] = provider.Equals("sqlserver", StringComparison.OrdinalIgnoreCase)
-                    ? "ApplicationSqlServer"
-                    : "ApplicationDatabase"
+                ["ReferenceApplication:DataAccess:ConnectionStringName"] = "ApplicationDatabase"
             });
 
         using ServiceProvider serviceProvider = CreateServiceProvider(configuration);
@@ -189,7 +209,7 @@ public sealed class DataAccessServiceExtensionsTests
     }
 
     /// <summary>
-    /// Verifies that unsupported provider names fail when the DbContext provider is configured.
+    /// Verifies that unsupported provider names fail fast during service registration.
     /// </summary>
     [Fact]
     public void AddApplicationDataAccess_UnsupportedProvider_ThrowsInvalidOperationException()
@@ -202,20 +222,32 @@ public sealed class DataAccessServiceExtensionsTests
                 ["ReferenceApplication:DataAccess:ConnectionStringName"] = "ApplicationDatabase"
             });
 
-        using ServiceProvider serviceProvider = CreateServiceProvider(configuration);
+        ServiceCollection services = new();
+        services.AddLogging();
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            serviceProvider.GetRequiredService<ApplicationDbContext>);
+            () => services.AddApplicationDataAccess(configuration));
 
-        Assert.Contains(
-            "Unsupported data access provider",
-            exception.Message,
-            StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(
+            "Unsupported data access provider 'PostgreSql'. Supported providers: Sqlite, None.",
+            exception.Message);
+    }
 
-        Assert.Contains(
-            "Sqlite, SqlServer",
-            exception.Message,
-            StringComparison.OrdinalIgnoreCase);
+    /// <summary>
+    /// Verifies the supported-provider policy: SQLite and the disabled aliases only.
+    /// </summary>
+    [Theory]
+    [InlineData("Sqlite", true)]
+    [InlineData(" sqlite ", true)]
+    [InlineData("None", true)]
+    [InlineData("Disabled", true)]
+    [InlineData("SqlServer", false)]
+    [InlineData("PostgreSql", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void DataAccessOptions_IsSupportedProvider_MatchesSupportPolicy(string? provider, bool expected)
+    {
+        Assert.Equal(expected, DataAccessOptions.IsSupportedProvider(provider));
     }
 
     /// <summary>

@@ -14,6 +14,9 @@ namespace ReferenceApplication.Infrastructure.Data.Extensions;
 /// </summary>
 public static class InfrastructureDataAccessServiceExtensions
 {
+    // Recognized only so selecting it fails with an explicit, actionable message instead of a generic one.
+    private const string _unsupportedSqlServerProvider = "SqlServer";
+
     /// <summary>
     /// Registers EF Core data access services for infrastructure and non-web consumers.
     /// </summary>
@@ -29,6 +32,9 @@ public static class InfrastructureDataAccessServiceExtensions
             .Bind(configuration.GetSection(DataAccessOptions.SectionName))
             .Validate(options => !string.IsNullOrWhiteSpace(options.Provider),
                 "ReferenceApplication:DataAccess:Provider must not be empty.")
+            .Validate(options => string.IsNullOrWhiteSpace(options.Provider)
+                || DataAccessOptions.IsSupportedProvider(options.Provider),
+                "ReferenceApplication:DataAccess:Provider must be Sqlite, None, or Disabled.")
             .Validate(options => DataAccessOptions.IsDisabledProvider(options.Provider)
                 || !string.IsNullOrWhiteSpace(options.ConnectionStringName),
                 "ReferenceApplication:DataAccess:ConnectionStringName must not be empty when data access is enabled.")
@@ -106,6 +112,11 @@ public static class InfrastructureDataAccessServiceExtensions
             return DataAccessRegistration.Disabled(provider, auditStorageMode);
         }
 
+        if (!DataAccessOptions.IsSupportedProvider(provider))
+        {
+            throw new InvalidOperationException(CreateUnsupportedProviderMessage(provider));
+        }
+
         if (string.IsNullOrWhiteSpace(connectionStringName))
         {
             throw new InvalidOperationException("Application data access connection string name was not configured.");
@@ -159,14 +170,20 @@ public static class InfrastructureDataAccessServiceExtensions
             return;
         }
 
-        if (provider.Equals(DataAccessOptions.SqlServerProvider, StringComparison.OrdinalIgnoreCase))
-        {
-            options.UseSqlServer(connectionString);
-            return;
-        }
+        throw new InvalidOperationException(CreateUnsupportedProviderMessage(provider));
+    }
 
-        throw new InvalidOperationException(
-            $"Unsupported data access provider '{provider}'. Supported providers: {DataAccessOptions.SqliteProvider}, {DataAccessOptions.SqlServerProvider}, {DataAccessOptions.DisabledProvider}.");
+    private static string CreateUnsupportedProviderMessage(string provider)
+    {
+        string supportedProviders = $"Supported providers: {DataAccessOptions.SqliteProvider}, {DataAccessOptions.DisabledProvider}.";
+
+        return provider.Equals(_unsupportedSqlServerProvider, StringComparison.OrdinalIgnoreCase)
+            ? $"Data access provider 'SqlServer' is not supported by this reference application. "
+            + $"Its EF Core migration history, migration bundle, and persistence tests target SQLite only. "
+            + $"To run on SQL Server, add the Microsoft.EntityFrameworkCore.SqlServer package, register the provider in "
+            + $"InfrastructureDataAccessServiceExtensions, and generate, review, and test your own SQL Server migration history. "
+            + $"{supportedProviders}"
+            : $"Unsupported data access provider '{provider}'. {supportedProviders}";
     }
 
     private readonly record struct DataAccessRegistration(
