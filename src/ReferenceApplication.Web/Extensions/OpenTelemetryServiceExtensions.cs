@@ -1,4 +1,6 @@
 using System.Reflection;
+using AsiBackbone.DependencyInjection;
+using AsiBackbone.OpenTelemetry;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
@@ -14,8 +16,16 @@ namespace ReferenceApplication.Web.Extensions;
 public static class OpenTelemetryServiceExtensions
 {
     /// <summary>
-    /// Adds baseline OpenTelemetry tracing and metrics support.
+    /// Adds OpenTelemetry tracing and metrics: ASP.NET Core and HttpClient instrumentation, and governance
+    /// instrumentation.
     /// </summary>
+    /// <remarks>
+    /// Governance instrumentation, on by default with <c>EnableGovernanceInstrumentation</c>, registers AsiBackbone's
+    /// OpenTelemetry governance emitter through <c>UseOpenTelemetryEmission</c>, collects its activity source and meter,
+    /// and collects the host's <c>ReferenceApplication.AuditReconciliation</c> gauges. The emitter records spans only
+    /// while tracing is enabled and metrics only while metrics are enabled. <see cref="ApplicationTelemetrySources" />
+    /// names every source and meter collected, and the Development pipeline inspector reads it too.
+    /// </remarks>
     /// <param name="services">The service collection to add OpenTelemetry services to.</param>
     /// <param name="configuration">The application configuration source.</param>
     /// <param name="environment">The current hosting environment.</param>
@@ -44,6 +54,16 @@ public static class OpenTelemetryServiceExtensions
         }
 
         string serviceVersion = ResolveServiceVersion(options);
+        bool governance = ApplicationTelemetrySources.IsGovernanceInstrumentationActive(options);
+
+        if (governance)
+        {
+            services.AddAsiBackbone(builder => builder.UseOpenTelemetryEmission(emitter =>
+            {
+                emitter.EmitActivityEvents = options.EnableTracing;
+                emitter.EmitMetrics = options.EnableMetrics;
+            }));
+        }
 
         OpenTelemetryBuilder openTelemetryBuilder = services
             .AddOpenTelemetry()
@@ -70,6 +90,11 @@ public static class OpenTelemetryServiceExtensions
                     tracing.AddHttpClientInstrumentation();
                 }
 
+                if (governance)
+                {
+                    tracing.AddSource([.. ApplicationTelemetrySources.GovernanceActivitySourceNames]);
+                }
+
                 if (options.Otlp.Enabled)
                 {
                     tracing.AddOtlpExporter(exporterOptions => ConfigureOtlpExporter(exporterOptions, options.Otlp));
@@ -89,6 +114,11 @@ public static class OpenTelemetryServiceExtensions
                 if (options.EnableHttpClientInstrumentation)
                 {
                     metrics.AddHttpClientInstrumentation();
+                }
+
+                if (governance)
+                {
+                    metrics.AddMeter([.. ApplicationTelemetrySources.GovernanceMeterNames]);
                 }
 
                 if (options.Otlp.Enabled)

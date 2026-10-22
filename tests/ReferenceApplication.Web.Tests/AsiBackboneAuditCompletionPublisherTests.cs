@@ -265,24 +265,34 @@ public sealed class AsiBackboneAuditCompletionPublisherTests
             new AsiBackboneAuditCompletionPublisher(
                 factory,
                 NullLoggerFactory.Instance,
-                CreateNotificationPublisher()).Destination);
+                CreateNotificationPublisher(),
+                GovernanceTelemetryProjection.Disabled).Destination);
         _ = Assert.Throws<ArgumentNullException>(() => new AsiBackboneAuditCompletionPublisher(
             null!,
             NullLoggerFactory.Instance,
-            CreateNotificationPublisher()));
+            CreateNotificationPublisher(),
+            GovernanceTelemetryProjection.Disabled));
         _ = Assert.Throws<ArgumentNullException>(() => new AsiBackboneAuditCompletionPublisher(
             factory,
             null!,
-            CreateNotificationPublisher()));
+            CreateNotificationPublisher(),
+            GovernanceTelemetryProjection.Disabled));
         _ = Assert.Throws<ArgumentNullException>(() => new AsiBackboneAuditCompletionPublisher(
             factory,
             NullLoggerFactory.Instance,
+            null!,
+            GovernanceTelemetryProjection.Disabled));
+        _ = Assert.Throws<ArgumentNullException>(() => new AsiBackboneAuditCompletionPublisher(
+            factory,
+            NullLoggerFactory.Instance,
+            CreateNotificationPublisher(),
             null!));
         _ = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
             await new AsiBackboneAuditCompletionPublisher(
                     factory,
                     NullLoggerFactory.Instance,
-                    CreateNotificationPublisher())
+                    CreateNotificationPublisher(),
+                    GovernanceTelemetryProjection.Disabled)
                 .PublishAsync(null!, TestContext.Current.CancellationToken));
     }
 

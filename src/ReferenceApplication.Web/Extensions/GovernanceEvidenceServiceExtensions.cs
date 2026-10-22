@@ -37,7 +37,9 @@ public static class GovernanceEvidenceServiceExtensions
     /// <item><description>registers <see cref="LedgerDecisionReceiptSink" /> as the endpoint governance audit sink;</description></item>
     /// <item><description>exposes the request's persisted evidence through <see cref="IGovernanceDecisionEvidenceAccessor" />;</description></item>
     /// <item><description>enables the NCAT audit-completion outbox with <see cref="AsiBackboneAuditCompletionPublisher" /> as its default destination;</description></item>
-    /// <item><description>registers NCAT audit reconciliation, its background worker, metrics, and audit-integrity health check.</description></item>
+    /// <item><description>registers NCAT audit reconciliation, its background worker, metrics, and audit-integrity health check;</description></item>
+    /// <item><description>registers <see cref="GovernanceTelemetryProjection" />, which projects persisted evidence onto telemetry when
+    /// <c>AddApplicationOpenTelemetry</c> has registered AsiBackbone's governance emitter, and does nothing otherwise.</description></item>
     /// </list>
     /// </remarks>
     public static IServiceCollection AddApplicationGovernanceEvidence(
@@ -60,6 +62,7 @@ public static class GovernanceEvidenceServiceExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IGovernanceEvidenceNotifier, InMemoryGovernanceEvidenceNotifier>();
         services.AddSingleton<GovernanceEvidenceNotificationPublisher>();
+        services.TryAddSingleton<GovernanceTelemetryProjection>();
 
         services.AddScoped<IApplicationAuditCompletionPublisher, AsiBackboneAuditCompletionPublisher>();
         services.AddApplicationAuditCompletionOutbox(options =>

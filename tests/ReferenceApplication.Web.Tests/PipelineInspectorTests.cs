@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using AsiBackbone.EntityFrameworkCore.Persistence;
+using AsiBackbone.OpenTelemetry;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -231,7 +232,8 @@ public sealed class PipelineInspectorTests : IDisposable
 
     /// <summary>
     /// Verifies that the in-process listener lists the sources and meters present, marks which the host's
-    /// OpenTelemetry configuration collects, reads the host's own gauges, and shows the request's server span.
+    /// OpenTelemetry configuration collects, including the governance source and meters, reads the host's own gauges,
+    /// and shows the request's server span and its governance span.
     /// </summary>
     [Fact]
     public async Task Telemetry_ListsSourcesAndMeters_AndShowsTheRequestsServerSpan()
@@ -240,7 +242,8 @@ public sealed class PipelineInspectorTests : IDisposable
         using HttpClient client = factory.CreateHttpsClient();
         string correlationId = await CreateRecordAsync(client, factory);
 
-        // The server span ends as the request finishes, which can be just after the client has the response.
+        // The server span ends as the request finishes, which can be just after the client has the response; the
+        // governance span ends earlier, inside the request, so wait for the server span itself.
         JsonElement? request = null;
         JsonElement telemetry = default;
         JsonElement candidate = default;
@@ -249,7 +252,8 @@ public sealed class PipelineInspectorTests : IDisposable
             using JsonDocument snapshot = await GetSnapshotAsync(client, correlationId);
             telemetry = snapshot.RootElement.GetProperty("telemetry").Clone();
             candidate = snapshot.RootElement.GetProperty("request").Clone();
-            if (candidate.GetProperty("spans").GetArrayLength() > 0)
+            if (candidate.GetProperty("spans").EnumerateArray().Any(static span =>
+                span.GetProperty("kind").GetString() == "Server"))
             {
                 request = candidate;
             }
@@ -298,9 +302,22 @@ public sealed class PipelineInspectorTests : IDisposable
         Assert.True(aspNetCore.GetProperty("addedToOpenTelemetry").GetBoolean());
         Assert.True(aspNetCore.GetProperty("spansObserved").GetInt64() > 0);
 
+        // Governance instrumentation adds AsiBackbone's governance source and meter and the reconciliation gauges.
+        JsonElement governanceSource = telemetry.GetProperty("activitySources").EnumerateArray()
+            .Single(static source => source.GetProperty("name").GetString() == OpenTelemetryGovernanceInstrumentation.ActivitySourceName);
+        Assert.True(governanceSource.GetProperty("addedToOpenTelemetry").GetBoolean());
+        Assert.True(governanceSource.GetProperty("spansObserved").GetInt64() > 0);
+        Assert.Contains(
+            observed.GetProperty("spans").EnumerateArray(),
+            static span => span.GetProperty("source").GetString() == OpenTelemetryGovernanceInstrumentation.ActivitySourceName);
+
+        JsonElement governanceMeter = telemetry.GetProperty("meters").EnumerateArray()
+            .Single(static meter => meter.GetProperty("name").GetString() == OpenTelemetryGovernanceInstrumentation.MeterName);
+        Assert.True(governanceMeter.GetProperty("addedToOpenTelemetry").GetBoolean());
+
         JsonElement reconciliationMeter = telemetry.GetProperty("meters").EnumerateArray()
             .Single(static meter => meter.GetProperty("name").GetString() == PipelineTelemetryRecorder.ReconciliationMeterName);
-        Assert.False(reconciliationMeter.GetProperty("addedToOpenTelemetry").GetBoolean());
+        Assert.True(reconciliationMeter.GetProperty("addedToOpenTelemetry").GetBoolean());
         Assert.Contains(
             telemetry.GetProperty("hostGauges").EnumerateArray(),
             static gauge => gauge.GetProperty("instrument").GetString() == "ncat.audit.outbox.pending");

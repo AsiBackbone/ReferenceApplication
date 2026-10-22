@@ -4,10 +4,15 @@ namespace ReferenceApplication.Infrastructure.Data.Auditing;
 
 public sealed class ApplicationAuditReconciliationMetrics : IDisposable
 {
+    /// <summary>
+    /// The name of the meter that publishes the reconciliation and outbox-health gauges.
+    /// </summary>
+    public const string MeterName = "ReferenceApplication.AuditReconciliation";
+
     public static readonly ApplicationAuditReconciliationSummary DisabledSummary =
         new(false, null, 0, 0, 0, 0, 0, 0, 0);
 
-    private readonly Meter _meter = new("ReferenceApplication.AuditReconciliation", "1.0.0");
+    private readonly Meter _meter = new(MeterName, "1.0.0");
     private ApplicationAuditReconciliationSummary _summary = DisabledSummary;
     private long _pendingDeliveryCount;
     private double _oldestPendingAgeSeconds;

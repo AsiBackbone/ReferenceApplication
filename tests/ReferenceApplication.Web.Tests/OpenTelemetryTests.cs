@@ -1,9 +1,12 @@
 using System.Net;
+using AsiBackbone.Core.Emissions;
+using AsiBackbone.OpenTelemetry;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using ReferenceApplication.Infrastructure.Data.Auditing;
 using ReferenceApplication.Web.Extensions;
 using ReferenceApplication.Web.Options;
 using ReferenceApplication.Web.Tests.Extensions;
@@ -33,6 +36,7 @@ public sealed class OpenTelemetryTests
             ["ReferenceApplication:OpenTelemetry:EnableMetrics"] = "true",
             ["ReferenceApplication:OpenTelemetry:EnableAspNetCoreInstrumentation"] = "true",
             ["ReferenceApplication:OpenTelemetry:EnableHttpClientInstrumentation"] = "true",
+            ["ReferenceApplication:OpenTelemetry:EnableGovernanceInstrumentation"] = "true",
             ["ReferenceApplication:OpenTelemetry:Otlp:Enabled"] = "false",
             ["ReferenceApplication:OpenTelemetry:Otlp:Endpoint"] = "",
             ["ReferenceApplication:OpenTelemetry:Otlp:Protocol"] = "Grpc"
@@ -49,6 +53,8 @@ public sealed class OpenTelemetryTests
         Assert.True(options.EnableMetrics);
         Assert.True(options.EnableAspNetCoreInstrumentation);
         Assert.True(options.EnableHttpClientInstrumentation);
+        Assert.True(options.EnableGovernanceInstrumentation);
+        Assert.True(new ApplicationOpenTelemetryOptions().EnableGovernanceInstrumentation);
 
         Assert.False(options.Otlp.Enabled);
         Assert.Equal(string.Empty, options.Otlp.Endpoint);
@@ -140,6 +146,59 @@ public sealed class OpenTelemetryTests
 
     }
     /// <summary>
+    /// Verifies which activity sources and meters the host collects under each setting, the single list the
+    /// OpenTelemetry composition and the pipeline inspector both read.
+    /// </summary>
+    [Fact]
+    public void TelemetrySources_GovernanceInstrumentation_FollowsTracingMetricsAndItsOwnSwitch()
+    {
+        ApplicationOpenTelemetryOptions defaults = new();
+        Assert.True(ApplicationTelemetrySources.IsGovernanceInstrumentationActive(defaults));
+        Assert.True(ApplicationTelemetrySources.IsActivitySourceCollected(defaults, OpenTelemetryGovernanceInstrumentation.ActivitySourceName));
+        Assert.True(ApplicationTelemetrySources.IsMeterCollected(defaults, OpenTelemetryGovernanceInstrumentation.MeterName));
+        Assert.True(ApplicationTelemetrySources.IsMeterCollected(defaults, ApplicationAuditReconciliationMetrics.MeterName));
+        Assert.True(ApplicationTelemetrySources.IsActivitySourceCollected(defaults, ApplicationTelemetrySources.AspNetCoreActivitySourceName));
+        Assert.False(ApplicationTelemetrySources.IsActivitySourceCollected(defaults, "Unrelated.Source"));
+        Assert.False(ApplicationTelemetrySources.IsMeterCollected(defaults, "Unrelated.Meter"));
+
+        ApplicationOpenTelemetryOptions governanceOff = new() { EnableGovernanceInstrumentation = false };
+        Assert.False(ApplicationTelemetrySources.IsGovernanceInstrumentationActive(governanceOff));
+        Assert.False(ApplicationTelemetrySources.IsActivitySourceCollected(governanceOff, OpenTelemetryGovernanceInstrumentation.ActivitySourceName));
+        Assert.False(ApplicationTelemetrySources.IsMeterCollected(governanceOff, ApplicationAuditReconciliationMetrics.MeterName));
+        Assert.True(ApplicationTelemetrySources.IsActivitySourceCollected(governanceOff, ApplicationTelemetrySources.AspNetCoreActivitySourceName));
+
+        ApplicationOpenTelemetryOptions tracingOnly = new() { EnableMetrics = false };
+        Assert.True(ApplicationTelemetrySources.IsGovernanceInstrumentationActive(tracingOnly));
+        Assert.True(ApplicationTelemetrySources.IsActivitySourceCollected(tracingOnly, OpenTelemetryGovernanceInstrumentation.ActivitySourceName));
+        Assert.False(ApplicationTelemetrySources.IsMeterCollected(tracingOnly, OpenTelemetryGovernanceInstrumentation.MeterName));
+
+        Assert.False(ApplicationTelemetrySources.IsGovernanceInstrumentationActive(new() { EnableTracing = false, EnableMetrics = false }));
+        Assert.False(ApplicationTelemetrySources.IsGovernanceInstrumentationActive(new() { Enabled = false }));
+    }
+
+    /// <summary>
+    /// Verifies that AsiBackbone's governance emitter is registered only while governance instrumentation is active.
+    /// </summary>
+    [Fact]
+    public void AddApplicationOpenTelemetry_RegistersGovernanceEmitterOnlyWhenActive()
+    {
+        _ = Assert.IsType<OpenTelemetryGovernanceEmitter>(BuildEmitter(new Dictionary<string, string?>()));
+        Assert.Null(BuildEmitter(new Dictionary<string, string?>
+        {
+            ["ReferenceApplication:OpenTelemetry:EnableGovernanceInstrumentation"] = "false"
+        }));
+        Assert.Null(BuildEmitter(new Dictionary<string, string?>
+        {
+            ["ReferenceApplication:OpenTelemetry:Enabled"] = "false"
+        }));
+        Assert.Null(BuildEmitter(new Dictionary<string, string?>
+        {
+            ["ReferenceApplication:OpenTelemetry:EnableTracing"] = "false",
+            ["ReferenceApplication:OpenTelemetry:EnableMetrics"] = "false"
+        }));
+    }
+
+    /// <summary>
     /// Creates a test application factory with the supplied in-memory configuration overrides.
     /// </summary>
     /// <param name="configurationValues">The configuration key/value pairs used to override application settings for a test.</param>
@@ -147,6 +206,20 @@ public sealed class OpenTelemetryTests
     private static ApplicationWebApplicationFactory CreateFactory(IReadOnlyDictionary<string, string?> configurationValues)
     {
         return ApplicationWebApplicationFactory.CreateAllowingAnonymousAccess(configurationValues);
+    }
+
+    private static IGovernanceEmitter? BuildEmitter(IReadOnlyDictionary<string, string?> configurationValues)
+    {
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(configurationValues)
+            .Build();
+
+        IServiceCollection services = new ServiceCollection();
+        _ = services.AddLogging();
+        _ = services.AddApplicationOpenTelemetry(configuration, new TestHostEnvironment());
+
+        using ServiceProvider provider = services.BuildServiceProvider(validateScopes: true);
+        return provider.GetService<IGovernanceEmitter>();
     }
 
     private static OptionsValidationException AssertOpenTelemetryOptionsValidationFails(

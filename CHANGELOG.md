@@ -11,6 +11,31 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
 
 ### Added
 
+* Governance telemetry exported through OpenTelemetry (#78).
+  * The host references `AsiBackbone.OpenTelemetry` `7.5.0` and registers its governance emitter with
+    `UseOpenTelemetryEmission`. `GovernanceTelemetryProjection` projects each decision once its receipt is appended to
+    the ledger, and each lifecycle event once the outbox delivery appends it. The result is an internal span in the
+    `AsiBackbone.OpenTelemetry` source (for a decision, a child of the request's server span), plus the
+    `asibackbone.governance.emissions` counter and `asibackbone.governance.emission_latency_ms` histogram, dimensioned
+    only by event type, result, and provider.
+  * The `ReferenceApplication.AuditReconciliation` meter is now collected, so its finding and outbox gauges are
+    exported.
+  * Envelopes are built field by field: the actor, reason codes, receipt and lifecycle metadata, request values, and
+    mutation values never reach telemetry. A projection happens only after evidence is persisted, never throws, ignores
+    the request's cancellation, and cannot change a governance outcome or delivery result.
+  * The new `ReferenceApplication:OpenTelemetry:EnableGovernanceInstrumentation` setting, `true` by default, turns all
+    of this on or off. Spans also need `EnableTracing`, and metrics `EnableMetrics`.
+  * `ApplicationTelemetrySources` is the single list of collected sources and meters. Both the OpenTelemetry
+    composition and the Development pipeline inspector read it, so the inspector now marks the governance source and
+    meters as collected.
+  * `LedgerDecisionReceiptSink` and `AsiBackboneAuditCompletionPublisher` take the projection as a new constructor
+    parameter.
+  * Step 7's new *Governance telemetry* section lists every span, tag, metric, dimension, and gauge, their cardinality,
+    and what is never recorded. The README and *Run outside Development* link to it, and the stable release policy's
+    #78 prerequisite now reads as completed.
+  * Tests export through in-memory span and metric exporters added to the host's own providers. They cover the decision
+    and lifecycle spans of a governed record, the governance metrics, the reconciliation gauges, the absence of
+    sensitive values, and the disabled switch.
 * A coverage gate in the `Build and test` job (#75). Coverage was previously reported only.
   * `scripts/Write-CoverageSummary.ps1` now fails the job when total line or branch coverage, or either production
     assembly's (`ReferenceApplication.Web` and `ReferenceApplication.Infrastructure`), falls below its floor. It also

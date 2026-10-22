@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
@@ -5,9 +6,11 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using AsiBackbone.Core.Audit;
 using AsiBackbone.Core.Decisions;
+using AsiBackbone.Core.Emissions;
 using AsiBackbone.Core.HostIntegration;
 using AsiBackbone.EntityFrameworkCore.Audit;
 using AsiBackbone.EntityFrameworkCore.Persistence;
+using AsiBackbone.OpenTelemetry;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -150,6 +153,193 @@ public sealed class GovernedAuditEvidenceTests : IDisposable
         Assert.DoesNotContain("originalValues", evidenceJson, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("currentValues", evidenceJson, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("keyValues", evidenceJson, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Verifies that, with OpenTelemetry enabled, the host exports AsiBackbone governance telemetry for the evidence
+    /// chain: a decision span in the governed request's trace, a lifecycle span when the completion is delivered,
+    /// low-cardinality governance metrics, and the reconciliation gauges, and that no actor, reason, metadata, request
+    /// value, or mutation value reaches telemetry.
+    /// </summary>
+    [Fact]
+    public async Task CreateRecord_OpenTelemetryEnabled_ExportsGovernanceSpansMetricsAndReconciliationGauges()
+    {
+        InMemoryTelemetryExporters telemetry = new();
+        using WebApplicationFactory<Program> factory = await CreateFactoryAsync(configureServices: telemetry.AddTo);
+        using HttpClient client = factory.CreateHttpsClient();
+
+        using HttpResponseMessage response = await PostAsync(
+            client,
+            "records",
+            role: "administrator",
+            form: new Dictionary<string, string> { ["Title"] = "Telemetry review" });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        GovernedRecordCreatedResponse created = Assert.IsType<GovernedRecordCreatedResponse>(
+            await response.Content.ReadFromJsonAsync<GovernedRecordCreatedResponse>(TestContext.Current.CancellationToken));
+
+        AuditLedgerRecord decision;
+        ApplicationAuditCompletionOutboxEntry outboxEntry;
+        await using (AsyncServiceScope scope = factory.Services.CreateAsyncScope())
+        {
+            ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            decision = Assert.IsType<AuditLedgerRecord>(
+                await new EfCoreAuditLedgerStore(dbContext).FindByRecordIdAsync(
+                    created.DecisionAuditRecordId,
+                    TestContext.Current.CancellationToken));
+            outboxEntry = await dbContext.ApplicationAuditCompletionOutboxEntries
+                .AsNoTracking()
+                .SingleAsync(TestContext.Current.CancellationToken);
+        }
+
+        string correlationId = Assert.IsType<string>(decision.CorrelationId);
+        string decisionTraceId = Assert.IsType<string>(decision.TraceId);
+
+        // 1. The decision is projected once, as an internal span in the governed request's trace.
+        InMemoryTelemetryExporters.ExportedSpan decisionSpan = Assert.Single(
+            GovernanceSpans(telemetry, correlationId),
+            static span => span.Tags.GetValueOrDefault(OpenTelemetryGovernanceAttributes.EventType) ==
+                nameof(GovernanceEmissionEventType.Decision));
+        Assert.Equal(decision.OperationName, decisionSpan.Name);
+        Assert.Equal(ActivityKind.Internal, decisionSpan.Kind);
+        Assert.NotNull(decisionSpan.ParentSpanId);
+        Assert.Contains(decisionSpan.TraceId, decisionTraceId, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(GovernanceDecisionOutcome.Allowed.ToString(), decisionSpan.Tags[OpenTelemetryGovernanceAttributes.DecisionOutcome]);
+        Assert.Equal(decision.DecisionReceiptId, decisionSpan.Tags[OpenTelemetryGovernanceAttributes.DecisionReceiptId]);
+        Assert.Equal(ReferenceApplicationGovernancePolicySet.Version, decisionSpan.Tags[OpenTelemetryGovernanceAttributes.PolicyVersion]);
+        Assert.Equal(ReferenceApplicationGovernancePolicySet.PolicyHash, decisionSpan.Tags[OpenTelemetryGovernanceAttributes.PolicyHash]);
+        Assert.Contains(OpenTelemetryGovernanceInstrumentation.DecisionEvaluatedEventName, decisionSpan.EventNames);
+
+        // 2. Delivering the completion projects the lifecycle event it appended.
+        Assert.Equal(1, (await DispatchAsync(factory)).DeliveredCount);
+        InMemoryTelemetryExporters.ExportedSpan lifecycleSpan = Assert.Single(
+            GovernanceSpans(telemetry, correlationId),
+            static span => span.Tags.GetValueOrDefault(OpenTelemetryGovernanceAttributes.EventType) ==
+                nameof(GovernanceEmissionEventType.AuditLifecycle));
+        Assert.Equal(decision.OperationName, lifecycleSpan.Name);
+        Assert.Equal(decisionSpan.Tags[OpenTelemetryGovernanceAttributes.DecisionReceiptId], lifecycleSpan.Tags[OpenTelemetryGovernanceAttributes.DecisionReceiptId]);
+        Assert.Equal(
+            nameof(DecisionReceiptLifecycleStage.GatewayExecutionCompleted),
+            lifecycleSpan.Tags[OpenTelemetryGovernanceAttributes.LifecycleStage]);
+        Assert.Contains(OpenTelemetryGovernanceInstrumentation.LifecycleRecordedEventName, lifecycleSpan.EventNames);
+
+        // 3. Telemetry carries identifiers and outcomes, never the actor, request or mutation values, or metadata.
+        string[] neverExported =
+        [
+            "test-admin",
+            "Telemetry review",
+            created.RecordId.ToString("D"),
+            Assert.IsType<string>(created.MutationBatchId),
+            created.OperationExecutionId,
+            outboxEntry.IdempotencyKey,
+            outboxEntry.MutationManifestHash
+        ];
+        Assert.All(GovernanceSpans(telemetry, correlationId), span => Assert.All(span.Tags, tag =>
+        {
+            Assert.DoesNotContain(tag.Value, neverExported);
+            Assert.DoesNotContain("actor", tag.Key, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("reason", tag.Key, StringComparison.OrdinalIgnoreCase);
+        }));
+
+        // 4. Governance metrics count projections by low-cardinality dimensions only, and the reconciliation gauges
+        // are exported alongside them.
+        InMemoryTelemetryExporters.CollectMetrics(factory.Services);
+        IReadOnlyList<InMemoryTelemetryExporters.ExportedMetricPoint> points = telemetry.MetricPoints;
+
+        foreach (string eventType in new[]
+        {
+            nameof(GovernanceEmissionEventType.Decision),
+            nameof(GovernanceEmissionEventType.AuditLifecycle)
+        })
+        {
+            Assert.Contains(points, point =>
+                point.Meter == OpenTelemetryGovernanceInstrumentation.MeterName &&
+                point.Instrument == OpenTelemetryGovernanceInstrumentation.EmissionsCounterName &&
+                point.Tags.GetValueOrDefault(OpenTelemetryGovernanceAttributes.MetricEventType) == eventType &&
+                point.Value >= 1);
+        }
+
+        Assert.Contains(points, static point =>
+            point.Meter == OpenTelemetryGovernanceInstrumentation.MeterName &&
+            point.Instrument == OpenTelemetryGovernanceInstrumentation.EmissionLatencyHistogramName &&
+            point.Count >= 1);
+
+        string[] metricDimensions =
+        [
+            OpenTelemetryGovernanceAttributes.MetricEventType,
+            OpenTelemetryGovernanceAttributes.MetricResult,
+            OpenTelemetryGovernanceAttributes.MetricProvider,
+            OpenTelemetryGovernanceAttributes.MetricFailureCode,
+            OpenTelemetryGovernanceAttributes.MetricRetryable
+        ];
+        Assert.All(
+            points.Where(static point => point.Meter == OpenTelemetryGovernanceInstrumentation.MeterName),
+            point => Assert.All(point.Tags.Keys, key => Assert.Contains(key, metricDimensions)));
+
+        foreach (string gauge in new[] { "ncat.audit.reconciliation.findings.open", "ncat.audit.outbox.pending" })
+        {
+            Assert.Contains(points, point =>
+                point.Meter == ApplicationAuditReconciliationMetrics.MeterName &&
+                point.Instrument == gauge);
+        }
+    }
+
+    /// <summary>
+    /// Verifies that turning governance instrumentation off registers no governance emitter and exports no governance
+    /// span or metric, while the governed request and its evidence are unaffected.
+    /// </summary>
+    [Fact]
+    public async Task CreateRecord_GovernanceInstrumentationDisabled_ExportsNoGovernanceTelemetry()
+    {
+        InMemoryTelemetryExporters telemetry = new();
+        using WebApplicationFactory<Program> factory = await CreateFactoryAsync(
+            configureServices: telemetry.AddTo,
+            settings: new Dictionary<string, string?>
+            {
+                ["ReferenceApplication:OpenTelemetry:EnableGovernanceInstrumentation"] = "false"
+            });
+        using HttpClient client = factory.CreateHttpsClient();
+
+        using HttpResponseMessage response = await PostAsync(
+            client,
+            "records",
+            role: "administrator",
+            form: new Dictionary<string, string> { ["Title"] = "Untraced review" });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal(1, (await DispatchAsync(factory)).DeliveredCount);
+        Assert.Null(factory.Services.GetService<IGovernanceEmitter>());
+        Assert.False(factory.Services.GetRequiredService<GovernanceTelemetryProjection>().IsEnabled);
+
+        // The exporters are wired: the request's server span, which ends just after the response, is exported.
+        for (int attempt = 0; attempt < 25 && !telemetry.Spans.Any(IsServerSpan); attempt++)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(200), TestContext.Current.CancellationToken);
+        }
+
+        Assert.Contains(telemetry.Spans, IsServerSpan);
+
+        InMemoryTelemetryExporters.CollectMetrics(factory.Services);
+        Assert.DoesNotContain(
+            telemetry.Spans,
+            static span => span.Source == OpenTelemetryGovernanceInstrumentation.ActivitySourceName);
+        Assert.DoesNotContain(telemetry.MetricPoints, static point =>
+            point.Meter is OpenTelemetryGovernanceInstrumentation.MeterName or
+            ApplicationAuditReconciliationMetrics.MeterName);
+
+        static bool IsServerSpan(InMemoryTelemetryExporters.ExportedSpan span)
+        {
+            return span.Source == "Microsoft.AspNetCore" && span.Kind == ActivityKind.Server;
+        }
+    }
+
+    private static IEnumerable<InMemoryTelemetryExporters.ExportedSpan> GovernanceSpans(
+        InMemoryTelemetryExporters telemetry,
+        string correlationId)
+    {
+        return telemetry.Spans.Where(span =>
+            span.Source == OpenTelemetryGovernanceInstrumentation.ActivitySourceName &&
+            span.Tags.GetValueOrDefault(OpenTelemetryGovernanceAttributes.CorrelationId) == correlationId);
     }
 
     /// <summary>
@@ -730,30 +920,48 @@ public sealed class GovernedAuditEvidenceTests : IDisposable
 
     private Task<WebApplicationFactory<Program>> CreateFactoryAsync(
         bool migrate = true,
-        Action<IServiceCollection>? configureServices = null)
+        Action<IServiceCollection>? configureServices = null,
+        IReadOnlyDictionary<string, string?>? settings = null)
     {
+        Dictionary<string, string?> configuration = new(StringComparer.Ordinal)
+        {
+            ["ReferenceApplication:Authentication:Enabled"] = "true",
+            ["ReferenceApplication:Authentication:DefaultScheme"] = _testAuthenticationScheme,
+            ["ReferenceApplication:Authentication:DefaultChallengeScheme"] = _testAuthenticationScheme,
+            ["ReferenceApplication:Authentication:DefaultSignInScheme"] = _testAuthenticationScheme,
+            ["ReferenceApplication:Authentication:Cookie:Enabled"] = "true",
+            ["ReferenceApplication:Authentication:Cookie:Scheme"] = "Cookies",
+            ["ReferenceApplication:Authorization:RoleClaimType"] = ApplicationClaimTypes.Role,
+            ["ReferenceApplication:Authorization:PermissionClaimType"] = ApplicationClaimTypes.Permission,
+            ["ReferenceApplication:Authorization:AdministratorRoles:0"] = "administrator"
+        };
+
+        foreach (KeyValuePair<string, string?> setting in settings ?? new Dictionary<string, string?>())
+        {
+            configuration[setting.Key] = setting.Value;
+        }
+
         return _database.ApplyAsync(
-            ApplicationWebApplicationFactory.CreateAllowingAnonymousAccess(new Dictionary<string, string?>
+            ApplicationWebApplicationFactory.CreateAllowingAnonymousAccess(configuration)
+            .WithWebHostBuilder(builder =>
             {
-                ["ReferenceApplication:Authentication:Enabled"] = "true",
-                ["ReferenceApplication:Authentication:DefaultScheme"] = _testAuthenticationScheme,
-                ["ReferenceApplication:Authentication:DefaultChallengeScheme"] = _testAuthenticationScheme,
-                ["ReferenceApplication:Authentication:DefaultSignInScheme"] = _testAuthenticationScheme,
-                ["ReferenceApplication:Authentication:Cookie:Enabled"] = "true",
-                ["ReferenceApplication:Authentication:Cookie:Scheme"] = "Cookies",
-                ["ReferenceApplication:Authorization:RoleClaimType"] = ApplicationClaimTypes.Role,
-                ["ReferenceApplication:Authorization:PermissionClaimType"] = ApplicationClaimTypes.Permission,
-                ["ReferenceApplication:Authorization:AdministratorRoles:0"] = "administrator"
-            })
-            .WithWebHostBuilder(builder => builder.ConfigureServices(services =>
-            {
-                _ = services
-                    .AddAuthentication()
-                    .AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>(
-                        _testAuthenticationScheme,
-                        _ => { });
-                configureServices?.Invoke(services);
-            })),
+                // Settings the host reads while registering services, such as the OpenTelemetry switches, must be
+                // host settings: the factory's in-memory configuration is applied only after registration.
+                foreach (KeyValuePair<string, string?> setting in settings ?? new Dictionary<string, string?>())
+                {
+                    _ = builder.UseSetting(setting.Key, setting.Value);
+                }
+
+                _ = builder.ConfigureServices(services =>
+                {
+                    _ = services
+                        .AddAuthentication()
+                        .AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>(
+                            _testAuthenticationScheme,
+                            _ => { });
+                    configureServices?.Invoke(services);
+                });
+            }),
             migrate);
     }
 

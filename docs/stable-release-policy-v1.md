@@ -178,8 +178,8 @@ Every item below is blocking unless it names an exception path.
 - [ ] #75 remains completed: repository-owned line and branch coverage floors protect the tested baseline.
 - [ ] #77 remains completed: reconciliation is registered independently of the Development pipeline inspector.
 - [ ] #81 is completed: Step 2's current AsiBackbone package/version statements are correct and test-guarded.
-- [ ] #78 is completed **or** a stable-release exception explicitly records that governance/reconciliation telemetry
-      export is deferred and removes any documentation implying that those signals are currently exported.
+- [ ] #78 remains completed: AsiBackbone governance spans and metrics and the reconciliation gauges are exported
+      through OpenTelemetry, tested with in-memory exporters, and documented.
 - [ ] #79 is completed **or** the release keeps the consequential acknowledgment flow sample-only as this policy
       currently defines it.
 - [ ] #82 is completed before benchmark results are used as stable-release qualification evidence. It is not otherwise

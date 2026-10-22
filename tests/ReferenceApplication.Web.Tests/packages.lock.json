@@ -858,6 +858,7 @@
         "dependencies": {
           "AsiBackbone.AspNetCore": "[7.5.0, )",
           "AsiBackbone.Core": "[7.5.0, )",
+          "AsiBackbone.OpenTelemetry": "[7.5.0, )",
           "AsiBackbone.Signing.LocalDevelopment": "[7.5.0, )",
           "AsiBackbone.Signing.ManagedKey": "[7.5.0, )",
           "Asp.Versioning.Mvc": "[10.2.1, )",
@@ -911,6 +912,16 @@
           "Microsoft.EntityFrameworkCore": "10.0.13",
           "Microsoft.EntityFrameworkCore.Relational": "10.0.13",
           "Microsoft.Extensions.Logging.Abstractions": "10.0.13"
+        }
+      },
+      "AsiBackbone.OpenTelemetry": {
+        "type": "CentralTransitive",
+        "requested": "[7.5.0, )",
+        "resolved": "7.5.0",
+        "contentHash": "LEkpc0ovRY3//uPb8zZgL01PGYg9sB4tHW1ecm1eiunu0lmNgrIKIAp+BtCyLrY8IIsVsDTa/2vwVVCpS4I9QA==",
+        "dependencies": {
+          "AsiBackbone.Core": "7.5.0",
+          "AsiBackbone.DependencyInjection": "7.5.0"
         }
       },
       "AsiBackbone.Signing.LocalDevelopment": {

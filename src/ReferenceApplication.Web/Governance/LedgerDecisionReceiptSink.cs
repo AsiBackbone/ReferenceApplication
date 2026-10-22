@@ -21,6 +21,11 @@ namespace ReferenceApplication.Web.Governance;
 /// can never save, or be rolled back with, unrelated changes tracked by the request's own context. A failed append
 /// throws <see cref="GovernanceEvidencePersistenceException" />, so the governed operation fails closed.
 /// </para>
+/// <para>
+/// Once the receipt is appended, the decision is projected onto telemetry through
+/// <see cref="GovernanceTelemetryProjection" />. A rejected or failed append projects nothing, and a projection can never
+/// fail the governed operation.
+/// </para>
 /// </remarks>
 public sealed partial class LedgerDecisionReceiptSink : IDecisionReceiptSink
 {
@@ -32,6 +37,7 @@ public sealed partial class LedgerDecisionReceiptSink : IDecisionReceiptSink
     private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
     private readonly GovernanceDecisionEvidenceAccessor _evidenceAccessor;
     private readonly GovernanceEvidenceNotificationPublisher _notificationPublisher;
+    private readonly GovernanceTelemetryProjection _telemetryProjection;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<LedgerDecisionReceiptSink> _logger;
 
@@ -42,21 +48,25 @@ public sealed partial class LedgerDecisionReceiptSink : IDecisionReceiptSink
     /// <param name="evidenceAccessor">The request-scoped evidence holder.</param>
     /// <param name="loggerFactory">The logger factory used for the AsiBackbone EF Core store.</param>
     /// <param name="notificationPublisher">The isolated best-effort evidence notification publisher.</param>
+    /// <param name="telemetryProjection">The best-effort projection of persisted evidence onto telemetry.</param>
     public LedgerDecisionReceiptSink(
         IDbContextFactory<ApplicationDbContext> dbContextFactory,
         GovernanceDecisionEvidenceAccessor evidenceAccessor,
         ILoggerFactory loggerFactory,
-        GovernanceEvidenceNotificationPublisher notificationPublisher)
+        GovernanceEvidenceNotificationPublisher notificationPublisher,
+        GovernanceTelemetryProjection telemetryProjection)
     {
         ArgumentNullException.ThrowIfNull(dbContextFactory);
         ArgumentNullException.ThrowIfNull(evidenceAccessor);
         ArgumentNullException.ThrowIfNull(loggerFactory);
         ArgumentNullException.ThrowIfNull(notificationPublisher);
+        ArgumentNullException.ThrowIfNull(telemetryProjection);
 
         _dbContextFactory = dbContextFactory;
         _evidenceAccessor = evidenceAccessor;
         _loggerFactory = loggerFactory;
         _notificationPublisher = notificationPublisher;
+        _telemetryProjection = telemetryProjection;
         _logger = loggerFactory.CreateLogger<LedgerDecisionReceiptSink>();
     }
 
@@ -119,6 +129,8 @@ public sealed partial class LedgerDecisionReceiptSink : IDecisionReceiptSink
                 GovernanceEvidenceNotificationKinds.Decision,
                 record.RecordId));
         }
+
+        await _telemetryProjection.ProjectDecisionAsync(receipt).ConfigureAwait(false);
     }
 
     [LoggerMessage(

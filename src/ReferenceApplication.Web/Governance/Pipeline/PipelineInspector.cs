@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using ReferenceApplication.Infrastructure.Data;
 using ReferenceApplication.Infrastructure.Data.Auditing;
 using ReferenceApplication.Infrastructure.Data.Entities;
+using ReferenceApplication.Web.Extensions;
 using ReferenceApplication.Web.Options;
 
 namespace ReferenceApplication.Web.Governance.Pipeline;
@@ -52,23 +53,8 @@ internal sealed class PipelineInspector(
     PipelineTelemetryRecorder telemetryRecorder,
     TimeProvider timeProvider) : IPipelineInspector
 {
-    private const string _aspNetCoreActivitySourceName = "Microsoft.AspNetCore";
-    private const string _httpClientActivitySourceName = "System.Net.Http";
     private const string _routeTag = "http.route";
     private const string _methodTag = "http.request.method";
-
-    // The meters OpenTelemetry's ASP.NET Core and HttpClient instrumentation add when the host enables them.
-    private static readonly string[] _aspNetCoreMeterNames =
-    [
-        "Microsoft.AspNetCore.Hosting",
-        "Microsoft.AspNetCore.Server.Kestrel",
-        "Microsoft.AspNetCore.Http.Connections",
-        "Microsoft.AspNetCore.Routing",
-        "Microsoft.AspNetCore.Diagnostics",
-        "Microsoft.AspNetCore.RateLimiting"
-    ];
-
-    private static readonly string[] _httpClientMeterNames = ["System.Net.Http", "System.Net.NameResolution"];
 
     private static readonly TimeSpan _measurementWindow = TimeSpan.FromSeconds(2);
 
@@ -241,22 +227,12 @@ internal sealed class PipelineInspector(
 
     private bool IsActivitySourceCollected(string name)
     {
-        bool tracing = _telemetryOptions.Enabled && _telemetryOptions.EnableTracing;
-        return tracing && (
-            (_telemetryOptions.EnableAspNetCoreInstrumentation &&
-                string.Equals(name, _aspNetCoreActivitySourceName, StringComparison.Ordinal)) ||
-            (_telemetryOptions.EnableHttpClientInstrumentation &&
-                string.Equals(name, _httpClientActivitySourceName, StringComparison.Ordinal)));
+        return ApplicationTelemetrySources.IsActivitySourceCollected(_telemetryOptions, name);
     }
 
     private bool IsMeterCollected(string name)
     {
-        bool metrics = _telemetryOptions.Enabled && _telemetryOptions.EnableMetrics;
-        return metrics && (
-            (_telemetryOptions.EnableAspNetCoreInstrumentation &&
-                _aspNetCoreMeterNames.Contains(name, StringComparer.Ordinal)) ||
-            (_telemetryOptions.EnableHttpClientInstrumentation &&
-                _httpClientMeterNames.Contains(name, StringComparer.Ordinal)));
+        return ApplicationTelemetrySources.IsMeterCollected(_telemetryOptions, name);
     }
 
     private async Task<PipelineRequestView> ReadRequestAsync(
@@ -306,7 +282,7 @@ internal sealed class PipelineInspector(
         IReadOnlyList<PipelineSpan> spans = traceId is null ? [] : _telemetryRecorder.GetSpans(traceId);
         PipelineSpan? serverSpan = spans.FirstOrDefault(static span =>
             string.Equals(span.Kind, "Server", StringComparison.Ordinal) &&
-            string.Equals(span.Source, _aspNetCoreActivitySourceName, StringComparison.Ordinal));
+            string.Equals(span.Source, ApplicationTelemetrySources.AspNetCoreActivitySourceName, StringComparison.Ordinal));
 
         List<PipelineStage> stages = CreateStages(
             decision,

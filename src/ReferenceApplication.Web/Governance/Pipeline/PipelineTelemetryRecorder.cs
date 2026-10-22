@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Globalization;
 using Microsoft.Extensions.Options;
+using ReferenceApplication.Infrastructure.Data.Auditing;
 using ReferenceApplication.Web.Options;
 
 namespace ReferenceApplication.Web.Governance.Pipeline;
@@ -30,7 +31,7 @@ internal sealed class PipelineTelemetryRecorder(
     /// <summary>
     /// Gets the name of the meter the host creates for NCAT audit reconciliation.
     /// </summary>
-    public const string ReconciliationMeterName = "ReferenceApplication.AuditReconciliation";
+    public const string ReconciliationMeterName = ApplicationAuditReconciliationMetrics.MeterName;
 
     /// <summary>
     /// Gets the name of the ASP.NET Core hosting meter.

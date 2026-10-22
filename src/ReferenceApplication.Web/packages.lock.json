@@ -24,6 +24,16 @@
         "resolved": "7.5.0",
         "contentHash": "DduxrFxsna78iw+vvmxc+TPUWdmcnkBlRwCKag3AaaOD7kLuQ2RNnxD/v9pc1H5KtnbKZQ4mO8QnGXq2lfSCxA=="
       },
+      "AsiBackbone.OpenTelemetry": {
+        "type": "Direct",
+        "requested": "[7.5.0, )",
+        "resolved": "7.5.0",
+        "contentHash": "LEkpc0ovRY3//uPb8zZgL01PGYg9sB4tHW1ecm1eiunu0lmNgrIKIAp+BtCyLrY8IIsVsDTa/2vwVVCpS4I9QA==",
+        "dependencies": {
+          "AsiBackbone.Core": "7.5.0",
+          "AsiBackbone.DependencyInjection": "7.5.0"
+        }
+      },
       "AsiBackbone.Signing.LocalDevelopment": {
         "type": "Direct",
         "requested": "[7.5.0, )",
