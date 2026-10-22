@@ -46,6 +46,35 @@ jobs:
       - name: Run benchmarks
         run: dotnet run --project ${{ env.BENCHMARK_PROJECT }} --configuration Release --no-build -- --filter '*'
 
+      - name: Record benchmark provenance
+        shell: pwsh
+        run: |
+          [xml]$packages = Get-Content -Raw 'Directory.Packages.props'
+          $versions = @(
+            $packages.Project.ItemGroup.PackageVersion |
+              Where-Object { $_.Include -like 'AsiBackbone.*' } |
+              ForEach-Object { [string]$_.Version } |
+              Sort-Object -Unique
+          )
+
+          if ($versions.Count -ne 1) {
+            throw "Expected one AsiBackbone package version, found: $($versions -join ', ')"
+          }
+
+          $artifactDirectory = Join-Path $PWD 'BenchmarkDotNet.Artifacts'
+          New-Item -ItemType Directory -Force -Path $artifactDirectory | Out-Null
+
+          @(
+            '# Governance benchmark provenance'
+            ''
+            "| Field | Value |"
+            "| --- | --- |"
+            "| Repository commit | ``$env:GITHUB_SHA`` |"
+            "| Repository ref | ``$env:GITHUB_REF`` |"
+            "| AsiBackbone version | ``$($versions[0])`` |"
+            "| Workflow run | ``$env:GITHUB_RUN_ID`` |"
+          ) | Set-Content -Path (Join-Path $artifactDirectory 'benchmark-provenance.md')
+
       - name: Upload benchmark results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

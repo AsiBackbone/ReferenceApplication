@@ -22,8 +22,9 @@ dotnet run -c Release --project tests/ReferenceApplication.Benchmarks -- --filte
 
 BenchmarkDotNet reports the mean, statistical error, standard deviation, and allocated bytes for each scenario. The
 `Governance Benchmarks` workflow also runs weekly and on demand, then uploads the full `BenchmarkDotNet.Artifacts`
-directory. It deliberately does not run on pull requests or ordinary pushes: timing from a shared runner is useful for
-trend evidence, but is not a stable merge gate.
+directory. Successful workflow runs include `benchmark-provenance.md` with the exact repository commit, ref, and
+AsiBackbone version. It deliberately does not run on pull requests or ordinary pushes: timing from a shared runner is
+useful for trend evidence, but is not a stable merge gate.
 
 ## What is measured
 
@@ -37,10 +38,16 @@ capability-scope rule sets. The persistence scenarios measure three host-owned p
 Schema migration and fixture setup happen outside the measured operations. Persistence scenarios use a temporary
 file-backed SQLite database in write-ahead logging mode with connection pooling disabled.
 
-## Reference results
+## Historical reference results
 
-This snapshot was recorded on October 19, 2026, using an AMD Ryzen 5 7430U, Windows 11 25H2, .NET SDK 10.0.402,
-.NET 10.0.13, BenchmarkDotNet 0.15.8, and the SQLite configuration described above.
+This snapshot was recorded on October 19, 2026, at repository commit
+[`73768d2bdee1acec8b2b1d9473a6b4e757fbe0bc`](https://github.com/AsiBackbone/ReferenceApplication/commit/73768d2bdee1acec8b2b1d9473a6b4e757fbe0bc)
+with AsiBackbone `7.2.1`, using an AMD Ryzen 5 7430U, Windows 11 25H2, .NET SDK 10.0.402, .NET 10.0.13,
+BenchmarkDotNet 0.15.8, and the SQLite configuration described above.
+
+The snapshot predates the current AsiBackbone `7.5.0` integration and signed-capability-token path. It is historical
+evidence only and must be refreshed on the exact stable release candidate before benchmark results are used as
+stable-release qualification evidence.
 
 | Scenario | Mean | Error (99.9% CI half-width) | Allocated per operation |
 | --- | ---: | ---: | ---: |
@@ -52,7 +59,7 @@ This snapshot was recorded on October 19, 2026, using an AMD Ryzen 5 7430U, Wind
 
 These values are a reproducibility record, not a target or service-level objective. See the detailed
 [governance-overhead benchmark record](../benchmarks/governance-overhead.md) for job settings, complete environment
-metadata, and interpretation guidance.
+metadata, interpretation guidance, and the stable-release refresh procedure.
 
 ## Measurement boundary
 
