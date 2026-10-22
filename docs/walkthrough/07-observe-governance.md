@@ -6,7 +6,8 @@ description: Use the Development governance explorer to run the real governed en
 # Step 7: Observe governance in action
 
 **Status:** Complete. The explorer combines evidence query, live notifications, verification, a resettable demonstration
-database, a bounded in-process load demonstration, a policy simulator, decision replay, and a pipeline inspector.
+database, a bounded in-process load demonstration, a policy simulator, decision replay, a pipeline inspector, and
+preset failure scenarios.
 
 Step 6 established the durable evidence chain. Step 7 presents that same production-shaped governance path as an
 interactive walkthrough: one panel calls the governed endpoints, and the other queries and verifies the decision,
@@ -50,6 +51,7 @@ The controls sit on the left in tabs, and the right-hand panel shows the output 
 | **Policy simulator** | the simulation inputs and their status | the staged simulation result |
 | **Decision replay** | the receipt lookup, recent decisions, and candidate policy | the decision, its reconstruction, and the side-by-side replay |
 | **Pipeline inspector** | the request to follow, the outbox filter, and live refresh | stage timing, the outbox, reconciliation, and telemetry |
+| **Failure scenarios** | the preset scenarios, each with what it teaches and expects | the outcome, the decision, and the evidence left behind |
 
 A tab appears only when its feature is available, so outside Development the explorer shows the actions alone. The
 explorer remembers the selected tab for the browser session, except after a database reset, which returns to
@@ -369,6 +371,88 @@ The service, listener, reconciliation, and route are registered only when the en
 the switch is enabled. `GET /api/v1/pipeline-inspector/snapshot?correlationId={id}&status={status}` requires the
 administrator policy and is never cached.
 
+## Failure scenarios
+
+The other tabs show the outcomes a well-formed request produces. The administrator-only **Failure scenarios** tab
+triggers common failure and attack paths against the same real endpoints, so you can see what was blocked and what
+evidence was left behind. Each scenario shows the HTTP outcome, the decision and its reason codes, whether the governed
+action body ran, and the request's evidence timeline.
+
+| # | Scenario | What it teaches | Outcome and evidence |
+| --- | --- | --- | --- |
+| 1 | Missing capability grant | The capability check runs for every decision that is not already denied, so a missing grant is denied before the action runs. | 403. A denied decision with `referenceapplication.capability.grant_required` (or AsiBackbone's `endpoint.capability_grant.missing` when signed tokens are enabled). |
+| 2 | Constraint throws | AsiBackbone's evaluator treats a constraint exception as a denial, so a broken rule fails closed. | 403. A denied decision with `asibackbone.policy.constraint_exception`. No record. |
+| 3 | Ledger append fails | A governed action never runs without its decision evidence. | 500. `GovernanceEvidencePersistenceException` with `asi_backbone.audit_ledger.append_failed`. No ledger row, no record. |
+| 4 | Outbox delivery fails | A failing destination delays evidence, never the request. | 201. The outbox entry retries on its backoff schedule and, once the fault is cleared, is delivered with its lifecycle event. |
+| 5 | Execution fails after approval | A decision records permission, not execution. | 500. An allowed decision with no mutation audit, outbox entry, or lifecycle event. |
+| 6 | Evidence tampering | Each ledger record carries a hash of its canonical payload. | An in-memory copy with a changed outcome reports a hash mismatch; an unchanged copy and the stored row verify. |
+| 7 | Payload tampering under a valid token | A signed token is bound to the payload it was issued for. | 403. A denied decision with `endpoint.capability_grant.resource_mismatch`. |
+| 8 | Expired token replay | A token is honored only inside its validity window. | 403. A denied decision with `endpoint.capability_grant.expired`. |
+
+The issue proposed `policy.constraint_exception_as_denial` for scenario 2. AsiBackbone's actual default, verified in the
+tests, is `GovernancePolicyOptions.DefaultConstraintExceptionReasonCode`, `asibackbone.policy.constraint_exception`.
+
+Scenarios 7 and 8 need signed capability tokens ([Signed capability tokens](signed-capability-tokens.md)). While
+`ReferenceApplication:CapabilityTokens:Enabled` is false they are listed but disabled, with that explanation. They issue
+a real token for the current actor after the issuance endpoint's entitlement check, so the actor also needs the
+consequential capability. Scenario 8 issues its token from a clock set back past the token lifetime and the validator's
+clock skew, instead of waiting for it to expire.
+
+### Execution failure and reconciliation
+
+Scenario 5 shows where the evidence chain has a deliberate gap. The decision is appended before the action runs, so
+it records that the request was permitted. The mutation, its NCAT audit, and its outbox entry then commit in one
+transaction, so when the mutation fails all three roll back together. Reconciliation compares committed mutation-audit
+batches with their audit completions, so it has nothing about this request to report: there is no batch. The gap shows
+in the ledger instead, as an allowed decision with no lifecycle event. A consumer that needs proof of execution reads
+the lifecycle event, not the decision.
+
+### How the faults are injected
+
+Arming a scenario returns the request to send, including an `X-Failure-Scenario-Run` header that names the run. The
+explorer then sends that request to the real governed endpoint. Nothing about the governed path changes for any other
+request:
+
+- **One request, one actor.** Middleware between authorization and endpoint governance consumes the run when the
+  request arrives. A run belongs to the actor who armed it, expires after two minutes, and is used once; a second
+  request with the same run is refused with 409 before governance runs.
+- **Seams at the real failure points.** Scenario 1 removes the capability claim from that one request's principal.
+  Scenario 2 is a Development-only constraint that throws when its scenario is armed and otherwise does not apply.
+  Because it is registered like any other constraint, the policy simulator and decision replay list it, as not
+  applicable, while the scenarios are active.
+  Scenarios 3, 4, and 5 use an EF Core save interceptor that fails the save that appends the ledger record, the
+  lifecycle event, or the governed record, so AsiBackbone's ledger store, the audit-completion publisher, and NCAT's
+  audited transaction each handle a real `DbUpdateException`.
+- **Delivery faults last until cleared.** Scenario 4's fault applies only to the armed request's audit completion, on
+  every delivery attempt, until **Clear the delivery fault** is selected. Left alone, the entry is dead-lettered after
+  the outbox's maximum attempts, which is also worth seeing.
+- **Read-only tampering.** Scenario 6 sends no request. It reads the newest decision, or the one the explorer
+  last selected, builds two in-memory copies, changes the outcome on one, and verifies both with the same method the
+  **Verify hashes** button uses. It then verifies the stored record again to show it was not modified.
+
+Runs are kept in memory, bounded to the 32 most recent. Their evidence is whatever the governed requests wrote to the
+demonstration database; reset it from the **Demo identity** tab.
+
+### Configure
+
+```json
+{
+  "ReferenceApplication": {
+    "DemoIdentity": {
+      "Enabled": true
+    },
+    "FailureScenarios": {
+      "Enabled": true
+    }
+  }
+}
+```
+
+The scenarios, the throwing constraint, the save interceptor, the middleware, and the routes are registered only when
+the environment is exactly `Development`, the switch is enabled, and the Development demo identity has selected the
+disposable demonstration database. The routes under `/api/v1/failure-scenarios` require the administrator policy; arming
+a scenario and clearing a delivery fault also require an antiforgery token, and run reports are never cached.
+
 ## Run the walkthrough
 
 1. Start the web project in Development and open `/Account/Login`.
@@ -386,6 +470,8 @@ administrator policy and is never cached.
 9. Open the **Pipeline inspector** tab, then create an audited record on the **Actions** tab. Back on the inspector,
    watch the record's outbox entry move from pending to delivered within the worker's poll interval, and the lifecycle
    event appear, without reloading.
+10. On the **Failure scenarios** tab, run scenario 4 and watch its delivery fail and retry, then clear the fault and
+    watch it deliver. Run scenario 5, then scenario 6 to verify a tampered copy of the decision scenario 5 left behind.
 
 See [Development-only demo identity controls](development-demo-identity.md) for the fixed claims and safety boundary.
 Real performance measurements are documented under [Governance benchmarks](../benchmarks/governance-overhead.md); the
@@ -423,3 +509,13 @@ in that order. Reconciliation reports a missing completion as an open finding. T
 meters present, marks which OpenTelemetry collects, reads the host's gauges, and shows the request's server span.
 Snapshots leave every outbox entry and evidence row unchanged. The inspector, its listener, the reconciliation it
 registers, and its route are absent outside Development, and the route is rejected for non-administrators.
+
+`FailureScenarioTests` run each scenario through the real endpoint and assert its HTTP outcome, reason code, and
+evidence shape: the recorded decision and its reason codes, the ledger, record, mutation-audit, and outbox row counts,
+and, for scenario 4, the retry, the recovery after the fault is cleared, and the lifecycle event. The governed action
+body runs only in scenarios 4 and 5, and scenario 5's change is rolled back. A run is refused once used, and a request
+without the run header is unaffected while a run is armed. The token scenarios are listed as unavailable while tokens
+are disabled. The scenarios, the throwing constraint, the save interceptor, and the routes are absent in Staging and
+Production, and in Development while the switch is off or the demonstration database is not in use, and the routes are
+rejected for non-administrators. `FailureScenarioRegistryTests` prove that a run is bound to its actor, expires unused,
+and is used once, and that a delivery fault applies only to its own request until cleared.

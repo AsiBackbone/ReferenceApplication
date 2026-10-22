@@ -4,7 +4,7 @@
     ViewData["Title"] = "Governance Explorer";
     ViewData["BodyClass"] = "governance-explorer-page";
     bool showTabs = Model.ShowDemoIdentityControls || Model.ShowGovernanceLoadDemonstration || Model.ShowPolicySimulator ||
-        Model.ShowDecisionReplay || Model.ShowPipelineInspector;
+        Model.ShowDecisionReplay || Model.ShowPipelineInspector || Model.ShowFailureScenarios;
 }
 
 @section Styles {
@@ -27,7 +27,8 @@
      data-load-demonstration="@Model.ShowGovernanceLoadDemonstration.ToString().ToLowerInvariant()"
      data-policy-simulator="@Model.ShowPolicySimulator.ToString().ToLowerInvariant()"
      data-decision-replay="@Model.ShowDecisionReplay.ToString().ToLowerInvariant()"
-     data-pipeline-inspector="@Model.ShowPipelineInspector.ToString().ToLowerInvariant()">
+     data-pipeline-inspector="@Model.ShowPipelineInspector.ToString().ToLowerInvariant()"
+     data-failure-scenarios="@Model.ShowFailureScenarios.ToString().ToLowerInvariant()">
     <section class="explorer-panel controls-panel" aria-label="Explorer controls">
         @if (showTabs)
         {
@@ -69,6 +70,13 @@
                     <button id="explorer-tab-pipeline" class="explorer-tab" type="button" role="tab" aria-selected="false"
                             aria-controls="explorer-panel-pipeline" tabindex="-1" data-output="pipeline">
                         Pipeline inspector
+                    </button>
+                }
+                @if (Model.ShowFailureScenarios)
+                {
+                    <button id="explorer-tab-scenarios" class="explorer-tab" type="button" role="tab" aria-selected="false"
+                            aria-controls="explorer-panel-scenarios" tabindex="-1" data-output="scenarios">
+                        Failure scenarios
                     </button>
                 }
             </div>
@@ -383,6 +391,42 @@
                 </div>
             </div>
         }
+
+        @if (Model.ShowFailureScenarios)
+        {
+            <div id="explorer-panel-scenarios" class="explorer-tab-panel" role="tabpanel"
+                 aria-labelledby="explorer-tab-scenarios" hidden>
+                <h2 id="failure-scenarios-heading">Failure scenarios</h2>
+                <p>
+                    Trigger a failure or attack path against the real governed endpoints, then inspect what was blocked and
+                    what evidence was left behind. Each run is armed for one request: its fault applies only to that
+                    request and disarms once it is used. The evidence lands in the disposable demonstration database, which
+                    the Demo identity tab can reset.
+                </p>
+                <ol class="failure-scenario-list">
+                    @foreach (var scenario in Model.FailureScenarios)
+                    {
+                        <li class="failure-scenario" data-scenario-id="@scenario.Id">
+                            <h3>@scenario.Number. @scenario.Title</h3>
+                            <p>@scenario.Teaches</p>
+                            <p class="failure-scenario-expectation"><strong>Expect:</strong> @scenario.Expectation</p>
+                            @if (scenario.Available)
+                            {
+                                <button type="button" data-run-scenario="@scenario.Id">Run scenario @scenario.Number</button>
+                            }
+                            else
+                            {
+                                <p class="failure-scenario-unavailable" role="note">@scenario.UnavailableReason</p>
+                                <button type="button" disabled>Run scenario @scenario.Number</button>
+                            }
+                        </li>
+                    }
+                </ol>
+                <div id="failure-scenario-status" class="load-demonstration-status" role="status" aria-live="polite">
+                    Choose a scenario to run.
+                </div>
+            </div>
+        }
     </section>
 
     <section class="explorer-panel output-panel" aria-label="Explorer output">
@@ -475,6 +519,17 @@
                     <h3 id="pipeline-telemetry-heading">Telemetry</h3>
                     <div id="pipeline-telemetry"></div>
                 </section>
+            </div>
+        }
+
+        @if (Model.ShowFailureScenarios)
+        {
+            <div id="explorer-output-scenarios" class="explorer-output" data-output-view="scenarios" hidden>
+                <h2>Scenario result</h2>
+                <p id="failure-scenario-empty" class="output-note">
+                    Run a scenario in the Failure scenarios tab to see its outcome and the evidence it left behind.
+                </p>
+                <div id="failure-scenario-result" class="failure-scenario-result" aria-live="polite"></div>
             </div>
         }
     </section>

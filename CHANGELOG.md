@@ -32,6 +32,28 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
 
 ### Added
 
+* Development-only, administrator-only failure scenarios in the governance explorer (#62), behind
+  `ReferenceApplication:FailureScenarios:Enabled`, on a new **Failure scenarios** tab. They are registered only while
+  the Development demo identity has selected the disposable demonstration database.
+  * Eight presets run against the real governed endpoints: missing capability grant, constraint throws, ledger append
+    fails, outbox delivery fails, execution fails after approval, evidence tampering, and, with signed capability tokens
+    enabled, payload tampering under a valid token and expired token replay. While tokens are disabled, the last two are
+    listed as unavailable with an explanation.
+  * Each run shows the HTTP outcome, the recorded decision and reason codes, whether the governed action body ran, the
+    mutation-audit and outbox evidence, and the request's evidence timeline. Scenario 4 shows the retry schedule and a
+    **Clear the delivery fault** control; scenario 5 explains why reconciliation has nothing to report for a rolled-back
+    mutation.
+  * `POST /api/v1/failure-scenarios/{scenarioId}` arms a run for the current actor's next request, named by the
+    `X-Failure-Scenario-Run` header. Middleware between authorization and endpoint governance consumes it, so a run is
+    used once, by its own actor, within two minutes; any other use is refused with 409 before governance runs.
+  * Faults are injected at the real failure points: the capability claim withheld from one request, a Development-only
+    constraint that throws when armed, and an EF Core save interceptor that fails the ledger append, the governed
+    record's save, or the lifecycle append for the armed request only. Evidence tampering verifies changed and unchanged
+    in-memory copies of a stored decision; the stored row is never modified.
+  * The scenario-2 reason code is AsiBackbone's `asibackbone.policy.constraint_exception`, verified against the package;
+    the issue had proposed `policy.constraint_exception_as_denial`.
+  * `GovernanceEvidenceVerifier.VerifyRecord` now holds the per-record hash check, so the explorer's verification and
+    the tampering scenario use the same code.
 * A Development-only, administrator-only pipeline inspector in the governance explorer (#61), behind
   `ReferenceApplication:PipelineInspector:Enabled`, on a new **Pipeline inspector** tab.
   * `GET /api/v1/pipeline-inspector/snapshot` returns the audit-completion outbox (health and the latest entries, with

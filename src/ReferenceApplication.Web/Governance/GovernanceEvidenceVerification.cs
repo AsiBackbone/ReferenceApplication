@@ -118,30 +118,45 @@ internal sealed class GovernanceEvidenceVerifier(
                 continue;
             }
 
-            if (string.IsNullOrWhiteSpace(record.RecordHash))
-            {
-                results.Add(new GovernanceEvidenceRecordVerification(
-                    record.RecordId,
-                    GovernanceEvidenceVerificationStatuses.NotHashed,
-                    StoredHash: null,
-                    ComputedHash: null,
-                    HashAlgorithm: null));
-                continue;
-            }
-
-            CanonicalPayloadHash computed = AuditLedgerRecordHashing.ComputeHash(record);
-            string status = string.Equals(record.RecordHash, computed.HashValue, StringComparison.Ordinal)
-                ? GovernanceEvidenceVerificationStatuses.Verified
-                : GovernanceEvidenceVerificationStatuses.Mismatch;
-            results.Add(new GovernanceEvidenceRecordVerification(
-                record.RecordId,
-                status,
-                record.RecordHash,
-                computed.HashValue,
-                computed.HashAlgorithm));
+            results.Add(VerifyRecord(record));
         }
 
         return new GovernanceEvidenceVerificationResponse(normalizedCorrelationId, results);
+    }
+
+    /// <summary>
+    /// Recomputes one ledger record's canonical hash and compares it with the hash stored on the record.
+    /// </summary>
+    /// <param name="record">The record to verify, as read from the ledger or as an in-memory copy.</param>
+    /// <returns>The verification result.</returns>
+    /// <remarks>
+    /// The Development failure scenarios verify an in-memory copy of a persisted record through this method, so they
+    /// show exactly what this verifier reports for a changed record.
+    /// </remarks>
+    internal static GovernanceEvidenceRecordVerification VerifyRecord(AuditLedgerRecord record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+
+        if (string.IsNullOrWhiteSpace(record.RecordHash))
+        {
+            return new GovernanceEvidenceRecordVerification(
+                record.RecordId,
+                GovernanceEvidenceVerificationStatuses.NotHashed,
+                StoredHash: null,
+                ComputedHash: null,
+                HashAlgorithm: null);
+        }
+
+        CanonicalPayloadHash computed = AuditLedgerRecordHashing.ComputeHash(record);
+        string status = string.Equals(record.RecordHash, computed.HashValue, StringComparison.Ordinal)
+            ? GovernanceEvidenceVerificationStatuses.Verified
+            : GovernanceEvidenceVerificationStatuses.Mismatch;
+        return new GovernanceEvidenceRecordVerification(
+            record.RecordId,
+            status,
+            record.RecordHash,
+            computed.HashValue,
+            computed.HashAlgorithm);
     }
 }
 
