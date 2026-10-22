@@ -20,6 +20,7 @@
     const hasPolicySimulator = explorer.dataset.policySimulator === "true";
     const hasDecisionReplay = explorer.dataset.decisionReplay === "true";
     const hasPipelineInspector = explorer.dataset.pipelineInspector === "true";
+    const hasFailureScenarios = explorer.dataset.failureScenarios === "true";
     const actionButtons = Array.from(actionsForm.querySelectorAll("[data-governed-action]"));
     const requestToken = actionsForm.querySelector("input[name='__RequestVerificationToken']");
     const acknowledgment = document.getElementById("explorer-acknowledgment");
@@ -1440,6 +1441,336 @@
             if (!pipelinePanel.hidden) {
                 void refresh();
             }
+        }
+    }
+
+    if (hasFailureScenarios) {
+        const scenariosPanel = document.getElementById("explorer-panel-scenarios");
+        const scenarioStatus = document.getElementById("failure-scenario-status");
+        const scenarioResult = document.getElementById("failure-scenario-result");
+        const scenarioEmpty = document.getElementById("failure-scenario-empty");
+        const runButtons = Array.from(document.querySelectorAll("[data-run-scenario]"));
+
+        if (scenariosPanel && scenarioStatus && scenarioResult && scenarioEmpty) {
+            const scenariosPath = "/api/v1/failure-scenarios";
+            const evidenceTamperingId = "evidence-tampering";
+            const pollIntervalMilliseconds = 2000;
+            const settledOutboxStatuses = ["Delivered", "Failed", "DeadLettered"];
+            const actionBodyText = {
+                "not-run": "The governed action body did not run.",
+                "ran": "The governed action body ran.",
+                "ran-rolled-back": "The governed action body ran; its change was rolled back."
+            };
+            let activeRun = null;
+            let loadingRun = false;
+
+            const element = (tag, className, text) => {
+                const created = document.createElement(tag);
+                if (className) {
+                    created.className = className;
+                }
+
+                if (text !== undefined && text !== null) {
+                    created.textContent = text;
+                }
+
+                return created;
+            };
+
+            const badge = (status, tone) => element("span", `pipeline-badge pipeline-badge-${tone || String(status).toLowerCase()}`, status);
+
+            const formatTime = (value) => (value ? new Date(value).toLocaleString() : null);
+
+            const card = (title, ...children) => {
+                const section = element("section", "replay-card");
+                section.append(element("h3", null, title), ...children);
+                return section;
+            };
+
+            const details = (entries) => {
+                const list = document.createElement("dl");
+                entries.forEach(([label, value]) => appendDetail(list, label, value));
+                return list;
+            };
+
+            const setRunning = (running) => {
+                runButtons.forEach((button) => {
+                    button.disabled = running;
+                });
+            };
+
+            const markCurrent = (scenarioId) => {
+                document.querySelectorAll(".failure-scenario").forEach((item) => {
+                    if (item.dataset.scenarioId === scenarioId) {
+                        item.setAttribute("aria-current", "true");
+                    } else {
+                        item.removeAttribute("aria-current");
+                    }
+                });
+            };
+
+            const postForm = (path, fields, headers) => {
+                const formData = new FormData();
+                formData.append("__RequestVerificationToken", requestToken?.value || "");
+                Object.entries(fields || {}).forEach(([name, value]) => formData.append(name, value));
+                return fetch(path, {
+                    method: "POST",
+                    body: formData,
+                    headers: { "Accept": "application/json", ...(headers || {}) },
+                    credentials: "same-origin"
+                });
+            };
+
+            const readMessage = async (response) => {
+                try {
+                    const payload = await response.json();
+                    return payload.message || payload.title || payload.detail || `HTTP ${response.status}`;
+                } catch {
+                    return `HTTP ${response.status}`;
+                }
+            };
+
+            const renderTamperingVerification = (label, verification) => {
+                const verified = verification.status === "verified";
+                const row = element("div");
+                row.append(
+                    element("strong", null, `${label}: `),
+                    badge(verification.status, verified ? "delivered" : "failed"));
+                const hashes = details([
+                    ["Stored hash", verification.storedHash],
+                    ["Computed hash", verification.computedHash]
+                ]);
+                return [row, hashes];
+            };
+
+            const renderTampering = (tampering) => {
+                scenarioEmpty.hidden = true;
+                scenarioResult.replaceChildren(
+                    card(
+                        "6. Evidence tampering",
+                        element("p", null, "An in-memory copy of the stored decision record was changed and verified. The stored row was not modified."),
+                        details([
+                            ["Correlation", tampering.correlationId],
+                            ["Record", tampering.recordId],
+                            ["Changed field", tampering.field],
+                            ["Stored value", tampering.storedValue],
+                            ["Copy's value", tampering.tamperedValue]
+                        ])),
+                    card(
+                        "Verification",
+                        ...renderTamperingVerification("Unchanged copy", tampering.unchangedCopy),
+                        ...renderTamperingVerification("Changed copy", tampering.tamperedCopy),
+                        ...renderTamperingVerification("Stored record, read again", tampering.storedRecord)));
+            };
+
+            const renderTimelineEntries = (timeline) => {
+                const entries = timeline?.entries || [];
+                if (entries.length === 0) {
+                    return element("p", "output-note", "The request left no persisted evidence.");
+                }
+
+                const list = element("ol", "failure-scenario-timeline");
+                entries.forEach((entry) => {
+                    const parts = [entry.kind.replaceAll("-", " ")];
+                    if (entry.outcome) {
+                        parts.push(entry.outcome);
+                    }
+
+                    if (entry.status) {
+                        parts.push(entry.status);
+                    }
+
+                    if (entry.reasonCodes?.length) {
+                        parts.push(entry.reasonCodes.join(", "));
+                    }
+
+                    list.append(element("li", null, `${formatTime(entry.occurredUtc)}: ${parts.join(" · ")}`));
+                });
+                return list;
+            };
+
+            const renderReport = (report) => {
+                const run = report.run;
+                const scenario = report.scenario;
+                scenarioEmpty.hidden = true;
+                const children = [];
+
+                const outcome = details([
+                    ["Run", run.status],
+                    ["HTTP status", run.statusCode],
+                    ["Exception", run.exceptionType],
+                    ["Exception reason", run.exceptionReasonCode],
+                    ["Faults injected", run.faults.map((fault) => fault.point)],
+                    ["Correlation", run.correlationId]
+                ]);
+                const outcomeCard = card(`${scenario.number}. ${scenario.title}`, element("p", null, scenario.expectation), outcome);
+                if (report.actionBody) {
+                    outcomeCard.append(element("p", null, actionBodyText[report.actionBody] || report.actionBody));
+                }
+
+                children.push(outcomeCard);
+
+                const decisions = card("Decision ledger");
+                if (report.decisions.length === 0) {
+                    decisions.append(element("p", "output-note", "No decision was recorded for this request."));
+                } else {
+                    report.decisions.forEach((decision) => {
+                        decisions.append(details([
+                            ["Outcome", decision.outcome],
+                            ["Reasons", decision.reasonCodes],
+                            ["Capability token", decision.capabilityTokenId],
+                            ["Record", decision.recordId]
+                        ]));
+                    });
+                }
+
+                decisions.append(element("p", null, `Mutation-audit records committed: ${report.mutationAuditRecordCount}.`));
+                children.push(decisions);
+
+                if (report.outbox) {
+                    const outbox = report.outbox;
+                    const outboxCard = card("Audit-completion outbox");
+                    const statusRow = element("div");
+                    statusRow.append(element("strong", null, "Status: "), badge(outbox.status));
+                    outboxCard.append(statusRow, details([
+                        ["Failed attempts", `${outbox.retryCount} of ${outbox.maxRetryAttempts} before dead-lettering`],
+                        ["Last attempt", formatTime(outbox.lastAttemptUtc)],
+                        ["Next attempt", formatTime(outbox.nextAttemptUtc)],
+                        ["Delivered", formatTime(outbox.deliveredUtc)],
+                        ["Last error", outbox.lastErrorCode
+                            ? `${outbox.lastErrorCode}${outbox.lastErrorMessage ? ` (${outbox.lastErrorMessage})` : ""}`
+                            : null],
+                        ["Lifecycle event", outbox.lifecycleEventAppended ? "appended" : "not appended"]
+                    ]));
+                    if (run.deliveryFaultActive) {
+                        const clearButton = element("button", "secondary-button", "Clear the delivery fault");
+                        clearButton.type = "button";
+                        clearButton.addEventListener("click", async () => {
+                            clearButton.disabled = true;
+                            const response = await postForm(`${scenariosPath}/runs/${encodeURIComponent(run.runId)}/clear-delivery-fault`);
+                            scenarioStatus.textContent = response.ok
+                                ? "Delivery fault cleared. The outbox delivers the entry at its next attempt."
+                                : await readMessage(response);
+                            await loadRun();
+                        });
+                        outboxCard.append(
+                            element("p", null, "Delivery keeps failing until the fault is cleared; the outbox worker retries on its backoff schedule."),
+                            clearButton);
+                    } else if (run.deliveryFaultClearedUtc) {
+                        outboxCard.append(element("p", null, `Delivery fault cleared at ${formatTime(run.deliveryFaultClearedUtc)}.`));
+                    }
+
+                    children.push(outboxCard);
+                }
+
+                if (report.reconciliation) {
+                    const reconciliation = report.reconciliation;
+                    children.push(card(
+                        "Reconciliation",
+                        element("p", null, reconciliation.explanation),
+                        details([
+                            ["Registered", reconciliation.registered ? "yes" : "no"],
+                            ["Last run", formatTime(reconciliation.lastRunUtc)],
+                            ["Open findings", reconciliation.registered ? reconciliation.openFindingCount : null],
+                            ["Mutation batches", reconciliation.mutationBatchIds.length ? reconciliation.mutationBatchIds : "none"],
+                            ["Findings for this request", reconciliation.findingReasonCodes.length ? reconciliation.findingReasonCodes : "none"]
+                        ])));
+                }
+
+                children.push(card("Evidence timeline", renderTimelineEntries(report.timeline)));
+                scenarioResult.replaceChildren(...children);
+            };
+
+            const isPolling = () => activeRun?.scenarioId === "outbox-delivery-fails" && !activeRun.settled;
+
+            const loadRun = async () => {
+                if (!activeRun || loadingRun) {
+                    return;
+                }
+
+                loadingRun = true;
+                try {
+                    const response = await fetch(
+                        `${scenariosPath}/runs/${encodeURIComponent(activeRun.runId)}`,
+                        { headers: { "Accept": "application/json" }, credentials: "same-origin" });
+                    if (!response.ok) {
+                        scenarioStatus.textContent = await readMessage(response);
+                        return;
+                    }
+
+                    const text = await response.text();
+                    const report = JSON.parse(text);
+                    activeRun.correlationId = report.run.correlationId;
+                    activeRun.settled = !report.outbox || settledOutboxStatuses.includes(report.outbox.status);
+                    // Re-render only when the report changed, so polling does not disturb reading or focus.
+                    if (text !== activeRun.lastReportText) {
+                        activeRun.lastReportText = text;
+                        renderReport(report);
+                    }
+                } catch {
+                    scenarioStatus.textContent = "The scenario result could not be read.";
+                } finally {
+                    loadingRun = false;
+                }
+            };
+
+            const runScenario = async (button) => {
+                const scenarioId = button.dataset.runScenario;
+                markCurrent(scenarioId);
+                setRunning(true);
+                activeRun = null;
+                scenarioResult.replaceChildren();
+                scenarioEmpty.hidden = false;
+                scenarioStatus.textContent = "Arming the scenario…";
+
+                try {
+                    // The tampering scenario copies the selected request's decision, or the newest one.
+                    const armFields = scenarioId === evidenceTamperingId && activeCorrelationId
+                        ? { correlationId: activeCorrelationId }
+                        : {};
+                    const armed = await postForm(`${scenariosPath}/${encodeURIComponent(scenarioId)}`, armFields);
+                    if (!armed.ok) {
+                        scenarioStatus.textContent = await readMessage(armed);
+                        return;
+                    }
+
+                    const payload = await armed.json();
+                    if (payload.tampering) {
+                        renderTampering(payload.tampering);
+                        scenarioStatus.textContent = "Verified an unchanged and a changed copy of the stored decision record.";
+                        return;
+                    }
+
+                    const run = payload.run;
+                    activeRun = { runId: run.runId, scenarioId, settled: false, correlationId: null, lastReportText: null };
+                    scenarioStatus.textContent = `Armed for one request. Sending ${run.request.method} ${run.request.path}…`;
+                    const response = await postForm(run.request.path, run.request.fields, run.request.headers);
+                    scenarioStatus.textContent = `The governed endpoint answered HTTP ${response.status}.`;
+                    await loadRun();
+                } catch {
+                    scenarioStatus.textContent = "The scenario could not be run.";
+                } finally {
+                    setRunning(false);
+                }
+            };
+
+            runButtons.forEach((button) => {
+                button.addEventListener("click", () => void runScenario(button));
+            });
+
+            // Retries send no evidence hint, so a delivery-failure run is re-read every two seconds while this tab is
+            // open, until the entry is delivered, fails, or is dead-lettered.
+            window.setInterval(() => {
+                if (isPolling() && !scenariosPanel.hidden && document.visibilityState === "visible") {
+                    void loadRun();
+                }
+            }, pollIntervalMilliseconds);
+
+            evidenceHintListeners.push((notification) => {
+                if (activeRun?.correlationId && notification.correlationId === activeRun.correlationId) {
+                    void loadRun();
+                }
+            });
         }
     }
 

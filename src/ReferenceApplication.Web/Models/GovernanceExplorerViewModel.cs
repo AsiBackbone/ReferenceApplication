@@ -1,3 +1,5 @@
+using ReferenceApplication.Web.Governance.FailureScenarios;
+
 namespace ReferenceApplication.Web.Models;
 
 /// <summary>
@@ -84,6 +86,16 @@ public sealed class GovernanceExplorerViewModel
     /// Gets or sets the outbox statuses the pipeline inspector can filter entries by.
     /// </summary>
     public IReadOnlyList<string> PipelineOutboxStatuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the administrator may use the Development-only failure scenarios.
+    /// </summary>
+    public bool ShowFailureScenarios { get; set; }
+
+    /// <summary>
+    /// Gets or sets the failure scenarios, with whether the current actor can run each one.
+    /// </summary>
+    public IReadOnlyList<FailureScenarioView> FailureScenarios { get; set; } = [];
 
     /// <summary>
     /// Gets or sets a value indicating whether signed capability tokens are enabled.

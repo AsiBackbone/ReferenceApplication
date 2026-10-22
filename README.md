@@ -188,6 +188,8 @@ In Development, `ReferenceApplication:DecisionReplay:Enabled` adds an administra
 
 In Development, `ReferenceApplication:PipelineInspector:Enabled` adds an administrator-only pipeline inspector to the explorer. It times one governed request's stages from timestamps the pipeline already stores, marking where the response ends and background delivery begins, and shows the audit-completion outbox, reconciliation findings, and in-process telemetry. Its timings are demonstration, not benchmark results; it adds nothing to the governed request path and never writes. While active, it also registers NCAT audit reconciliation for Development.
 
+In Development, with the demo identity's demonstration database in use, `ReferenceApplication:FailureScenarios:Enabled` adds administrator-only failure scenarios to the explorer. Eight presets trigger failure and attack paths against the real governed endpoints: a missing capability grant, a throwing constraint, a failed ledger append, a failed outbox delivery, an execution failure after approval, evidence tampering, and, with signed tokens enabled, payload tampering and an expired token. Each shows the HTTP outcome, the decision and reason codes, and the evidence left behind. Faults are injected only into the one request a run is armed for, and nothing is registered outside Development.
+
 `POST /Account/Logout` and all Step 5 governed operations require an authenticated user and a valid antiforgery token. Restrict production access to the health endpoints at the ingress, firewall, or proxy layer.
 
 ### Data Protection keys

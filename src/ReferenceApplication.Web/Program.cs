@@ -51,6 +51,7 @@ try
     builder.Services.AddApplicationPolicySimulator(builder.Configuration, builder.Environment);
     builder.Services.AddApplicationDecisionReplay(builder.Configuration, builder.Environment);
     builder.Services.AddApplicationPipelineInspector(builder.Configuration, builder.Environment);
+    builder.Services.AddApplicationFailureScenarios(builder.Configuration, builder.Environment);
 
     Log.Information("Starting ReferenceApplication.Web application");
     WebApplication app = builder.Build();

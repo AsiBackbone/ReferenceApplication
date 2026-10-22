@@ -8,6 +8,7 @@ using ReferenceApplication.Web.Authentication.Options;
 using ReferenceApplication.Web.Extensions;
 using ReferenceApplication.Web.Governance;
 using ReferenceApplication.Web.Governance.Demonstration;
+using ReferenceApplication.Web.Governance.FailureScenarios;
 using ReferenceApplication.Web.Governance.Pipeline;
 using ReferenceApplication.Web.Governance.Replay;
 using ReferenceApplication.Web.Governance.Simulation;
@@ -28,7 +29,8 @@ public sealed class GovernanceExplorerController(
     IEnumerable<IGovernanceLoadDemonstrationService> loadDemonstrationServices,
     IEnumerable<IPolicySimulator> policySimulators,
     IEnumerable<IDecisionReplayService> decisionReplayServices,
-    IEnumerable<IPipelineInspector> pipelineInspectors) : Controller
+    IEnumerable<IPipelineInspector> pipelineInspectors,
+    IEnumerable<IFailureScenarioService> failureScenarioServices) : Controller
 {
     private readonly IAuthorizationService _authorizationService =
         authorizationService ?? throw new ArgumentNullException(nameof(authorizationService));
@@ -48,6 +50,8 @@ public sealed class GovernanceExplorerController(
         decisionReplayServices?.FirstOrDefault();
     private readonly IPipelineInspector? _pipelineInspector =
         pipelineInspectors?.FirstOrDefault();
+    private readonly IFailureScenarioService? _failureScenarios =
+        failureScenarioServices?.FirstOrDefault();
 
     /// <summary>
     /// Displays the explorer for an authenticated actor.
@@ -78,6 +82,9 @@ public sealed class GovernanceExplorerController(
         bool showPipelineInspector = administrator.Succeeded &&
             _pipelineInspector is not null &&
             PipelineInspectorServiceExtensions.IsActive(_configuration, _environment);
+        bool showFailureScenarios = administrator.Succeeded &&
+            _failureScenarios is not null &&
+            FailureScenarioServiceExtensions.IsActive(_configuration, _environment);
 
         return View(new GovernanceExplorerViewModel
         {
@@ -104,6 +111,8 @@ public sealed class GovernanceExplorerController(
             DecisionReplayConstraintNames = showDecisionReplay ? _decisionReplay!.ConstraintNames : [],
             ShowPipelineInspector = showPipelineInspector,
             PipelineOutboxStatuses = showPipelineInspector ? _pipelineInspector!.OutboxStatuses : [],
+            ShowFailureScenarios = showFailureScenarios,
+            FailureScenarios = showFailureScenarios ? _failureScenarios!.GetScenarios(User) : [],
             CapabilityTokensEnabled = _configuration.GetValue<bool>(
                 $"{CapabilityTokenOptions.SectionName}:{nameof(CapabilityTokenOptions.Enabled)}")
         });

@@ -57,6 +57,10 @@ public static class PipelineExtensions
         app.UseApplicationAuthentication();
         app.UseAuthorization();
 
+        // Development-only failure scenarios: consumes an armed run named by the request, before governance sees the
+        // request. Nothing is added outside an active Development host.
+        app.UseApplicationFailureScenarios();
+
         // 10. AsiBackbone reads the selected endpoint and authenticated actor before endpoint execution.
         app.UseAsiBackboneEndpointGovernance(requireEndpointRoutingRegistered: true);
 
@@ -68,6 +72,7 @@ public static class PipelineExtensions
         app.MapApplicationPolicySimulator();
         app.MapApplicationDecisionReplay();
         app.MapApplicationPipelineInspector();
+        app.MapApplicationFailureScenarios();
 
         return app;
     }
