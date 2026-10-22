@@ -175,7 +175,7 @@ Every item below is blocking unless it names an exception path.
 - [ ] #72 remains completed: Production-shaped startup/deployment validation is present and green.
 - [ ] #73 remains completed: release-to-release SQLite upgrade evidence and recovery guidance are present and green.
 - [ ] #74 remains completed: SQLite is the only supported database provider and code/docs/CI agree.
-- [ ] #75 is completed: repository-owned line and branch coverage floors protect the tested baseline.
+- [ ] #75 remains completed: repository-owned line and branch coverage floors protect the tested baseline.
 - [ ] #77 remains completed: reconciliation is registered independently of the Development pipeline inspector.
 - [ ] #81 is completed: Step 2's current AsiBackbone package/version statements are correct and test-guarded.
 - [ ] #78 is completed **or** a stable-release exception explicitly records that governance/reconciliation telemetry

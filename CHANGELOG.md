@@ -11,6 +11,28 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
 
 ### Added
 
+* A coverage gate in the `Build and test` job (#75). Coverage was previously reported only.
+  * `scripts/Write-CoverageSummary.ps1` now fails the job when total line or branch coverage, or either production
+    assembly's (`ReferenceApplication.Web` and `ReferenceApplication.Infrastructure`), falls below its floor. It also
+    fails when a floored assembly is missing from the report or an assembly without a floor appears in it. It uses the
+    same report and exclusions as before: generated migrations and the test assembly are excluded.
+  * The floors live in `eng/code-coverage-floors.json`. Each is a baseline from the clean `main` run at `f2f03b3`,
+    truncated to two decimals, minus a tolerance of 0.5 percentage points for the total and 1.0 per assembly:
+
+    | Scope | Line baseline / floor | Branch baseline / floor |
+    |:---|---:|---:|
+    | Total | 96.00% / 95.50% | 78.20% / 77.70% |
+    | `ReferenceApplication.Infrastructure` | 93.85% / 92.85% | 80.26% / 79.26% |
+    | `ReferenceApplication.Web` | 96.75% / 95.75% | 77.61% / 76.61% |
+
+  * Coverage is computed from covered and valid counts, not Cobertura's rounded rates, and a value exactly at its
+    floor passes. The job summary shows each value next to its floor and lists every failure, and the
+    `coverage-report` artifact is still published when the gate fails.
+  * `-SelfTest` covers passing, exact-boundary, below-threshold, per-assembly, missing and duplicate assembly,
+    missing and multiple report, invalid floors, and summary-file cases. CI runs it before the tests.
+  * The README describes the gate and how to raise or lower a baseline. The stable release policy's #75 prerequisite
+    now reads as completed.
+
 * Release-to-release database upgrade tests and an upgrade, backup, and recovery procedure (#73). Upgrades are supported
   from `v0.1.0-alpha.11`.
   * `tests/ReferenceApplication.Web.Tests/Upgrades/v0.1.0-alpha.11/` holds two files:

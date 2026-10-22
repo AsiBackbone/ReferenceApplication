@@ -99,16 +99,25 @@ dotnet build --configuration Release
 dotnet test --configuration Release
 ```
 
-To collect code coverage the same way CI does, with the test project's `coverlet.MTP` extension, and summarize it:
+To collect code coverage the same way CI does, with the test project's `coverlet.MTP` extension, and check it against
+the coverage floors:
 
 ```powershell
 dotnet test --configuration Release --results-directory TestResults/coverage --coverlet --coverlet-output-format cobertura --coverlet-exclude-by-file "**/Migrations/*.cs"
 ./scripts/Write-CoverageSummary.ps1 -ReportDirectory TestResults/coverage
 ```
 
-CI reports coverage on every run without a threshold gate. It adds the summary to the job and publishes the Cobertura
-report as the `coverage-report` artifact. Generated EF Core migrations and the test assembly are excluded. Remove
-`TestResults/coverage` before running the command again, because the summary expects a single report.
+CI gates coverage on every run. The `Build and test` job fails when total line or branch coverage, or either production
+assembly's (`ReferenceApplication.Web` and `ReferenceApplication.Infrastructure`), falls below its floor in
+`eng/code-coverage-floors.json`. Each floor is a baseline measured on a clean `main` run minus an explicit tolerance:
+0.5 percentage points for the total and 1.0 for each assembly. Coverage is computed from covered and valid counts, and a
+value exactly at its floor passes. A report that is missing an assembly with a floor, or that contains an assembly
+without one, also fails. The job adds the summary, with each value next to its floor, and publishes the Cobertura report
+as the `coverage-report` artifact even when the gate fails. Generated EF Core migrations and the test assembly are
+excluded. Remove `TestResults/coverage` before running the command again, because the gate expects a single report.
+
+Raise a baseline when coverage improves. Lower one only on purpose, and say why in the pull request. To check the gate
+itself, run `./scripts/Write-CoverageSummary.ps1 -SelfTest`; CI runs it before the tests.
 
 Each project has a checked-in `packages.lock.json`. Locked mode restores the exact recorded dependency graph and fails if the projects and lock files disagree. After an intentional dependency change, run `dotnet restore --force-evaluate`, review the lock-file changes, and commit them with the change.
 

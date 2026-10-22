@@ -75,9 +75,15 @@ jobs:
       - name: Verify formatting
         run: dotnet format ${{ env.SOLUTION_FILE }} --verify-no-changes --no-restore --verbosity minimal
 
-      # Coverage is reported, not gated. Generated EF Core migrations are excluded; coverlet's defaults exclude the
-      # test assembly and compiler-generated code.
+      - name: Self-test coverage gate
+        shell: pwsh
+        run: ./scripts/Write-CoverageSummary.ps1 -SelfTest
+
+      # Coverage is gated against the line and branch floors in eng/code-coverage-floors.json, in total and per
+      # production assembly. Generated EF Core migrations are excluded; coverlet's defaults exclude the test assembly
+      # and compiler-generated code.
       - name: Test with coverage
+        id: test-with-coverage
         run: >-
           dotnet test ${{ env.SOLUTION_FILE }} --configuration ${{ env.CONFIGURATION }} --no-build
           --results-directory TestResults/coverage
@@ -86,11 +92,14 @@ jobs:
           --coverlet-exclude-by-file "**/Migrations/*.cs"
           /p:ContinuousIntegrationBuild=true
 
-      - name: Summarize coverage
+      # Writes the summary first, then fails the job when a scope falls below its floor.
+      - name: Summarize and gate coverage
         shell: pwsh
         run: ./scripts/Write-CoverageSummary.ps1 -ReportDirectory TestResults/coverage
 
+      # Publish the report even when the gate fails, so the regression can be reviewed line by line.
       - name: Upload coverage report
+        if: ${{ !cancelled() && steps.test-with-coverage.outcome == 'success' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-report

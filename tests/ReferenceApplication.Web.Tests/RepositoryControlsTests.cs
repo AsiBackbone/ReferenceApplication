@@ -12,6 +12,7 @@ public sealed partial class RepositoryControlsTests
 {
     private const string _ciWorkflowPath = ".github/workflows/ci.yml";
     private const string _mainRulesetPath = "eng/repository-controls/main-branch-ruleset.json";
+    private const string _coverageFloorsPath = "eng/code-coverage-floors.json";
     private const int _gitHubActionsIntegrationId = 15368;
 
     /// <summary>
@@ -47,10 +48,11 @@ public sealed partial class RepositoryControlsTests
 
     /// <summary>
     /// Verifies that the required build-and-test job collects coverage with the referenced coverlet.MTP extension,
-    /// excludes generated migrations, and publishes the report, so the package reference is never left unused.
+    /// excludes generated migrations, self-tests and runs the coverage gate, and publishes the report even when the
+    /// gate fails, so the package reference is never left unused and a coverage regression fails the job.
     /// </summary>
     [Fact]
-    public void Ci_BuildAndTest_CollectsSummarizesAndPublishesCoverage()
+    public void Ci_BuildAndTest_CollectsGatesAndPublishesCoverage()
     {
         string workflow = RepositoryFiles.ReadAllText(_ciWorkflowPath);
         string testProject = RepositoryFiles.ReadAllText(
@@ -65,9 +67,63 @@ public sealed partial class RepositoryControlsTests
             "./scripts/Write-CoverageSummary.ps1 -ReportDirectory TestResults/coverage",
             workflow,
             StringComparison.Ordinal);
+        Assert.Contains("./scripts/Write-CoverageSummary.ps1 -SelfTest", workflow, StringComparison.Ordinal);
+        Assert.Contains("name: Summarize and gate coverage", workflow, StringComparison.Ordinal);
+        Assert.Contains(
+            "if: ${{ !cancelled() && steps.test-with-coverage.outcome == 'success' }}",
+            workflow,
+            StringComparison.Ordinal);
         Assert.Contains("name: coverage-report", workflow, StringComparison.Ordinal);
         Assert.Contains("if-no-files-found: error", workflow, StringComparison.Ordinal);
         Assert.True(File.Exists(RepositoryFiles.GetPath("scripts/Write-CoverageSummary.ps1")));
+        Assert.True(File.Exists(RepositoryFiles.GetPath(_coverageFloorsPath)));
+
+        Assert.DoesNotContain("not gated", workflow, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("without a threshold gate", RepositoryFiles.ReadAllText("README.md"), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Verifies that the coverage floors cover exactly the production projects under <c>src</c>, so neither production
+    /// assembly can regress behind a well-covered one and a new production project cannot ship without a floor.
+    /// </summary>
+    [Fact]
+    public void CoverageFloors_FloorEveryProductionAssemblyWithinBounds()
+    {
+        using var floors = JsonDocument.Parse(RepositoryFiles.ReadAllText(_coverageFloorsPath));
+        JsonElement root = floors.RootElement;
+
+        string[] expectedProductionAssemblies = ["ReferenceApplication.Infrastructure", "ReferenceApplication.Web"];
+        string[] productionAssemblies = [.. Directory
+            .EnumerateFiles(RepositoryFiles.GetPath("src"), "*.csproj", SearchOption.AllDirectories)
+            .Select(projectPath => Path.GetFileNameWithoutExtension(projectPath.AsSpan()).ToString())
+            .Order(StringComparer.Ordinal)];
+        string[] flooredAssemblies = [.. root
+            .GetProperty("assemblies")
+            .EnumerateObject()
+            .Select(assembly => assembly.Name)
+            .Order(StringComparer.Ordinal)];
+
+        Assert.Equal(expectedProductionAssemblies, productionAssemblies);
+        Assert.Equal(productionAssemblies, flooredAssemblies);
+
+        JsonElement tolerance = root.GetProperty("tolerance");
+        Assert.InRange(tolerance.GetProperty("total").GetDecimal(), 0m, 2m);
+        Assert.InRange(tolerance.GetProperty("assembly").GetDecimal(), 0m, 2m);
+
+        AssertBaselinesInRange("total", root.GetProperty("total"));
+        foreach (JsonProperty assembly in root.GetProperty("assemblies").EnumerateObject())
+        {
+            AssertBaselinesInRange(assembly.Name, assembly.Value);
+        }
+    }
+
+    private static void AssertBaselinesInRange(string scope, JsonElement baseline)
+    {
+        foreach (string kind in new[] { "line", "branch" })
+        {
+            decimal value = baseline.GetProperty(kind).GetDecimal();
+            Assert.True(value is > 0m and <= 100m, $"The {kind} baseline for {scope} must be above 0 and at most 100.");
+        }
     }
 
     private static List<(string Context, int? IntegrationId)> ReadRequiredChecks()
