@@ -1,6 +1,11 @@
 using ReferenceApplication.Web.Authentication.Demo;
 using ReferenceApplication.Web.Authentication.Extensions;
 using ReferenceApplication.Web.Authentication.Options;
+using ReferenceApplication.Web.Governance.Demonstration;
+using ReferenceApplication.Web.Governance.FailureScenarios;
+using ReferenceApplication.Web.Governance.Pipeline;
+using ReferenceApplication.Web.Governance.Replay;
+using ReferenceApplication.Web.Governance.Simulation;
 using ReferenceApplication.Web.Options;
 
 namespace ReferenceApplication.Web.Extensions;
@@ -73,6 +78,29 @@ public static class StartupSecurityPostureExtensions
             "Anonymous probes are supported for infrastructure health checks; confirm reverse-proxy, ingress, firewall, " +
             "or service-mesh routing limits external reachability as intended.");
 
+    private static readonly Action<ILogger, Exception?> _logNoDevelopmentOnlyComponents =
+        LoggerMessage.Define(
+            LogLevel.Information,
+            new EventId(1007, "NoDevelopmentOnlyComponents"),
+            "Security posture: no Development-only components are registered.");
+
+    private static readonly Action<ILogger, string, Exception?> _logDevelopmentOnlyComponents =
+        LoggerMessage.Define<string>(
+            LogLevel.Warning,
+            new EventId(1008, "DevelopmentOnlyComponentsRegistered"),
+            "Security posture: Development-only components are registered: {Components}. They exist for local " +
+            "walkthroughs; do not expose this host beyond a trusted development environment.");
+
+    private static readonly (string Name, Type ServiceType)[] _developmentOnlyComponents =
+    [
+        ("demo identity", typeof(IDemoIdentityService)),
+        ("load demonstration", typeof(IGovernanceLoadDemonstrationService)),
+        ("policy simulator", typeof(IPolicySimulator)),
+        ("decision replay", typeof(IDecisionReplayService)),
+        ("pipeline inspector", typeof(IPipelineInspector)),
+        ("failure scenarios", typeof(IFailureScenarioService))
+    ];
+
     /// <summary>
     /// Emits structured startup diagnostics for supported security postures that require
     /// operator awareness.
@@ -84,8 +112,51 @@ public static class StartupSecurityPostureExtensions
         ArgumentNullException.ThrowIfNull(app);
 
         LogApplicationSecurityPosture(app.Logger, app.Configuration, app.Environment);
+        LogDevelopmentOnlyComponents(app.Logger, app.Services);
 
         return app;
+    }
+
+    /// <summary>
+    /// Lists the Development-only components the host's service provider has registered.
+    /// </summary>
+    /// <param name="services">The application's root service provider.</param>
+    /// <returns>The display names of the registered components, in a fixed order; empty when none is registered.</returns>
+    /// <remarks>
+    /// The answer comes from the running host's own registrations, not from configuration, so a deployment can prove
+    /// from its startup log that none of the demo identity or governance sandbox components is present.
+    /// </remarks>
+    public static IReadOnlyList<string> GetRegisteredDevelopmentOnlyComponents(IServiceProvider services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        IServiceProviderIsService? isService = services.GetService<IServiceProviderIsService>();
+        return isService is null
+            ? []
+            : [.. _developmentOnlyComponents
+                .Where(component => isService.IsService(component.ServiceType))
+                .Select(static component => component.Name)];
+    }
+
+    /// <summary>
+    /// Reports which Development-only components the host's service provider has registered.
+    /// </summary>
+    /// <param name="logger">The startup logger.</param>
+    /// <param name="services">The application's root service provider.</param>
+    public static void LogDevelopmentOnlyComponents(ILogger logger, IServiceProvider services)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(services);
+
+        IReadOnlyList<string> registered = GetRegisteredDevelopmentOnlyComponents(services);
+        if (registered.Count == 0)
+        {
+            _logNoDevelopmentOnlyComponents(logger, null);
+        }
+        else
+        {
+            _logDevelopmentOnlyComponents(logger, string.Join(", ", registered), null);
+        }
     }
 
     /// <summary>

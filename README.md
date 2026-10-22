@@ -152,6 +152,21 @@ Copy-Item .env.example .env
 
 Do not commit `.env` files.
 
+### Production-shaped configuration
+
+`docker-compose.production.yml` is a reference configuration, not a hosting recommendation. Apply it on top of the
+base file to run in `Production` with explicit host and proxy trust, an external OpenID Connect provider, an
+encrypted, durable Data Protection key ring, and every Development-only component absent:
+
+```powershell
+docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.production.yml up --build
+```
+
+It contains no credentials. Every secret and deployment-specific value is required from the environment, and Compose
+refuses to start without one. CI starts this configuration on every pull request. The
+[production deployment checklist](https://asibackbone.github.io/ReferenceApplication/walkthrough/run-in-production.html)
+lists every decision a deployment outside Development must make.
+
 ## Configuration and security notes
 
 The NCAT baseline behavior is documented authoritatively on the [NCAT documentation site](https://asibackbone.github.io/NetCoreApplicationTemplate/). The points below matter most when running this host.

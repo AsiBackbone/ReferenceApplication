@@ -7,6 +7,40 @@ This project follows Semantic Versioning using the format `MAJOR.MINOR.PATCH`. C
 a stable public contract; releases remain `0.x` pre-releases until the repository's release-readiness criteria are met.
 The release version is independent of the NCAT version, which the `ncat-v<version>` tags record.
 
+## Unreleased
+
+### Added
+
+* A validated production deployment path (#72).
+  * `docker-compose.production.yml` is a production-shaped reference configuration, applied on top of the base Compose
+    file. It runs both services in `Production`, with these settings:
+    * explicit `AllowedHosts` and a trusted proxy network, with the Development "trust every proxy" relaxation off;
+    * an external OpenID Connect provider;
+    * a durable Data Protection key ring encrypted with a certificate injected as a file secret;
+    * every Development-only switch off; and
+    * capability tokens disabled.
+
+    It contains no credentials: every secret and deployment-specific value is required from the environment, and
+    Compose refuses to start without one.
+  * The CI container smoke test now also runs this configuration, with throwaway secrets generated on the runner. It
+    checks the following:
+    * the migrations service succeeds and the host becomes ready;
+    * the host runs in `Production`, with no Development-only component registered and no relaxed-posture warning;
+    * a request with an unlisted `Host` header is rejected;
+    * the sign-in page offers the external provider and no demo identity; and
+    * the stored key is encrypted with the injected certificate.
+  * At startup the host now logs which Development-only components its service provider has registered. It logs
+    `Security posture: no Development-only components are registered.` at Information when there are none, and a
+    warning naming each one otherwise. An outside HTTP probe cannot show that a route is absent, because the fallback
+    authorization policy sends every anonymous request to sign-in; this log line can.
+  * `ProductionDeploymentTests` run the same settings in-process. They check readiness, the external provider, host
+    filtering, and the encrypted key ring, and that no Development-only service is registered and no Development-only
+    route is mapped. `ContainerConfigurationTests` guard the production Compose file.
+  * The new supplemental walkthrough page *Run outside Development* is a single production checklist. It covers
+    environment, host names, TLS and proxy trust, sign-in, secrets, Data Protection, migrations, health probes, logs,
+    telemetry, evidence notifications, and capability-token signing. It also says what the reference configuration
+    deliberately does not cover. The README links to it.
+
 ## 0.1.0-alpha.11 - 2026-10-22
 
 ### Fixed

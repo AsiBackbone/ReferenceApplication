@@ -1,0 +1,86 @@
+# Production-shaped reference configuration. Apply it on top of the base file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.production.yml up --build
+#
+# This is a reference configuration that proves the documented production boundaries compose, not a hosting
+# recommendation. It contains no credentials: every secret and deployment-specific value is required from the
+# environment (for example an untracked .env.production file passed with --env-file, or the orchestrator's secret
+# store), and Compose refuses to start when one is missing. See docs/walkthrough/run-in-production.md.
+
+x-production-environment: &production-environment
+  ASPNETCORE_ENVIRONMENT: Production
+  DOTNET_RUNNING_IN_CONTAINER: "true"
+
+  # The normal application database. Production never selects the Development demonstration database, and the
+  # application never migrates at startup; the migrations service applies the schema first.
+  ConnectionStrings__ApplicationDatabase: ${CONNECTIONSTRINGS_APPLICATIONDATABASE:-Data Source=/app/data/application.db}
+
+  # Host filtering: list the public host names. Health probes must send one of them as the Host header.
+  AllowedHosts: ${REFERENCEAPPLICATION_ALLOWEDHOSTS:?Set REFERENCEAPPLICATION_ALLOWEDHOSTS to the semicolon-separated public host names}
+
+  # TLS terminates at the ingress proxy. Forwarded client address and scheme are trusted only from the network the
+  # proxy runs in; the Development relaxation that trusts every proxy is switched off.
+  ReferenceApplication__ForwardedHeaders__Enabled: "true"
+  ReferenceApplication__ForwardedHeaders__ClearKnownNetworksAndProxies: "false"
+  ReferenceApplication__ForwardedHeaders__KnownNetworks__0: ${REFERENCEAPPLICATION_FORWARDEDHEADERS_KNOWNNETWORK:?Set REFERENCEAPPLICATION_FORWARDEDHEADERS_KNOWNNETWORK to the ingress proxy CIDR}
+
+  # Durable key ring on a volume shared by every replica, with keys encrypted at rest by a certificate injected as a
+  # file secret. The certificate password comes from the environment.
+  ReferenceApplication__DataProtection__ApplicationName: ReferenceApplication.Web
+  ReferenceApplication__DataProtection__KeyRingPath: /app/data-protection-keys
+  ReferenceApplication__DataProtection__KeyEncryptionCertificatePath: /run/secrets/dataprotection-certificate
+  ReferenceApplication__DataProtection__KeyEncryptionCertificatePassword: ${REFERENCEAPPLICATION_DATAPROTECTION_CERTIFICATE_PASSWORD:?Set REFERENCEAPPLICATION_DATAPROTECTION_CERTIFICATE_PASSWORD}
+
+  # A real external identity provider. The client secret comes from the environment, never from source.
+  ReferenceApplication__Authentication__Providers__OpenIdConnect__Enabled: "true"
+  ReferenceApplication__Authentication__Providers__OpenIdConnect__Authority: ${REFERENCEAPPLICATION_OIDC_AUTHORITY:?Set REFERENCEAPPLICATION_OIDC_AUTHORITY to the identity provider issuer URL}
+  ReferenceApplication__Authentication__Providers__OpenIdConnect__ClientId: ${REFERENCEAPPLICATION_OIDC_CLIENTID:?Set REFERENCEAPPLICATION_OIDC_CLIENTID}
+  ReferenceApplication__Authentication__Providers__OpenIdConnect__ClientSecret: ${REFERENCEAPPLICATION_OIDC_CLIENTSECRET:?Set REFERENCEAPPLICATION_OIDC_CLIENTSECRET}
+
+  # Logs go to standard output for the platform to collect; telemetry is exported over OTLP when an endpoint is set.
+  ReferenceApplication__OpenTelemetry__Otlp__Enabled: ${REFERENCEAPPLICATION_OTLP_ENABLED:-false}
+  ReferenceApplication__OpenTelemetry__Otlp__Endpoint: ${REFERENCEAPPLICATION_OTLP_ENDPOINT:-}
+
+  # Every Development-only component stays off. Outside Development they cannot be registered anyway; pinning them
+  # here keeps this file honest if it is ever reused with another environment name.
+  ReferenceApplication__DemoIdentity__Enabled: "false"
+  ReferenceApplication__GovernanceLoadDemonstration__Enabled: "false"
+  ReferenceApplication__PolicySimulator__Enabled: "false"
+  ReferenceApplication__DecisionReplay__Enabled: "false"
+  ReferenceApplication__PipelineInspector__Enabled: "false"
+  ReferenceApplication__FailureScenarios__Enabled: "false"
+
+  # Signed capability tokens stay disabled here. Enabling them in Production requires signing through a managed key
+  # service; AllowSampleSigningKeyInProduction is not the intended path.
+  ReferenceApplication__CapabilityTokens__Enabled: "false"
+
+services:
+  referenceapplication.migrations:
+    image: referenceapplication-migrations:production
+    # The migration bundle builds the application's host, so it needs the same configuration and secrets.
+    environment: *production-environment
+    secrets:
+      - dataprotection-certificate
+    networks:
+      - ingress
+
+  referenceapplication.web:
+    image: referenceapplication-web:production
+    environment:
+      <<: *production-environment
+      ASPNETCORE_URLS: http://+:8080
+    secrets:
+      - dataprotection-certificate
+    networks:
+      - ingress
+
+networks:
+  # The ingress proxy and the application share this network; its range is the trusted proxy CIDR.
+  ingress:
+    ipam:
+      config:
+        - subnet: ${REFERENCEAPPLICATION_INGRESS_SUBNET:-172.31.250.0/24}
+
+secrets:
+  dataprotection-certificate:
+    file: ${REFERENCEAPPLICATION_DATAPROTECTION_CERTIFICATE_FILE:?Set REFERENCEAPPLICATION_DATAPROTECTION_CERTIFICATE_FILE to the key-encryption certificate (.pfx)}
