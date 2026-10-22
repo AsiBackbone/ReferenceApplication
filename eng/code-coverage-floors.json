@@ -1,0 +1,30 @@
+{
+  "description": "Coverage floors enforced by scripts/Write-CoverageSummary.ps1 in the Build and test job. Each value is a baseline percentage measured on a clean main run, truncated to two decimals; the floor is the baseline minus the tolerance for its scope, in percentage points. Raise a baseline when coverage improves. Lower one only on purpose, and say why in the pull request.",
+  "source": {
+    "commit": "f2f03b3",
+    "run": "https://github.com/AsiBackbone/ReferenceApplication/actions/runs/39803277847",
+    "measured": {
+      "total": "line 8638/8997 (96.01%), branch 2067/2643 (78.21%)",
+      "ReferenceApplication.Infrastructure": "line 2167/2309 (93.85%), branch 492/613 (80.26%)",
+      "ReferenceApplication.Web": "line 6471/6688 (96.76%), branch 1574/2028 (77.61%)"
+    }
+  },
+  "tolerance": {
+    "total": 0.5,
+    "assembly": 1.0
+  },
+  "total": {
+    "line": 96.00,
+    "branch": 78.20
+  },
+  "assemblies": {
+    "ReferenceApplication.Infrastructure": {
+      "line": 93.85,
+      "branch": 80.26
+    },
+    "ReferenceApplication.Web": {
+      "line": 96.75,
+      "branch": 77.61
+    }
+  }
+}
