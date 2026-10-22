@@ -167,6 +167,28 @@ refuses to start without one. CI starts this configuration on every pull request
 [production deployment checklist](https://asibackbone.github.io/ReferenceApplication/walkthrough/run-in-production.html)
 lists every decision a deployment outside Development must make.
 
+Audit reconciliation is part of the normal governance-evidence composition in Development, Staging, and Production.
+The base configuration enables its worker with conservative defaults:
+
+```json
+{
+  "ReferenceApplication": {
+    "AuditReconciliation": {
+      "Enabled": true,
+      "RunWorker": true,
+      "Interval": "00:05:00",
+      "CompletionGracePeriod": "00:02:00"
+    }
+  }
+}
+```
+
+The worker detects retained mutation-audit batches whose expected completion evidence never arrives, and
+`/health/audit-integrity` runs the registered reconciliation health check in every environment. Development shortens
+the interval to one minute for the walkthrough. Set `RunWorker` to `false` only when another scheduler owns
+reconciliation, and monitor that scheduler separately. The Development pipeline inspector reads the same reconciliation
+state; it does not register or enable reconciliation.
+
 ### Upgrading between releases
 
 Database upgrades are supported from `v0.1.0-alpha.11` onward and are tested on every pull request. CI builds that
@@ -215,7 +237,7 @@ In Development, `ReferenceApplication:PolicySimulator:Enabled` adds an administr
 
 In Development, `ReferenceApplication:DecisionReplay:Enabled` adds an administrator-only decision replay to the explorer. It finds a persisted decision by receipt identifier or from the recent decisions, shows which evaluation inputs the minimized ledger records and which it can only infer, and replays the decision against the current policy and an optional what-if candidate, side by side. A replay never writes to the ledger, and a policy-hash mismatch is flagged before replay.
 
-In Development, `ReferenceApplication:PipelineInspector:Enabled` adds an administrator-only pipeline inspector to the explorer. It times one governed request's stages from timestamps the pipeline already stores, marking where the response ends and background delivery begins, and shows the audit-completion outbox, reconciliation findings, and in-process telemetry. Its timings are demonstration, not benchmark results; it adds nothing to the governed request path and never writes. While active, it also registers NCAT audit reconciliation for Development.
+In Development, `ReferenceApplication:PipelineInspector:Enabled` adds an administrator-only pipeline inspector to the explorer. It times one governed request's stages from timestamps the pipeline already stores, marking where the response ends and background delivery begins, and shows the audit-completion outbox, reconciliation findings, and in-process telemetry. Its timings are demonstration, not benchmark results; it adds nothing to the governed request path and never writes. The inspector reads the host-wide NCAT audit reconciliation registered by `AddApplicationGovernanceEvidence`; it does not own or enable reconciliation.
 
 In Development, with the demo identity's demonstration database in use, `ReferenceApplication:FailureScenarios:Enabled` adds administrator-only failure scenarios to the explorer. Eight presets trigger failure and attack paths against the real governed endpoints: a missing capability grant, a throwing constraint, a failed ledger append, a failed outbox delivery, an execution failure after approval, evidence tampering, and, with signed tokens enabled, payload tampering and an expired token. Each shows the HTTP outcome, the decision and reason codes, and the evidence left behind. Faults are injected only into the one request a run is armed for, and nothing is registered outside Development.
 

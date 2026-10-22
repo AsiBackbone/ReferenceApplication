@@ -73,7 +73,7 @@ public class GovernancePersistenceBenchmarks
         _ = services.AddLogging();
         _ = services.AddApplicationDataAccess(configuration);
         _ = services.AddApplicationAsiBackbone();
-        _ = services.AddApplicationGovernanceEvidence();
+        _ = services.AddApplicationGovernanceEvidence(configuration);
 
         _serviceProvider = services.BuildServiceProvider(new ServiceProviderOptions
         {

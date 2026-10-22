@@ -45,7 +45,7 @@ try
     builder.Services.AddApplicationAuthorization(builder.Configuration);
     builder.Services.AddApplicationDataAccess(builder.Configuration);
     builder.Services.AddApplicationAsiBackbone();
-    builder.Services.AddApplicationGovernanceEvidence();
+    builder.Services.AddApplicationGovernanceEvidence(builder.Configuration);
     builder.Services.AddApplicationCapabilityTokens(builder.Configuration, builder.Environment);
     builder.Services.AddApplicationGovernanceLoadDemonstration(builder.Configuration, builder.Environment);
     builder.Services.AddApplicationPolicySimulator(builder.Configuration, builder.Environment);
