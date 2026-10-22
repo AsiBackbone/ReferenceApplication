@@ -54,8 +54,11 @@ lists what it holds and how to regenerate it for a new boundary.
 1. It builds the boundary release's migration bundle from its tag and creates a database with it.
 2. It seeds the database with the fixture.
 3. It upgrades the database twice with this commit's bundle and checks that the second upgrade changes nothing.
-4. It starts this commit's application on the upgraded database and waits for `/health/ready`.
-5. It runs the deep checks above against that database.
+4. It keeps a copy of the database exactly as the upgrade left it.
+5. It starts this commit's application on the upgraded database and waits for `/health/ready`.
+6. It runs the deep checks above against the copy. Once the application runs, its own background work, such as a
+   reconciliation pass re-observing findings, legitimately updates rows, so the checks read the database before that
+   happens.
 
 ## Before upgrading: back up
 

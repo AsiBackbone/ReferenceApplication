@@ -315,6 +315,9 @@ jobs:
           dump > "$RUNNER_TEMP/after-second-upgrade.sql"
           diff "$RUNNER_TEMP/after-first-upgrade.sql" "$RUNNER_TEMP/after-second-upgrade.sql"
           sudo chmod 0666 "$data"/upgrade.db*
+          # The deep checks read the database exactly as the upgrade left it. Once the application runs, its own
+          # background work, such as a reconciliation pass re-observing findings, legitimately updates rows.
+          cp "$data/upgrade.db" "$RUNNER_TEMP/upgraded.db"
 
       - name: Serve the upgraded database
         run: |
@@ -331,7 +334,7 @@ jobs:
 
       - name: Verify the upgraded evidence
         env:
-          REFERENCEAPPLICATION_UPGRADED_DATABASE: ${{ runner.temp }}/upgrade-data/upgrade.db
+          REFERENCEAPPLICATION_UPGRADED_DATABASE: ${{ runner.temp }}/upgraded.db
         run: |
           dotnet restore ${{ env.SOLUTION_FILE }} --locked-mode
           dotnet test ${{ env.SOLUTION_FILE }} --configuration ${{ env.CONFIGURATION }} --no-restore \
@@ -348,7 +351,7 @@ jobs:
         if: always()
         run: |
           docker rm --force referenceapplication-upgraded || true
-          sudo rm -rf "$RUNNER_TEMP/upgrade-data"
+          sudo rm -rf "$RUNNER_TEMP/upgrade-data" "$RUNNER_TEMP/upgraded.db"
           git worktree remove --force "$RUNNER_TEMP/previous-release" || true
 
   codeql-actions:
