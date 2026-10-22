@@ -11,11 +11,6 @@ public sealed class PipelineInspectorOptions
     public const string SectionName = "ReferenceApplication:PipelineInspector";
 
     /// <summary>
-    /// Gets the configuration section that binds NCAT audit reconciliation while the inspector registers it.
-    /// </summary>
-    public const string ReconciliationSectionName = "ReferenceApplication:AuditReconciliation";
-
-    /// <summary>
     /// Gets the number of outbox entries and open findings each snapshot returns.
     /// </summary>
     public const int ListSize = 25;

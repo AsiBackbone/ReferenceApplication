@@ -1,4 +1,3 @@
-using ReferenceApplication.Infrastructure.Data.Auditing;
 using ReferenceApplication.Web.Authentication.Extensions;
 using ReferenceApplication.Web.Governance.Pipeline;
 
@@ -24,13 +23,12 @@ public static class PipelineInspectorServiceExtensions
     /// <remarks>
     /// <para>
     /// Call after <c>AddApplicationOpenTelemetry</c> and <c>AddApplicationGovernanceEvidence</c>: the inspector reads
-    /// the audit-completion outbox that the evidence composition registers, and observes the telemetry that
-    /// OpenTelemetry creates.
+    /// the audit-completion outbox and audit reconciliation that the evidence composition registers, and observes the
+    /// telemetry that OpenTelemetry creates.
     /// </para>
     /// <para>
-    /// The host does not otherwise register NCAT audit reconciliation. While the inspector is active, this also
-    /// registers it, bound to <see cref="PipelineInspectorOptions.ReconciliationSectionName" />, with its background
-    /// worker, metrics, and audit-integrity health check, so the inspector has a summary and findings to show.
+    /// The inspector is a reader of reconciliation state. It does not own or conditionally register reconciliation;
+    /// the normal governance-evidence composition keeps that operational control available outside Development.
     /// </para>
     /// </remarks>
     public static IServiceCollection AddApplicationPipelineInspector(
@@ -46,10 +44,6 @@ public static class PipelineInspectorServiceExtensions
         {
             return services;
         }
-
-        services.AddApplicationAuditReconciliation();
-        services.AddOptions<ApplicationAuditReconciliationOptions>()
-            .BindConfiguration(PipelineInspectorOptions.ReconciliationSectionName);
 
         services.AddSingleton<PipelineTelemetryRecorder>();
         services.AddHostedService(static serviceProvider =>

@@ -221,12 +221,37 @@ The outbox options can be overridden in the `ReferenceApplication:AuditCompletio
 ```csharp
 builder.Services.AddApplicationDataAccess(builder.Configuration);
 builder.Services.AddApplicationAsiBackbone();
-builder.Services.AddApplicationGovernanceEvidence();
+builder.Services.AddApplicationGovernanceEvidence(builder.Configuration);
 ```
 
 `AddApplicationGovernanceEvidence` binds AsiBackbone's EF Core audit ledger and lifecycle stores to `ApplicationDbContext`,
 registers the evidence holder, the receipt sink, and the completion publisher, and enables the NCAT audit-completion
-outbox.
+outbox. It also registers NCAT audit reconciliation, its hosted worker, metrics, and the `application-audit-integrity`
+health check. Reconciliation is bound to `ReferenceApplication:AuditReconciliation`.
+
+The base configuration is production-shaped and applies in Staging and Production unless deployment configuration
+overrides it:
+
+```json
+{
+  "ReferenceApplication": {
+    "AuditReconciliation": {
+      "Enabled": true,
+      "RunWorker": true,
+      "Interval": "00:05:00",
+      "CompletionGracePeriod": "00:02:00"
+    }
+  }
+}
+```
+
+The worker closes the operational gap between a retained mutation-audit batch and the completion evidence expected for
+that batch. `/health/audit-integrity` therefore runs a real reconciliation health check in every environment, rather
+than reporting the result of an empty health-check selection. Development overrides only the interval to one minute so
+the walkthrough converges quickly.
+
+Set `RunWorker` to `false` when an external scheduler deliberately owns reconciliation. The reconciler, metrics, and
+health check remain registered; the external scheduler's freshness must then be monitored separately.
 
 ## Observe persisted evidence notifications
 

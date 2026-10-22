@@ -382,14 +382,18 @@ itself emits no spans or metrics; only ASP.NET Core and HttpClient instrumentati
 `ReferenceApplication.AuditReconciliation` meter is created but not added to the OpenTelemetry pipeline, so its gauges
 are not exported.
 
-### Reconciliation in Development
+### Reconciliation observed in Development
 
-The host does not otherwise register NCAT audit reconciliation. While the inspector is active, it registers
-reconciliation with its background worker, metrics, and the `application-audit-integrity` health check, bound to
-`ReferenceApplication:AuditReconciliation`. The checked-in Development configuration runs the worker every minute.
-Staging and Production compositions are unchanged.
+NCAT audit reconciliation is part of the host's normal governance-evidence composition in every environment.
+`AddApplicationGovernanceEvidence` registers the reconciler, background worker, metrics, and
+`application-audit-integrity` health check, bound to `ReferenceApplication:AuditReconciliation`. The pipeline inspector
+only reads its summary and findings; enabling or disabling the inspector does not change whether reconciliation exists.
 
-### Configure
+The base configuration enables the worker with a five-minute interval and a two-minute completion grace period.
+Development overrides the interval to one minute so the inspector can demonstrate background convergence quickly.
+Staging and Production retain the base values unless deployment configuration overrides them.
+
+### Configure the inspector
 
 ```json
 {

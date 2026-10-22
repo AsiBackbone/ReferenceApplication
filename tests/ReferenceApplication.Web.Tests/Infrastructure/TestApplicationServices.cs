@@ -47,7 +47,7 @@ internal sealed class TestApplicationServices : IAsyncDisposable
         _ = services.AddSingleton(configuration);
         _ = services.AddLogging();
         _ = services.AddApplicationDataAccess(configuration);
-        _ = services.AddApplicationGovernanceEvidence();
+        _ = services.AddApplicationGovernanceEvidence(configuration);
 
         ServiceProvider provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
 

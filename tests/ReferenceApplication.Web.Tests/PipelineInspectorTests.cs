@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -19,6 +20,8 @@ using ReferenceApplication.Web.Authentication.Claims;
 using ReferenceApplication.Web.Extensions;
 using ReferenceApplication.Web.Governance;
 using ReferenceApplication.Web.Governance.Pipeline;
+using ReferenceApplication.Web.HealthChecks;
+using ReferenceApplication.Web.Services;
 using ReferenceApplication.Web.Tests.Extensions;
 using ReferenceApplication.Web.Tests.Infrastructure;
 
@@ -163,8 +166,8 @@ public sealed class PipelineInspectorTests : IDisposable
     }
 
     /// <summary>
-    /// Verifies that the reconciliation the inspector registers reports its summary and open findings: a mutation
-    /// whose audit completion was never staged is a missing completion.
+    /// Verifies that the inspector reads the host reconciliation summary and open findings: a mutation whose audit
+    /// completion was never staged is a missing completion.
     /// </summary>
     [Fact]
     public async Task Snapshot_ShowsReconciliationSummaryAndOpenFindings()
@@ -193,6 +196,37 @@ public sealed class PipelineInspectorTests : IDisposable
             static finding => finding.GetProperty("reasonCode").GetString() ==
                 ApplicationAuditReconciliationReasonCodes.MissingCompletion);
         Assert.False(snapshot.RootElement.GetProperty("outbox").GetProperty("enabled").GetBoolean());
+    }
+
+    /// <summary>
+    /// Verifies that reconciliation reports missing completion evidence even when the Development pipeline inspector
+    /// is not registered.
+    /// </summary>
+    [Fact]
+    public async Task Reconciliation_WithoutPipelineInspector_ReportsMissingCompletion()
+    {
+        using WebApplicationFactory<Program> factory = await CreateFactoryAsync(
+            outboxEnabled: false,
+            pipelineInspectorEnabled: false);
+        using HttpClient client = factory.CreateHttpsClient();
+        _ = await CreateRecordAsync(client, factory);
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        Assert.Null(scope.ServiceProvider.GetService<IPipelineInspector>());
+
+        IApplicationAuditReconciler reconciler = scope.ServiceProvider
+            .GetRequiredService<IApplicationAuditReconciler>();
+        ApplicationAuditReconciliationSummary summary = await reconciler
+            .ReconcileAsync(TestContext.Current.CancellationToken);
+        Assert.True(summary.MissingCompletionCount > 0);
+
+        IReadOnlyList<ApplicationAuditReconciliationFindingItem> findings = await reconciler.QueryFindingsAsync(
+            new ApplicationAuditReconciliationQuery(
+                ReasonCode: ApplicationAuditReconciliationReasonCodes.MissingCompletion),
+            TestContext.Current.CancellationToken);
+        Assert.Contains(
+            findings,
+            static finding => finding.ReasonCode == ApplicationAuditReconciliationReasonCodes.MissingCompletion);
     }
 
     /// <summary>
@@ -335,32 +369,53 @@ public sealed class PipelineInspectorTests : IDisposable
     }
 
     /// <summary>
-    /// Verifies that outside Development, even with the switch on, the inspector, its listener, the reconciliation it
-    /// would register, and its route are all absent.
+    /// Verifies that outside Development the inspector and its route stay absent while host reconciliation, its worker,
+    /// and its audit-integrity health check remain registered.
     /// </summary>
     /// <param name="environmentName">The host environment.</param>
     [Theory]
     [InlineData("Staging")]
     [InlineData("Production")]
-    public async Task Feature_OutsideDevelopment_IsNotRegisteredOrMapped(string environmentName)
+    public async Task Feature_OutsideDevelopment_LeavesInspectorAbsentButRegistersReconciliation(string environmentName)
     {
         using WebApplicationFactory<Program> factory = ApplicationWebApplicationFactory
             .CreateAllowingAnonymousAccess(new Dictionary<string, string?>
             {
                 [$"{PipelineInspectorOptions.SectionName}:Enabled"] = "true",
-                ["ReferenceApplication:AuditCompletionOutbox:Enabled"] = "false"
+                ["ReferenceApplication:AuditCompletionOutbox:Enabled"] = "false",
+                [$"{GovernanceEvidenceServiceExtensions.AuditReconciliationSectionName}:Enabled"] = "false",
+                [$"{GovernanceEvidenceServiceExtensions.AuditReconciliationSectionName}:RunWorker"] = "false"
             }, environmentName)
             .WithWebHostBuilder(static builder => builder.UseSetting($"{PipelineInspectorOptions.SectionName}:Enabled", "true"));
 
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         Assert.Null(scope.ServiceProvider.GetService<IPipelineInspector>());
         Assert.Null(scope.ServiceProvider.GetService<PipelineTelemetryRecorder>());
-        Assert.Null(scope.ServiceProvider.GetService<IApplicationAuditReconciler>());
+        Assert.NotNull(scope.ServiceProvider.GetService<IApplicationAuditReconciler>());
+        Assert.Contains(
+            factory.Services.GetServices<IHostedService>(),
+            static service => service is ApplicationAuditReconciliationHostedService);
+
+        HealthCheckServiceOptions healthCheckOptions = factory.Services
+            .GetRequiredService<IOptions<HealthCheckServiceOptions>>()
+            .Value;
+        Assert.Contains(
+            healthCheckOptions.Registrations,
+            static registration => registration.Tags.Contains(ApplicationHealthCheckTags.Audit));
+
         using HttpClient client = factory.CreateHttpsClient();
-        using HttpResponseMessage response = await client.GetAsync(
+        using HttpResponseMessage inspectorResponse = await client.GetAsync(
             PipelineInspectorServiceExtensions.SnapshotPath,
             TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, inspectorResponse.StatusCode);
+
+        using HttpResponseMessage healthResponse = await client.GetAsync(
+            "/health/audit-integrity",
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, healthResponse.StatusCode);
+        Assert.Equal(
+            "Healthy",
+            await healthResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
     }
 
     /// <summary>
@@ -395,7 +450,10 @@ public sealed class PipelineInspectorTests : IDisposable
         _database.Dispose();
     }
 
-    private Task<WebApplicationFactory<Program>> CreateFactoryAsync(bool outboxEnabled = true, bool failingDelivery = false)
+    private Task<WebApplicationFactory<Program>> CreateFactoryAsync(
+        bool outboxEnabled = true,
+        bool failingDelivery = false,
+        bool pipelineInspectorEnabled = true)
     {
         Dictionary<string, string?> configuration = new()
         {
@@ -413,8 +471,8 @@ public sealed class PipelineInspectorTests : IDisposable
             [$"{_outboxSection}:Enabled"] = outboxEnabled ? "true" : "false",
             [$"{_outboxSection}:PollInterval"] = "01:00:00",
             [$"{_outboxSection}:MaximumCycleRetryDelay"] = "01:00:00",
-            [$"{PipelineInspectorOptions.ReconciliationSectionName}:RunWorker"] = "false",
-            [$"{PipelineInspectorOptions.ReconciliationSectionName}:CompletionGracePeriod"] = "00:00:00"
+            [$"{GovernanceEvidenceServiceExtensions.AuditReconciliationSectionName}:RunWorker"] = "false",
+            [$"{GovernanceEvidenceServiceExtensions.AuditReconciliationSectionName}:CompletionGracePeriod"] = "00:00:00"
         };
 
         // Feature switches are read during service registration, before test configuration sources are applied, so
@@ -423,7 +481,9 @@ public sealed class PipelineInspectorTests : IDisposable
         return _database.ApplyAsync(ApplicationWebApplicationFactory
             .CreateAllowingAnonymousAccess(configuration, Environments.Development)
             .WithWebHostBuilder(builder => builder
-                .UseSetting($"{PipelineInspectorOptions.SectionName}:Enabled", "true")
+                .UseSetting(
+                    $"{PipelineInspectorOptions.SectionName}:Enabled",
+                    pipelineInspectorEnabled ? "true" : "false")
                 .UseSetting("ReferenceApplication:DecisionReplay:Enabled", "false")
                 .UseSetting("ReferenceApplication:PolicySimulator:Enabled", "false")
                 .UseSetting("ReferenceApplication:DemoIdentity:Enabled", "false")

@@ -2,6 +2,8 @@ using System.Net;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
+using ReferenceApplication.Web.Extensions;
 using ReferenceApplication.Web.HealthChecks;
 using ReferenceApplication.Web.Tests.Extensions;
 using ReferenceApplication.Web.Tests.Infrastructure;
@@ -101,25 +103,37 @@ public sealed class HealthCheckTests
 
     private static ApplicationWebApplicationFactory CreateFactory()
     {
-        return new ApplicationWebApplicationFactory(new Dictionary<string, string?>());
+        return new ApplicationWebApplicationFactory(new Dictionary<string, string?>
+        {
+            // These endpoint tests verify registration and routing without starting reconciliation against the
+            // scaffold's file-backed application database.
+            [$"{GovernanceEvidenceServiceExtensions.AuditReconciliationSectionName}:Enabled"] = "false",
+            [$"{GovernanceEvidenceServiceExtensions.AuditReconciliationSectionName}:RunWorker"] = "false"
+        });
     }
 
     /// <summary>
-    /// Verifies that the audit health endpoint is mapped and reports healthy when no audit checks are registered.
+    /// Verifies that the host registers an audit-tagged reconciliation check and that the endpoint runs it.
     /// </summary>
     /// <returns>A task that represents the asynchronous test operation.</returns>
     [Fact]
-    public async Task HealthAuditEndpoint_WithoutAuditChecks_ReturnsHealthy()
+    public async Task HealthAuditEndpoint_RunsRegisteredReconciliationCheck()
     {
         using ApplicationWebApplicationFactory factory = CreateFactory();
+        HealthCheckServiceOptions healthCheckOptions = factory.Services
+            .GetRequiredService<IOptions<HealthCheckServiceOptions>>()
+            .Value;
+
+        Assert.Contains(
+            healthCheckOptions.Registrations,
+            static registration => registration.Tags.Contains(ApplicationHealthCheckTags.Audit));
+
         using HttpClient client = factory.CreateHttpsClient();
 
         using HttpResponseMessage response = await client.GetAsync("/health/audit-integrity", TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
         string body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-
         Assert.Equal("Healthy", body);
     }
 

@@ -19,10 +19,16 @@ public static class GovernanceEvidenceServiceExtensions
     public const string AuditCompletionOutboxSectionName = "ReferenceApplication:AuditCompletionOutbox";
 
     /// <summary>
+    /// The configuration section that controls NCAT audit reconciliation.
+    /// </summary>
+    public const string AuditReconciliationSectionName = "ReferenceApplication:AuditReconciliation";
+
+    /// <summary>
     /// Persists governance decision receipts to the AsiBackbone audit ledger in the host-owned
     /// <see cref="ApplicationDbContext" />, and links NCAT audit completion to that evidence.
     /// </summary>
     /// <param name="services">The service collection to configure.</param>
+    /// <param name="configuration">The application configuration used to bind reconciliation options.</param>
     /// <returns>The same service collection so calls can be chained.</returns>
     /// <remarks>
     /// Call after <c>AddApplicationDataAccess</c> and <c>AddApplicationAsiBackbone</c>. The registration:
@@ -30,12 +36,16 @@ public static class GovernanceEvidenceServiceExtensions
     /// <item><description>binds the AsiBackbone EF Core audit ledger and lifecycle stores to the host context;</description></item>
     /// <item><description>registers <see cref="LedgerDecisionReceiptSink" /> as the endpoint governance audit sink;</description></item>
     /// <item><description>exposes the request's persisted evidence through <see cref="IGovernanceDecisionEvidenceAccessor" />;</description></item>
-    /// <item><description>enables the NCAT audit-completion outbox with <see cref="AsiBackboneAuditCompletionPublisher" /> as its default destination.</description></item>
+    /// <item><description>enables the NCAT audit-completion outbox with <see cref="AsiBackboneAuditCompletionPublisher" /> as its default destination;</description></item>
+    /// <item><description>registers NCAT audit reconciliation, its background worker, metrics, and audit-integrity health check.</description></item>
     /// </list>
     /// </remarks>
-    public static IServiceCollection AddApplicationGovernanceEvidence(this IServiceCollection services)
+    public static IServiceCollection AddApplicationGovernanceEvidence(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
 
         services.AddAsiBackbone(builder => builder
             .UseEfCoreAuditLedger<ApplicationDbContext>()
@@ -56,6 +66,10 @@ public static class GovernanceEvidenceServiceExtensions
             options.DefaultDestination = AsiBackboneAuditCompletionPublisher.DestinationName);
         services.AddOptions<ApplicationAuditCompletionOutboxOptions>()
             .BindConfiguration(AuditCompletionOutboxSectionName);
+
+        services.AddApplicationAuditReconciliation();
+        services.AddOptions<ApplicationAuditReconciliationOptions>()
+            .BindConfiguration(AuditReconciliationSectionName);
 
         return services;
     }
