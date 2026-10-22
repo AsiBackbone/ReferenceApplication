@@ -40,6 +40,7 @@ public sealed partial class LedgerDecisionReceiptSink : IDecisionReceiptSink
     private readonly GovernanceTelemetryProjection _telemetryProjection;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<LedgerDecisionReceiptSink> _logger;
+    private readonly IHttpContextAccessor? _httpContextAccessor;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LedgerDecisionReceiptSink" /> class.
@@ -49,12 +50,14 @@ public sealed partial class LedgerDecisionReceiptSink : IDecisionReceiptSink
     /// <param name="loggerFactory">The logger factory used for the AsiBackbone EF Core store.</param>
     /// <param name="notificationPublisher">The isolated best-effort evidence notification publisher.</param>
     /// <param name="telemetryProjection">The best-effort projection of persisted evidence onto telemetry.</param>
+    /// <param name="httpContextAccessor">The current request, used only to link a validated acknowledgment retry.</param>
     public LedgerDecisionReceiptSink(
         IDbContextFactory<ApplicationDbContext> dbContextFactory,
         GovernanceDecisionEvidenceAccessor evidenceAccessor,
         ILoggerFactory loggerFactory,
         GovernanceEvidenceNotificationPublisher notificationPublisher,
-        GovernanceTelemetryProjection telemetryProjection)
+        GovernanceTelemetryProjection telemetryProjection,
+        IHttpContextAccessor? httpContextAccessor = null)
     {
         ArgumentNullException.ThrowIfNull(dbContextFactory);
         ArgumentNullException.ThrowIfNull(evidenceAccessor);
@@ -68,6 +71,7 @@ public sealed partial class LedgerDecisionReceiptSink : IDecisionReceiptSink
         _notificationPublisher = notificationPublisher;
         _telemetryProjection = telemetryProjection;
         _logger = loggerFactory.CreateLogger<LedgerDecisionReceiptSink>();
+        _httpContextAccessor = httpContextAccessor;
     }
 
     /// <inheritdoc />
@@ -83,7 +87,13 @@ public sealed partial class LedgerDecisionReceiptSink : IDecisionReceiptSink
                 "Governance decision evidence was already recorded for this request.");
         }
 
-        AuditLedgerRecord record = AuditLedgerRecordHashing.CreateHashed(receipt);
+        IApplicationAcknowledgmentFeature? acknowledgment = _httpContextAccessor?
+            .HttpContext?
+            .Features.Get<IApplicationAcknowledgmentFeature>();
+        AuditLedgerRecord record = AuditLedgerRecordHashing.CreateHashed(
+            receipt,
+            acknowledgment?.HandshakeId,
+            acknowledgment?.AcknowledgmentId);
         OperationResult<AuditLedgerRecord> result;
 
         try

@@ -42,17 +42,25 @@ public static class GovernanceEvidenceVerificationStatuses
 /// </summary>
 internal static class AuditLedgerRecordHashing
 {
-    public static AuditLedgerRecord CreateHashed(IDecisionReceipt receipt)
+    public static AuditLedgerRecord CreateHashed(
+        IDecisionReceipt receipt,
+        string? handshakeId = null,
+        string? acknowledgmentId = null)
     {
         ArgumentNullException.ThrowIfNull(receipt);
 
-        var unhashed = AuditLedgerRecord.FromDecisionReceipt(receipt);
+        var unhashed = AuditLedgerRecord.FromDecisionReceipt(
+            receipt,
+            handshakeId: handshakeId,
+            acknowledgmentId: acknowledgmentId);
         CanonicalPayloadHash hash = ComputeHash(unhashed);
 
         return AuditLedgerRecord.FromDecisionReceipt(
             receipt,
             recordId: unhashed.RecordId,
             recordedUtc: unhashed.RecordedUtc,
+            handshakeId: handshakeId,
+            acknowledgmentId: acknowledgmentId,
             recordHash: hash.HashValue);
     }
 

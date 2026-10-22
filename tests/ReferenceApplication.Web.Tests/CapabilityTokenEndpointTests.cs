@@ -335,7 +335,7 @@ public sealed class CapabilityTokenEndpointTests : IDisposable
     /// Verifies that a valid token does not bypass acknowledgment: an authorized administrator is still challenged.
     /// </summary>
     [Fact]
-    public async Task ConsequentialAction_ValidToken_StillRequiresAcknowledgment()
+    public async Task ConsequentialAction_ValidToken_SurvivesChallengeAndIsConsumedByAcknowledgedRetry()
     {
         using WebApplicationFactory<Program> factory = await CreateFactoryAsync(tokensEnabled: true);
         using HttpClient client = factory.CreateHttpsClient();
@@ -356,6 +356,42 @@ public sealed class CapabilityTokenEndpointTests : IDisposable
             "Consequential action executed.",
             await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken),
             StringComparison.Ordinal);
+
+        JsonObject challenge = JsonNode
+            .Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken))!
+            .AsObject();
+        string handshakeId = challenge["handshakeId"]!.GetValue<string>();
+        string acknowledgmentCode = challenge["requiredAcknowledgmentCode"]!.GetValue<string>();
+
+        string acknowledgmentId = await AcceptAcknowledgmentAsync(
+            client,
+            handshakeId,
+            acknowledgmentCode,
+            role: "administrator");
+
+        using HttpResponseMessage retry = await PostOperationAsync(
+            client,
+            "consequential",
+            issued.Token,
+            role: "administrator",
+            acknowledgmentId: acknowledgmentId);
+
+        Assert.Equal(HttpStatusCode.OK, retry.StatusCode);
+        Assert.Contains(
+            "Consequential action executed after acknowledgment.",
+            await retry.Content.ReadAsStringAsync(TestContext.Current.CancellationToken),
+            StringComparison.Ordinal);
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        CapabilityGrantUseEntity use = await dbContext.Set<CapabilityGrantUseEntity>()
+            .AsNoTracking()
+            .SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(issued.TokenId, use.TokenId);
+        Assert.Equal(1, use.UseCount);
+        AuditLedgerRecordEntity acknowledgedDecision = await dbContext.AsiBackboneAuditLedgerRecords
+            .SingleAsync(item => item.AcknowledgmentId == acknowledgmentId, TestContext.Current.CancellationToken);
+        Assert.Equal(handshakeId, acknowledgedDecision.HandshakeId);
     }
 
     /// <summary>
@@ -568,6 +604,37 @@ public sealed class CapabilityTokenEndpointTests : IDisposable
         return await client.SendAsync(request, TestContext.Current.CancellationToken);
     }
 
+    private static async Task<string> AcceptAcknowledgmentAsync(
+        HttpClient client,
+        string handshakeId,
+        string acknowledgmentCode,
+        string? role)
+    {
+        Dictionary<string, string> form = new(StringComparer.Ordinal)
+        {
+            [_antiforgeryFormFieldName] = await GetAntiforgeryTokenAsync(client, "test-user", role, permission: null),
+            ["HandshakeId"] = handshakeId,
+            ["AcknowledgmentCode"] = acknowledgmentCode,
+            ["Acknowledged"] = "true"
+        };
+
+        using HttpRequestMessage request = CreateRequest(
+            HttpMethod.Post,
+            "/api/v1/acknowledgments",
+            "test-user",
+            role,
+            permission: null);
+        request.Content = new FormUrlEncodedContent(form);
+        using HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        JsonObject document = JsonNode
+            .Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken))!
+            .AsObject();
+        Assert.Equal(ApplicationAcknowledgmentOptions.DefaultHeaderName, document["headerName"]!.GetValue<string>());
+        return document["acknowledgmentId"]!.GetValue<string>();
+    }
+
     private static async Task<HttpResponseMessage> PostOperationAsync(
         HttpClient client,
         string action,
@@ -575,7 +642,8 @@ public sealed class CapabilityTokenEndpointTests : IDisposable
         string? role = null,
         string? permission = null,
         IReadOnlyDictionary<string, string>? form = null,
-        string user = "test-user")
+        string user = "test-user",
+        string? acknowledgmentId = null)
     {
         Dictionary<string, string> fields = new(StringComparer.Ordinal)
         {
@@ -602,6 +670,11 @@ public sealed class CapabilityTokenEndpointTests : IDisposable
         if (token is not null)
         {
             request.Headers.Add(SignedCapabilityGrantOptions.DefaultTokenHeaderName, token);
+        }
+
+        if (acknowledgmentId is not null)
+        {
+            request.Headers.Add(ApplicationAcknowledgmentOptions.DefaultHeaderName, acknowledgmentId);
         }
 
         return await client.SendAsync(request, TestContext.Current.CancellationToken);

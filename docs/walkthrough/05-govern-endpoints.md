@@ -18,7 +18,7 @@ behind explicit host-owned rules:
 | `GET /api/v1/governed-operations` | None; explicitly anonymous | Returns the read-only sample description. |
 | `POST /api/v1/governed-operations/administrator` | `AdministratorActionPolicy` | Executes for an authenticated actor in a configured administrator role. |
 | `POST /api/v1/governed-operations/capability` | `CapabilityProtectedActionPolicy` and `referenceapplication.consequential.execute` capability | Executes when the actor holds the declared capability. |
-| `POST /api/v1/governed-operations/consequential` | All three policy markers, the capability scope, and acknowledgment metadata | Returns an acknowledgment challenge to an administrator who holds the capability; an administrator without it is denied. The action body does not execute. |
+| `POST /api/v1/governed-operations/consequential` | All three policy markers, the capability scope, and acknowledgment metadata | Challenges an entitled administrator, then executes only on a same-actor, same-operation, unexpired, one-time acknowledged retry. |
 
 The POST routes keep NCAT's authenticated-by-default authorization policy and validate antiforgery tokens explicitly
 with `[ValidateAntiForgeryToken]`, matching NCAT's own `AccountController`. Endpoint governance adds an execution
@@ -83,9 +83,33 @@ intentionally generic: it reports HTTP 403 without exposing policy internals, wh
 trace correlation fields.
 
 An otherwise-allowed consequential request produces AsiBackbone's acknowledgment challenge with HTTP 428
-`Precondition Required`. The challenge includes the handshake identifier and stable acknowledgment reason code. Step 5
-demonstrates that execution is withheld at this boundary; storing and completing a host-owned acknowledgment workflow
-is outside this sample step.
+`Precondition Required`. The challenge includes the handshake identifier, required acknowledgment code, and stable
+acknowledgment reason code. The host persists that request in AsiBackbone's acknowledgment tables with a five-minute
+validity window.
+
+The actor submits the handshake identifier and required code to `POST /api/v1/acknowledgments`. The host delegates the
+actor and code checks back to `IAcknowledgmentChallengeService`, persists the resulting acknowledgment, and returns its
+identifier plus the `X-ReferenceApplication-Acknowledgment` retry-header name. A retry presents that identifier:
+
+```http
+POST /api/v1/governed-operations/consequential
+X-ReferenceApplication-Acknowledgment: <acknowledgment-id>
+```
+
+Before governance runs, the host verifies that the acknowledgment is accepted, unexpired, unused, belongs to the same
+actor, and names the selected endpoint's operation. The consequential decision policy then permits the already-
+acknowledged evaluation to continue through the ordinary capability validator. The endpoint consumes the
+acknowledgment immediately before executing. A second retry is denied as
+`referenceapplication.acknowledgment.replayed`.
+
+The accepted retry's decision ledger record carries both `HandshakeId` and `AcknowledgmentId`. They are part of
+AsiBackbone's canonical ledger payload, so the existing record hash covers the link. The governance explorer displays
+both identifiers on the decision timeline.
+
+The host-owned stable failures include `referenceapplication.acknowledgment.expired`,
+`referenceapplication.acknowledgment.replayed`, and `referenceapplication.acknowledgment.operation_mismatch`.
+AsiBackbone's challenge service retains its actor/code failures, including
+`acknowledgment.challenge.actor_mismatch` and `acknowledgment.challenge.code_mismatch`.
 
 The effective order is:
 
@@ -120,8 +144,10 @@ an acknowledgment-required decision. The upgrade is tracked in
 - the anonymous read-only description passes without governance metadata;
 - an administrator is allowed and a non-administrator receives safe Problem Details;
 - an actor with the exact normalized capability claim is allowed and an actor without it is denied;
-- an administrator with the capability receives an HTTP 428 acknowledgment challenge and the consequential action
-  body does not execute;
+- an administrator with the capability receives an HTTP 428 challenge, accepts it, retries, and executes;
+- the accepted retry records the handshake and acknowledgment identifiers under the decision record hash;
+- a foreign actor, wrong acknowledgment code, expired challenge, and replayed acknowledgment are denied with stable
+  reason codes;
 - an actor with the capability but without an administrator role is denied on the consequential endpoint;
 - an administrator without the capability is denied on the consequential endpoint with safe Problem Details rather than
   offered an acknowledgment challenge, as described in

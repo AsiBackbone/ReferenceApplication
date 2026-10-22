@@ -80,11 +80,29 @@ public sealed class GovernedOperationsController : ControllerBase
     [GovernancePolicy(typeof(ConsequentialActionPolicy))]
     [RequireCapabilityGrant(ReferenceApplicationGovernancePolicySet.ConsequentialExecutionScope)]
     [RequireAcknowledgment]
-    public ActionResult<GovernedOperationResponse> ExecuteConsequentialAction()
+    public async Task<ActionResult<GovernedOperationResponse>> ExecuteConsequentialAction(
+        [FromServices] ApplicationAcknowledgmentWorkflow acknowledgmentWorkflow,
+        CancellationToken cancellationToken)
     {
-        return Ok(new GovernedOperationResponse(
+        IApplicationAcknowledgmentFeature feature = HttpContext.Features.Get<IApplicationAcknowledgmentFeature>()
+            ?? throw new InvalidOperationException(
+                "The consequential action reached execution without a validated acknowledgment.");
+
+        ApplicationAcknowledgmentConsumptionResult consumption = await acknowledgmentWorkflow
+            .ConsumeAsync(feature, cancellationToken)
+            .ConfigureAwait(false);
+        return !consumption.Succeeded
+            ? (ActionResult<GovernedOperationResponse>)Problem(
+                title: "Acknowledgment denied.",
+                detail: consumption.Message,
+                statusCode: StatusCodes.Status403Forbidden,
+                extensions: new Dictionary<string, object?>
+                {
+                    ["reasonCodes"] = new[] { consumption.ReasonCode }
+                })
+            : (ActionResult<GovernedOperationResponse>)Ok(new GovernedOperationResponse(
             Operation: "consequential-action",
-            Message: "Consequential action executed."));
+            Message: "Consequential action executed after acknowledgment."));
     }
 
     /// <summary>

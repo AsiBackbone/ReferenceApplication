@@ -2,12 +2,18 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using AsiBackbone.Core.Audit;
+using AsiBackbone.EntityFrameworkCore.Audit;
+using AsiBackbone.EntityFrameworkCore.Persistence;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
+using ReferenceApplication.Infrastructure.Data;
 using ReferenceApplication.Web.Authentication.Claims;
 using ReferenceApplication.Web.Governance;
 using ReferenceApplication.Web.Tests.Extensions;
@@ -147,6 +153,132 @@ public sealed class GovernedOperationsEndpointTests : IDisposable
     }
 
     /// <summary>
+    /// Verifies the complete challenge, acknowledgment, retry, execution, and hashed evidence flow.
+    /// </summary>
+    [Fact]
+    public async Task ConsequentialAction_AcknowledgedRetry_ExecutesAndRecordsAcknowledgment()
+    {
+        using WebApplicationFactory<Program> factory = await CreateFactoryWithTestAuthenticationAsync();
+        using HttpClient client = factory.CreateHttpsClient();
+
+        using HttpResponseMessage challenge = await PostAsync(
+            client,
+            "consequential",
+            role: "administrator",
+            permission: ReferenceApplicationGovernancePolicySet.ConsequentialExecutionScope);
+        (string handshakeId, string acknowledgmentCode) = await ReadChallengeAsync(challenge);
+
+        using HttpResponseMessage accepted = await PostAcknowledgmentAsync(
+            client,
+            handshakeId,
+            acknowledgmentCode,
+            user: "test-user",
+            role: "administrator",
+            permission: ReferenceApplicationGovernancePolicySet.ConsequentialExecutionScope);
+        Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+        using var acceptedDocument = JsonDocument.Parse(
+            await accepted.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        string acknowledgmentId = acceptedDocument.RootElement.GetProperty("acknowledgmentId").GetString()!;
+
+        using HttpResponseMessage retry = await PostAsync(
+            client,
+            "consequential",
+            role: "administrator",
+            permission: ReferenceApplicationGovernancePolicySet.ConsequentialExecutionScope,
+            acknowledgmentId: acknowledgmentId);
+
+        Assert.Equal(HttpStatusCode.OK, retry.StatusCode);
+        Assert.Contains(
+            "Consequential action executed after acknowledgment.",
+            await retry.Content.ReadAsStringAsync(TestContext.Current.CancellationToken),
+            StringComparison.Ordinal);
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.Equal(1, await dbContext.Set<AcknowledgmentRequestEntity>().CountAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(1, await dbContext.Set<AcknowledgmentResponseEntity>().CountAsync(TestContext.Current.CancellationToken));
+
+        AuditLedgerRecordEntity acknowledgedDecision = await dbContext.AsiBackboneAuditLedgerRecords
+            .SingleAsync(
+                decision => decision.AcknowledgmentId == acknowledgmentId,
+                TestContext.Current.CancellationToken);
+        Assert.Equal(handshakeId, acknowledgedDecision.HandshakeId);
+        AuditLedgerRecord record = Assert.IsType<AuditLedgerRecord>(
+            await new EfCoreAuditLedgerStore(dbContext).FindByRecordIdAsync(
+                acknowledgedDecision.RecordId,
+                TestContext.Current.CancellationToken));
+        Assert.Equal(acknowledgmentId, record.AcknowledgmentId);
+        Assert.Equal(record.RecordHash, AuditLedgerRecordHashing.ComputeHash(record).HashValue);
+    }
+
+    /// <summary>
+    /// Verifies actor binding, required-code matching, expiration, and one-time retry behavior.
+    /// </summary>
+    [Fact]
+    public async Task ConsequentialAcknowledgment_InvalidUses_AreDeniedWithStableReasons()
+    {
+        var clock = new MutableTimeProvider(DateTimeOffset.UtcNow);
+        using WebApplicationFactory<Program> factory = await CreateFactoryWithTestAuthenticationAsync(clock);
+        using HttpClient client = factory.CreateHttpsClient();
+
+        // Foreign actor.
+        using HttpResponseMessage foreignChallenge = await PostAsync(
+            client, "consequential", role: "administrator",
+            permission: ReferenceApplicationGovernancePolicySet.ConsequentialExecutionScope);
+        (string foreignHandshake, string foreignCode) = await ReadChallengeAsync(foreignChallenge);
+        using HttpResponseMessage foreign = await PostAcknowledgmentAsync(
+            client, foreignHandshake, foreignCode, "another-user", "administrator",
+            ReferenceApplicationGovernancePolicySet.ConsequentialExecutionScope);
+        await AssertAcknowledgmentReasonAsync(foreign, ApplicationAcknowledgmentReasonCodes.ActorMismatch);
+
+        // Wrong acknowledgment code.
+        using HttpResponseMessage codeChallenge = await PostAsync(
+            client, "consequential", role: "administrator",
+            permission: ReferenceApplicationGovernancePolicySet.ConsequentialExecutionScope);
+        (string codeHandshake, _) = await ReadChallengeAsync(codeChallenge);
+        using HttpResponseMessage wrongCode = await PostAcknowledgmentAsync(
+            client, codeHandshake, "wrong-code", "test-user", "administrator",
+            ReferenceApplicationGovernancePolicySet.ConsequentialExecutionScope);
+        await AssertAcknowledgmentReasonAsync(wrongCode, "acknowledgment.challenge.code_mismatch");
+
+        // Expired challenge.
+        using HttpResponseMessage expiryChallenge = await PostAsync(
+            client, "consequential", role: "administrator",
+            permission: ReferenceApplicationGovernancePolicySet.ConsequentialExecutionScope);
+        (string expiryHandshake, string expiryCode) = await ReadChallengeAsync(expiryChallenge);
+        clock.Advance(TimeSpan.FromMinutes(6));
+        using HttpResponseMessage expired = await PostAcknowledgmentAsync(
+            client, expiryHandshake, expiryCode, "test-user", "administrator",
+            ReferenceApplicationGovernancePolicySet.ConsequentialExecutionScope);
+        await AssertAcknowledgmentReasonAsync(expired, ApplicationAcknowledgmentReasonCodes.Expired);
+
+        // Fresh accepted acknowledgment is consumed exactly once.
+        clock.Advance(TimeSpan.FromMinutes(-6));
+        using HttpResponseMessage replayChallenge = await PostAsync(
+            client, "consequential", role: "administrator",
+            permission: ReferenceApplicationGovernancePolicySet.ConsequentialExecutionScope);
+        (string replayHandshake, string replayCode) = await ReadChallengeAsync(replayChallenge);
+        using HttpResponseMessage replayAccepted = await PostAcknowledgmentAsync(
+            client, replayHandshake, replayCode, "test-user", "administrator",
+            ReferenceApplicationGovernancePolicySet.ConsequentialExecutionScope);
+        using var replayDocument = JsonDocument.Parse(
+            await replayAccepted.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        string replayAcknowledgmentId = replayDocument.RootElement.GetProperty("acknowledgmentId").GetString()!;
+
+        using HttpResponseMessage firstRetry = await PostAsync(
+            client, "consequential", role: "administrator",
+            permission: ReferenceApplicationGovernancePolicySet.ConsequentialExecutionScope,
+            acknowledgmentId: replayAcknowledgmentId);
+        Assert.Equal(HttpStatusCode.OK, firstRetry.StatusCode);
+
+        using HttpResponseMessage replayed = await PostAsync(
+            client, "consequential", role: "administrator",
+            permission: ReferenceApplicationGovernancePolicySet.ConsequentialExecutionScope,
+            acknowledgmentId: replayAcknowledgmentId);
+        await AssertAcknowledgmentReasonAsync(replayed, ApplicationAcknowledgmentReasonCodes.Replayed);
+    }
+
+    /// <summary>
     /// Verifies that an administrator without the capability grant is denied on the consequential endpoint rather
     /// than offered an acknowledgment challenge: acknowledgment must never stand in for a missing grant.
     /// </summary>
@@ -238,6 +370,65 @@ public sealed class GovernedOperationsEndpointTests : IDisposable
             StringComparison.Ordinal);
     }
 
+    private static async Task<(string HandshakeId, string AcknowledgmentCode)> ReadChallengeAsync(
+        HttpResponseMessage response)
+    {
+        Assert.Equal(HttpStatusCode.PreconditionRequired, response.StatusCode);
+        using var document = JsonDocument.Parse(
+            await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        return (
+            document.RootElement.GetProperty("handshakeId").GetString()!,
+            document.RootElement.GetProperty("requiredAcknowledgmentCode").GetString()!);
+    }
+
+    private static async Task<HttpResponseMessage> PostAcknowledgmentAsync(
+        HttpClient client,
+        string handshakeId,
+        string acknowledgmentCode,
+        string user,
+        string? role,
+        string? permission)
+    {
+        using HttpRequestMessage tokenRequest = CreateRequest(
+            HttpMethod.Get,
+            "/test/authentication/antiforgery-token",
+            user,
+            role,
+            permission);
+        using HttpResponseMessage tokenResponse = await client.SendAsync(
+            tokenRequest,
+            TestContext.Current.CancellationToken);
+        tokenResponse.EnsureSuccessStatusCode();
+
+        Dictionary<string, string> form = new(StringComparer.Ordinal)
+        {
+            [_antiforgeryFormFieldName] = await tokenResponse.Content.ReadAsStringAsync(
+                TestContext.Current.CancellationToken),
+            ["HandshakeId"] = handshakeId,
+            ["AcknowledgmentCode"] = acknowledgmentCode,
+            ["Acknowledged"] = "true"
+        };
+
+        using HttpRequestMessage request = CreateRequest(
+            HttpMethod.Post,
+            "/api/v1/acknowledgments",
+            user,
+            role,
+            permission);
+        request.Content = new FormUrlEncodedContent(form);
+        return await client.SendAsync(request, TestContext.Current.CancellationToken);
+    }
+
+    private static async Task AssertAcknowledgmentReasonAsync(HttpResponseMessage response, string expectedReasonCode)
+    {
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        using var document = JsonDocument.Parse(
+            await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.Contains(
+            expectedReasonCode,
+            document.RootElement.GetProperty("reasonCodes").EnumerateArray().Select(item => item.GetString()));
+    }
+
     private static async Task AssertGovernanceProblemAsync(HttpResponseMessage response)
     {
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -262,7 +453,8 @@ public sealed class GovernedOperationsEndpointTests : IDisposable
         string user = "test-user",
         string? role = null,
         string? permission = null,
-        bool includeAntiforgeryToken = true)
+        bool includeAntiforgeryToken = true,
+        string? acknowledgmentId = null)
     {
         Dictionary<string, string> form = new(StringComparer.Ordinal);
 
@@ -291,6 +483,11 @@ public sealed class GovernedOperationsEndpointTests : IDisposable
             permission);
         request.Headers.Accept.ParseAdd("application/problem+json");
         request.Content = new FormUrlEncodedContent(form);
+
+        if (acknowledgmentId is not null)
+        {
+            request.Headers.Add(ApplicationAcknowledgmentOptions.DefaultHeaderName, acknowledgmentId);
+        }
 
         return await client.SendAsync(request, TestContext.Current.CancellationToken);
     }
@@ -324,7 +521,7 @@ public sealed class GovernedOperationsEndpointTests : IDisposable
         _database.Dispose();
     }
 
-    private Task<WebApplicationFactory<Program>> CreateFactoryWithTestAuthenticationAsync()
+    private Task<WebApplicationFactory<Program>> CreateFactoryWithTestAuthenticationAsync(TimeProvider? timeProvider = null)
     {
         return _database.ApplyAsync(ApplicationWebApplicationFactory.CreateAllowingAnonymousAccess(new Dictionary<string, string?>
         {
@@ -338,11 +535,35 @@ public sealed class GovernedOperationsEndpointTests : IDisposable
             ["ReferenceApplication:Authorization:PermissionClaimType"] = ApplicationClaimTypes.Permission,
             ["ReferenceApplication:Authorization:AdministratorRoles:0"] = "administrator"
         })
-        .WithWebHostBuilder(builder => builder.ConfigureServices(services => services
-            .AddAuthentication()
-            .AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>(
-                _testAuthenticationScheme,
-                _ => { }))));
+        .WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+        {
+            if (timeProvider is not null)
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton(timeProvider);
+            }
+
+            services
+                .AddAuthentication()
+                .AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>(
+                    _testAuthenticationScheme,
+                    _ => { });
+        })));
+    }
+
+    private sealed class MutableTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        private DateTimeOffset _utcNow = utcNow;
+
+        public override DateTimeOffset GetUtcNow()
+        {
+            return _utcNow;
+        }
+
+        public void Advance(TimeSpan value)
+        {
+            _utcNow = _utcNow.Add(value);
+        }
     }
 
     private sealed class HeaderAuthenticationHandler(

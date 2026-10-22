@@ -1,6 +1,7 @@
 using AsiBackbone.AspNetCore.Endpoints;
 using ReferenceApplication.Web.Authentication.Extensions;
 using ReferenceApplication.Web.ErrorHandling;
+using ReferenceApplication.Web.Governance;
 
 namespace ReferenceApplication.Web.Extensions;
 
@@ -61,10 +62,14 @@ public static class PipelineExtensions
         // request. Nothing is added outside an active Development host.
         app.UseApplicationFailureScenarios();
 
-        // 10. AsiBackbone reads the selected endpoint and authenticated actor before endpoint execution.
+        // 10. A host-owned acknowledgment retry is validated against its persisted challenge before governance runs.
+        // A request without the acknowledgment header passes through unchanged.
+        app.UseMiddleware<ApplicationAcknowledgmentMiddleware>();
+
+        // 11. AsiBackbone reads the selected endpoint and authenticated actor before endpoint execution.
         app.UseAsiBackboneEndpointGovernance(requireEndpointRoutingRegistered: true);
 
-        // 11. Endpoint mapping.
+        // 12. Endpoint mapping.
         app.MapControllers();
         app.MapRazorPages();
         app.MapApplicationDemoIdentity();

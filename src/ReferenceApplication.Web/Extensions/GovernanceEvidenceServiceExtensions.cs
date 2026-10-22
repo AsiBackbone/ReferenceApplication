@@ -1,3 +1,4 @@
+using AsiBackbone.AspNetCore.Acknowledgments;
 using AsiBackbone.Core.Audit;
 using AsiBackbone.DependencyInjection;
 using AsiBackbone.EntityFrameworkCore;
@@ -63,6 +64,18 @@ public static class GovernanceEvidenceServiceExtensions
         services.AddSingleton<IGovernanceEvidenceNotifier, InMemoryGovernanceEvidenceNotifier>();
         services.AddSingleton<GovernanceEvidenceNotificationPublisher>();
         services.TryAddSingleton<GovernanceTelemetryProjection>();
+
+        services.AddOptions<ApplicationAcknowledgmentOptions>()
+            .BindConfiguration(ApplicationAcknowledgmentOptions.SectionName)
+            .Validate(
+                options => options.Lifetime > TimeSpan.Zero && options.Lifetime <= TimeSpan.FromDays(1),
+                "ReferenceApplication:Acknowledgment:Lifetime must be greater than zero and no more than one day.")
+            .Validate(
+                options => !string.IsNullOrWhiteSpace(options.HeaderName) && options.HeaderName.Length <= 128,
+                "ReferenceApplication:Acknowledgment:HeaderName must contain a header name of at most 128 characters.")
+            .ValidateOnStart();
+        services.AddScoped<ApplicationAcknowledgmentWorkflow>();
+        services.Replace(ServiceDescriptor.Scoped<IAcknowledgmentChallengeService, ApplicationAcknowledgmentChallengeService>());
 
         services.AddScoped<IApplicationAuditCompletionPublisher, AsiBackboneAuditCompletionPublisher>();
         services.AddApplicationAuditCompletionOutbox(options =>
