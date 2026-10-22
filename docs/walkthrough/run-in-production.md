@@ -36,7 +36,7 @@ registered, it logs a warning naming each one instead.
 | Sign-in | A real external identity provider. No provider is configured by default, so without one nobody can sign in. See the provider settings under `ReferenceApplication:Authentication:Providers`. | OpenID Connect. Required: `REFERENCEAPPLICATION_OIDC_AUTHORITY`, `REFERENCEAPPLICATION_OIDC_CLIENTID`, `REFERENCEAPPLICATION_OIDC_CLIENTSECRET` |
 | Secrets | Inject secrets from the platform's secret store as environment variables or files. Never put them in `appsettings` or source. | Every secret is required from the environment, and the certificate is a Compose file secret. Compose refuses to start when one is missing. |
 | Data Protection | `ReferenceApplication:DataProtection:KeyRingPath`, an absolute path on durable storage shared by every replica. `KeyEncryptionCertificatePath` and its password, so keys are encrypted at rest. Every replica uses the same `ApplicationName`. | Key ring on the `referenceapplication-data-protection-keys` volume. Certificate injected at `/run/secrets/dataprotection-certificate`. |
-| Database and migrations | `ConnectionStrings:ApplicationDatabase`. Apply migrations deliberately before the application starts, against the same database; the application never migrates at startup. SQLite is the supported provider ([#74](https://github.com/AsiBackbone/ReferenceApplication/issues/74)). | The one-shot `referenceapplication.migrations` service runs the EF Core migration bundle with the same configuration, then the web service starts |
+| Database and migrations | `ConnectionStrings:ApplicationDatabase`. Apply migrations deliberately before the application starts, against the same database; the application never migrates at startup. SQLite is the only supported provider; any other fails at startup ([Supported database provider](local-database-setup.md#supported-database-provider)). | The one-shot `referenceapplication.migrations` service runs the EF Core migration bundle with the same configuration, then the web service starts |
 | Health probes | `/health/live` for liveness, `/health/ready` for readiness. All health endpoints are anonymous, and the host logs a warning saying so in Production. Restrict their external reachability at the ingress, firewall, or service mesh. | Published on the loopback interface only |
 | Logs | Serilog writes to standard output for the platform to collect, and to rolling files under `/app/Logs`. Keep `IncludeQueryString`, `IncludeUserName`, and `IncludeRemoteIpAddress` off unless a reviewed need requires them. | Console output; files on the `referenceapplication-logs` volume |
 | Telemetry | `ReferenceApplication:OpenTelemetry:Otlp:Enabled` and `Endpoint` to export traces and metrics over OTLP | Optional: `REFERENCEAPPLICATION_OTLP_ENABLED`, `REFERENCEAPPLICATION_OTLP_ENDPOINT` |
@@ -102,7 +102,8 @@ than on HTTP status codes.
   says what each one must provide.
 - **A real identity provider or key service.** Both are the deployment's own. The reference configuration requires them
   and never ships a value for them.
-- **Database providers other than SQLite**, until [#74](https://github.com/AsiBackbone/ReferenceApplication/issues/74)
-  decides the support contract.
+- **Database providers other than SQLite.** SQLite is the only supported provider, and the application refuses any
+  other at startup. [Supported database provider](local-database-setup.md#supported-database-provider) lists what an
+  adopter must add to run on another one.
 - **Upgrades between releases.** [#73](https://github.com/AsiBackbone/ReferenceApplication/issues/73) covers
   release-to-release database upgrades and recovery.

@@ -15,8 +15,9 @@ public abstract class DataEntity
     /// Gets or sets the application-managed optimistic concurrency token used to detect conflicting updates.
     /// </summary>
     /// <remarks>
-    /// This token is application-managed so the default template model remains portable across SQLite and SQL Server.
-    /// SQL Server-only applications can replace this pattern with a provider-native rowversion column when appropriate.
+    /// This token is application-managed so the model stays provider-neutral. SQLite is the only provider this reference
+    /// application supports; an adopter that adds its own SQL Server provider and migration history can replace this
+    /// pattern with a provider-native rowversion column when appropriate.
     /// </remarks>
     public string ConcurrencyStamp { get; set; } = NewConcurrencyStamp();
 

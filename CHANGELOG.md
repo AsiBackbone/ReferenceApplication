@@ -63,6 +63,21 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
     telemetry, evidence notifications, and capability-token signing. It also says what the reference configuration
     deliberately does not cover. The README links to it.
 
+### Changed
+
+* SQLite is now the only supported database provider (#74).
+  * The SQL Server provider is no longer offered. `ReferenceApplication:DataAccess:Provider` accepts `Sqlite` or
+    `None`/`Disabled`; any other value fails during service registration instead of when the first `DbContext` is
+    resolved. `SqlServer` fails with an explicit message saying it is not supported and what adopting it requires.
+  * The `Microsoft.EntityFrameworkCore.SqlServer` package reference, `DataAccessOptions.SqlServerProvider`, and the
+    `ApplicationSqlServer` connection strings in `appsettings.json` and `appsettings.Development.json` are removed, along
+    with the startup warning about a missing SQL Server migration history (event 19102).
+  * `Microsoft.Bcl.AsyncInterfaces` 8.0.0 and `System.Configuration.ConfigurationManager` 9.0.11 are pinned centrally.
+    The SQL Server provider's dependency graph had lifted them to those versions; without a pin, NuGet would now
+    resolve the older minimums their remaining dependents declare.
+  * The supplemental page *Create the Development Database* states the support policy and what an adopter must add
+    to use another provider. The README, *Run outside Development*, and *Upgrade between releases* link to it.
+
 ### Fixed
 
 * Reconciliation no longer reports the audit-completion outbox's own saves as missing completions (#87).

@@ -20,7 +20,8 @@ none of that, so upgrades are tested from a real earlier release.
 | `v0.1.0-alpha.11` or later | Any later release | Yes. Tested on every pull request. |
 | Earlier than `v0.1.0-alpha.11` | Any release | No. Those pre-releases predate the tested boundary; start from a new database. |
 
-The supported provider is SQLite ([#74](https://github.com/AsiBackbone/ReferenceApplication/issues/74) decides any other).
+Upgrades are supported and tested on SQLite, the only supported provider (see
+[Supported database provider](local-database-setup.md#supported-database-provider)).
 The boundary may move forward when a release is declared stable; it never moves silently.
 
 ## How upgrades are tested

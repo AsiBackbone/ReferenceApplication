@@ -26,6 +26,28 @@ the normal `ApplicationDatabase` described on this page.
 Until the migrations are applied, the SQLite file does not exist and the database readiness check reports the application
 as unavailable. Running the web host alone does not create the file.
 
+## Supported database provider
+
+SQLite is the only database provider this reference application supports. The checked-in migration history, the
+`migrations` migration bundle built by the Dockerfile, the release-to-release upgrade tests, and the persistence and
+governance tests all target SQLite, and CI applies the schema to SQLite only.
+
+`ReferenceApplication:DataAccess:Provider` accepts `Sqlite` (the default) or `None` (alias `Disabled`) to turn data
+access off. Any other value stops the application during service registration. `SqlServer` gets its own message saying
+that SQL Server is not supported here and what adopting it requires. The SQL Server EF Core package is not referenced,
+and no SQL Server connection string ships in `appsettings.json` or `appsettings.Development.json`.
+
+An adopter that needs SQL Server, or another relational provider, owns that work in its own host:
+
+1. Reference the provider package and register it in `InfrastructureDataAccessServiceExtensions`.
+2. Generate and review a migration history for that provider. The SQLite history in this repository does not apply to
+   another provider.
+3. Build a migration bundle from that history rather than the SQLite one.
+4. Run the persistence, governance, and upgrade tests against a real instance of that provider in CI.
+
+The entity model is written to stay provider-neutral (for example, `DataEntity.ConcurrencyStamp` is
+application-managed rather than a SQL Server `rowversion`), but no provider other than SQLite is tested here.
+
 ## Apply the inherited migrations
 
 The repository already contains the NCAT migration history under
