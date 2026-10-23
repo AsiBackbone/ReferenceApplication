@@ -13,6 +13,9 @@ procedure regenerates the old and new template versions with identical inputs, v
 protected `ncat-baseline` branch still matches the old scaffold exactly, stages only the upstream
 difference onto that branch, and then carries the same delta into the integrated application.
 
+An automated [reproducibility check](#verify-reproducibility) proves, before and after each refresh, that
+`ncat-baseline` is exactly what its recorded NCAT release generates.
+
 The commands below use the `2.11.4` to `2.11.5` refresh as a concrete example. Every version
 number is held in two variables, so a later upgrade only changes those two lines. The application
 name and template options must stay identical to those recorded in
@@ -49,6 +52,71 @@ Mirroring each scaffold into the baseline worktree and staging it avoids the pro
 Git normalizes every file through the repository's own `.gitattributes`, deletions and additions
 are detected automatically, and no path-prefix (`-p`) handling is involved.
 
+## Verify reproducibility
+
+`scripts/Test-NcatBaselineReproducibility.ps1` turns the baseline's provenance into evidence a reviewer can rerun.
+The *NCAT baseline reproducibility* workflow runs it weekly, on pull requests into `main` that change the check, and
+on demand.
+
+The baseline records its inputs in two places, neither of which is a file on `ncat-baseline` itself:
+
+- **The release.** The annotated `ncat-v<version>` tag on the baseline commit names the NCAT release that generated it.
+- **The generation inputs.** `eng/ncat-baseline.json` on `main` records the template package, its short name, the
+  application name, and every template option. The options are passed explicitly, with the values the default
+  scaffold selects, so a later change to a template default cannot silently change the inputs.
+
+The check then:
+
+1. resolves the baseline commit, `origin/ncat-baseline` by default, and reads the NCAT version from its tag;
+2. installs exactly that `NetCoreApplicationTemplate` release from NuGet.org into an isolated, temporary template
+   hive, leaving the templates installed on the machine untouched;
+3. generates the scaffold twice and fails if the two generations differ in any byte;
+4. checks that the generated `Directory.Build.props` records the same NCAT version;
+5. mirrors the scaffold onto a detached worktree of the baseline commit and stages it, so Git normalizes line endings
+   through the baseline's own `.gitattributes`, exactly as the refresh does; and
+6. fails, printing the staged diff, when any file is added, removed, or changed.
+
+Nothing generated is normalized or ignored by the check itself, and none needs to be: NCAT generation has been
+deterministic, and step 3 proves it on every run. Two kinds of difference are reported but are not failures, because
+the baseline's own files define them as non-material:
+
+- **Line endings only.** A file whose bytes differ only in line endings that the baseline's `.gitattributes`
+  normalizes. NCAT's `.gitattributes` checks many file types out with CRLF but stores them with LF.
+- **Ignored.** A generated file excluded by the baseline's `.gitignore`, which the raw scaffold commit could never have
+  contained.
+
+If NCAT ever generates nondeterministic content, the check fails at step 3 and names the files. Handle that by adding a
+narrow, documented rule for those specific files to the script and to this section, never by ignoring files broadly.
+
+Run it from the root of a `main` checkout with PowerShell 7.2 or later, after fetching the baseline and tags:
+
+```powershell
+git fetch origin ncat-baseline --tags
+./scripts/Test-NcatBaselineReproducibility.ps1
+```
+
+A passing run ends with evidence like this:
+
+```text
+NCAT baseline reproducibility
+  Ref:               origin/ncat-baseline
+  Commit:            <baseline commit SHA>
+  NCAT release:      NetCoreApplicationTemplate@2.11.5 (tag ncat-v2.11.5)
+  Generation:        dotnet new netcoreapp-template --name ReferenceApplication --authProvider cookie --dbProvider sqlite --skipRestore true
+  Generated files:   <count>; two generations byte-identical
+  Line endings only: <count> file(s), normalized by the baseline's .gitattributes
+  Ignored:           <count> generated file(s) excluded by the baseline's .gitignore
+  Material changes:  0
+Result: origin/ncat-baseline at <short SHA> is reproducible from NetCoreApplicationTemplate@2.11.5.
+```
+
+In the workflow, the same evidence is written to the run's job summary. `-SelfTest` exercises the tag, determinism,
+and comparison logic against a synthetic repository without the .NET SDK; the workflow runs it first.
+
+A failure means the baseline is not what the recorded release generates. Typical causes are a manual edit to
+`ncat-baseline`, a tag on the wrong commit, or a scaffold generated with other options. Do not fix it by editing
+`ncat-baseline` by hand: restore it to the regenerated output through a pull request, or correct the tag.
+
 ## Prerequisites
 
 - A clean clone of ReferenceApplication with `origin` fetched, including tags.
@@ -56,6 +124,7 @@ are detected automatically, and no path-prefix (`-p`) handling is involved.
 - Windows PowerShell 5.1 or PowerShell 7. The commands use `robocopy`, which ships with Windows.
 - The current baseline commit is tagged `ncat-v<version>`. The initial scaffold is tagged
   `ncat-v2.11.4`.
+- PowerShell 7.2 or later for the [reproducibility check](#verify-reproducibility).
 
 The install commands change the locally installed version of the template package; the
 procedure leaves the newer version installed.
@@ -115,8 +184,10 @@ If the two option lists match, continue.
 If the new release adds an option or changes a default value, the default scaffold for `$New` is
 no longer generated with the same inputs as the one for `$Old`. Decide which value
 ReferenceApplication should use, then regenerate both `old` and `new` passing that option
-explicitly, so the delta contains only the release change. Add the option to Step 1 so later
-refreshes generate with the same inputs.
+explicitly, so the delta contains only the release change. Add the option to Step 1 and to
+`options` in `eng/ncat-baseline.json` so later refreshes and the reproducibility check generate
+with the same inputs. Until that `main` change merges, pass the updated manifest to the check
+with `-ManifestPath`.
 
 ### Check that generation is deterministic
 
@@ -130,11 +201,15 @@ as noise in every refresh. Stop and decide how to handle those files before cont
 
 ## 2. Prepare the baseline worktree
 
-From the local ReferenceApplication repository root, confirm that the remote baseline is still
-exactly the tagged `$Old` scaffold, then create a worktree for the refresh:
+From the local ReferenceApplication repository root, on an up-to-date `main`, record the root,
+confirm that the remote baseline is still exactly the tagged `$Old` scaffold and reproducible from
+it, then create a worktree for the refresh:
 
 ```powershell
 git fetch origin --tags
+$RepositoryRoot = (Get-Location).Path
+
+./scripts/Test-NcatBaselineReproducibility.ps1
 
 $tagCommit = git rev-list -n 1 "ncat-v$Old"
 $baselineCommit = git rev-list -n 1 origin/ncat-baseline
@@ -152,7 +227,9 @@ Set-Location "..\ReferenceApplication-ncat-$New"
 ```
 
 The commands contain no placeholders: `$Old`, `$New`, and `$BaselineBranch` come from step 1, and
-`git rev-list -n 1` resolves the annotated tag to the commit it points at.
+`git rev-list -n 1` resolves the annotated tag to the commit it points at. The reproducibility check
+reads `$Old` from the tag itself; if it fails, stop, because the delta would otherwise build on a
+baseline that its release does not reproduce.
 
 Define the helper that replaces the worktree contents with a scaffold and stages the result.
 `robocopy /MIR` copies new and changed files and deletes files the scaffold no longer contains,
@@ -242,7 +319,18 @@ git commit -m "chore: refresh NCAT baseline to $New"
 git push -u origin $BaselineBranch
 ```
 
-Open a pull request targeting `ncat-baseline`, not `main`.
+The pushed branch is not tagged yet, so verify it as a candidate for `$New`. The check runs from the
+`main` checkout, because the baseline worktree contains only generated files:
+
+```powershell
+& "$RepositoryRoot\scripts\Test-NcatBaselineReproducibility.ps1" -Ref "origin/$BaselineBranch" -TemplateVersion $New
+```
+
+Alternatively, run the *NCAT baseline reproducibility* workflow manually with `ref` set to
+`origin/<branch>` and `template_version` set to the new version.
+
+Open a pull request targeting `ncat-baseline`, not `main`. Include the check's evidence, or a link
+to the workflow run, in the pull request description.
 
 ## 4. Tag the new baseline
 
@@ -262,6 +350,16 @@ git diff --stat "ncat-v$Old" "ncat-v$New"
 
 Confirm that the `log` line is the squash commit from the pull request before tagging, and that the
 final `diff --stat` matches the delta reviewed in step 3.
+
+Then verify the tagged baseline, which now records `$New` through its tag. Run the check again, from
+the repository root:
+
+```powershell
+./scripts/Test-NcatBaselineReproducibility.ps1
+```
+
+Its evidence must name `ncat-v$New` and report no material changes. The scheduled workflow verifies the
+same thing every week from then on.
 
 ## 5. Overlay it onto the integrated application
 

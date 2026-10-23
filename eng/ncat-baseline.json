@@ -1,0 +1,12 @@
+{
+  "templatePackage": "NetCoreApplicationTemplate",
+  "templateShortName": "netcoreapp-template",
+  "name": "ReferenceApplication",
+  "options": {
+    "authProvider": "cookie",
+    "dbProvider": "sqlite",
+    "skipRestore": "true"
+  },
+  "baselineRef": "origin/ncat-baseline",
+  "tagPrefix": "ncat-v"
+}
