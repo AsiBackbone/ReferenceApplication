@@ -47,6 +47,9 @@ The desired branch rulesets for `main` and `ncat-baseline` are versioned under `
 
 The release version is set by `VersionPrefix` and `VersionSuffix` in `Directory.Build.props` and matches the tag, for example `0.1.0` and `alpha.1` for `v0.1.0-alpha.1`. Completing the walkthrough does not by itself declare a stable public contract; releases remain `0.x` pre-releases until the repository's release-readiness criteria are met. The versioned [Stable Release Policy v1](docs/stable-release-policy-v1.md) defines the compatibility contract, supported environment matrix, graduation gates, exception process, release-candidate soak, release procedure, and mechanical validation required before the first stable release. The release version is independent of the NCAT version, which the `ncat-v<version>` tags record.
 
+Which release lines receive security fixes, and where to report a suspected vulnerability, is defined in the
+repository [Security Policy](SECURITY.md).
+
 Run `./scripts/Validate-StableRelease.ps1` during prerelease development to validate release metadata. The final stable tagged commit must pass `./scripts/Validate-StableRelease.ps1 -RequireStable -Tag vX.Y.Z` in addition to the hosted evidence required by the policy.
 
 The `ncat-baseline` branch is updated separately through a pull request containing only the raw scaffold generated from the selected NCAT version. Bringing a new baseline into the Reference Application is a second, deliberate integration change targeting `main`.
@@ -212,13 +215,17 @@ Data Protection key ring before every upgrade, and roll back only by restoring t
 
 The NCAT baseline behavior is documented authoritatively on the [NCAT documentation site](https://asibackbone.github.io/NetCoreApplicationTemplate/). The points below matter most when running this host.
 
+Report suspected vulnerabilities privately, as the [Security Policy](SECURITY.md) describes, not in a public Issue. It
+also states which findings belong to this repository rather than AsiBackbone or NCAT, which responsibilities stay with
+the deployment, and what this reference host does not guarantee.
+
 ### Endpoint access
 
 Every routed endpoint requires an authenticated user unless it is deliberately marked anonymous. The intentionally anonymous endpoints are:
 
 - `GET /Account/Login` and `GET /External/Challenge`, to enter the authentication flow;
 - `GET /Account/AccessDenied` and `GET /Home/Error/{statusCode?}`, so failure handling cannot redirect recursively; and
-- `/health`, `/health/live`, and `/health/ready`, for infrastructure probes;
+- `/health`, `/health/live`, `/health/ready`, and `/health/audit-integrity`, for infrastructure probes and audit monitoring;
 - `GET /` is explicitly anonymous as the public project entry point; the explorer and its governed operations retain
   their documented authentication and authorization boundaries; and
 - `GET /api/v1/governed-operations` is the intentionally ungoverned, read-only description of the Step 5 sample.

@@ -203,6 +203,10 @@ A green run from another commit does not satisfy this gate.
 
 ### Security gate
 
+The repository [Security Policy](https://github.com/AsiBackbone/ReferenceApplication/blob/main/SECURITY.md) defines how
+vulnerabilities are reported, which repository owns a finding, and which release lines receive fixes. It must be current
+for the release before this gate is evaluated.
+
 There must be no unresolved Critical or High security finding applicable to the release. Check GitHub code scanning,
 Dependabot, secret scanning, dependency review, OWASP output, and current OpenSSF Scorecard results.
 
@@ -220,6 +224,8 @@ explicit maintainer decision in the release pull request. An expired exception b
 - [ ] `CHANGELOG.md` contains a heading for the exact stable version and release date.
 - [ ] `Directory.Build.props` has the exact stable `VersionPrefix` and an empty `VersionSuffix`.
 - [ ] README version/release statements agree with the candidate.
+- [ ] The supported-versions table in `SECURITY.md` names the stable major line (for the first stable release, `1.x`)
+      and states how prereleases are handled after it.
 - [ ] `scripts/Validate-StableRelease.ps1 -RequireStable -Tag vX.Y.Z` succeeds against the tagged commit.
 - [ ] The tag is annotated, follows `vMAJOR.MINOR.PATCH`, and resolves to the exact release commit.
 - [ ] GitHub release notes use the same version and changelog scope.
@@ -269,20 +275,22 @@ If a published release is found unsafe:
 2. publish a correcting release as soon as practical;
 3. do not move or rewrite the existing tag;
 4. document whether operators must restore data or may upgrade forward; and
-5. record the incident/finding in the changelog and security process as appropriate.
+5. record the incident/finding in the changelog and handle it under the
+   [Security Policy](https://github.com/AsiBackbone/ReferenceApplication/blob/main/SECURITY.md) as appropriate.
 
 ## Mechanical validation
 
 `scripts/Validate-StableRelease.ps1` intentionally separates repository metadata checks from hosted-security evidence.
 
-Without `-RequireStable`, CI and developers can run it during the alpha series to validate that the policy, README link,
-version metadata, and changelog structure remain coherent.
+Without `-RequireStable`, CI and developers can run it during the alpha series to validate that the policy, the README
+links to it and to `SECURITY.md`, version metadata, and changelog structure remain coherent.
 
 With `-RequireStable`, it additionally requires:
 
 - stable SemVer with no prerelease suffix;
 - major version 1 or greater;
 - a matching dated changelog heading;
+- a `SECURITY.md` supported-versions row for the stable major line, such as `1.x`;
 - a clean working tree;
 - an annotated `vMAJOR.MINOR.PATCH` tag; and
 - that the tag resolves to `HEAD`.
