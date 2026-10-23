@@ -75,6 +75,8 @@ Run every command from PowerShell. Do not open the generated folder in Visual St
 
 7. Keep the baseline untouched: make integration changes on short-lived working branches and merge them into `main` through pull requests, never into `ncat-baseline`.
 
+The generation inputs are recorded for machines as well as readers: `eng/ncat-baseline.json` holds the template package, short name, application name, and options (the defaults above, passed explicitly), and the annotated `ncat-v<version>` tag on the baseline names the release. The [reproducibility check](refresh-ncat-baseline.md#verify-reproducibility) regenerates the scaffold from both and fails if `ncat-baseline` has drifted from it.
+
 ## Resulting layout
 
 | Project | Role |

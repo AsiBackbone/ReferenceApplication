@@ -11,6 +11,26 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
 
 ### Added
 
+* An automated reproducibility check for the `ncat-baseline` branch (#99).
+  * `eng/ncat-baseline.json` records the generation inputs: the `NetCoreApplicationTemplate` package, the
+    `netcoreapp-template` short name, the `ReferenceApplication` name, and every template option passed explicitly
+    (`--authProvider cookie --dbProvider sqlite --skipRestore true`). The annotated `ncat-v<version>` tag on the
+    baseline commit records the release, so `ncat-baseline` itself still holds only generated files.
+  * `scripts/Test-NcatBaselineReproducibility.ps1` reads the version from that tag, installs exactly that release into
+    an isolated temporary template hive, generates the scaffold twice and fails if the two differ, then mirrors it onto
+    a detached worktree of the baseline and fails with the staged diff on any material change. Nothing generated is
+    normalized or ignored; differences only in line endings that the baseline's `.gitattributes` normalizes, and
+    generated files its `.gitignore` excludes, are reported separately. `-TemplateVersion` verifies an untagged
+    refresh candidate, and `-SelfTest` exercises the logic against a synthetic repository without the .NET SDK.
+  * The *NCAT baseline reproducibility* workflow runs the self-test and the check weekly, on pull requests into `main`
+    that change the check, and manually with a ref and version for a refresh candidate. It writes the evidence to the
+    job summary. It is not a required check, because `ncat-baseline` carries no workflows of its own.
+  * *Refresh the NCAT Baseline* gains a *Verify reproducibility* section with the command and expected evidence, and
+    runs the check before a refresh, on the pushed candidate, and on the tagged result. Step 1, the README, and the
+    repository-controls notes describe the record and the check.
+  * `NcatBaselineReproducibilityTests` keep the manifest, the workflow wiring, and the refresh guide's evidence
+    sample in agreement.
+
 * A repository-specific security policy, `SECURITY.md` (#98).
   * It links the organization security policy for the general disclosure process instead of repeating it, and adds
     only what is specific to this host: the private reporting route, the details a report about this host should

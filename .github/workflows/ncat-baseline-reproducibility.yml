@@ -1,0 +1,70 @@
+name: NCAT baseline reproducibility
+
+# ncat-baseline holds only raw template output, so it carries no workflow of its own. This workflow lives on main and
+# regenerates the baseline from the NCAT release recorded by its ncat-v<version> tag.
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/ncat-baseline-reproducibility.yml'
+      - 'eng/ncat-baseline.json'
+      - 'scripts/Test-NcatBaselineReproducibility.ps1'
+  schedule:
+    - cron: '43 8 * * 1'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Baseline commit to verify, such as origin/<refresh-branch>. Empty verifies origin/ncat-baseline.'
+        required: false
+        default: ''
+        type: string
+      template_version:
+        description: 'NCAT version for an untagged refresh candidate. Empty reads it from the ncat-v<version> tag.'
+        required: false
+        default: ''
+        type: string
+
+# Deny all token permissions unless granted by the job.
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  verify:
+    name: Verify ncat-baseline reproducibility
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The baseline branch, refresh branches, and ncat-v tags are all needed.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Self-test reproducibility check
+        shell: pwsh
+        run: ./scripts/Test-NcatBaselineReproducibility.ps1 -SelfTest
+
+      - name: Regenerate and compare the baseline
+        shell: pwsh
+        env:
+          BASELINE_REF: ${{ inputs.ref }}
+          TEMPLATE_VERSION: ${{ inputs.template_version }}
+        run: ./scripts/Test-NcatBaselineReproducibility.ps1 -Ref $env:BASELINE_REF -TemplateVersion $env:TEMPLATE_VERSION

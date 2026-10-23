@@ -40,6 +40,19 @@ After the workflows land on `main`:
 The `ncat-baseline` ruleset remains independent so an upstream baseline refresh
 does not inherit checks that validate the integrated application.
 
+The ruleset protects `ncat-baseline` from deletion, force pushes, and direct
+pushes, but it cannot prove that the branch content is what NCAT generates.
+The `NCAT baseline reproducibility` workflow on `main` supplies that evidence:
+it regenerates the scaffold from the release named by the baseline's annotated
+`ncat-v<version>` tag, with the inputs in `eng/ncat-baseline.json`, and fails on
+any material difference. It is deliberately not a required check in either
+ruleset. `ncat-baseline` carries no workflows, so a pull request into it cannot
+produce the check, and the check does not depend on a pull request into `main`.
+Verify a refresh candidate before merging it by running the workflow manually
+or the script locally, as
+[Refresh the NCAT Baseline](../../docs/walkthrough/refresh-ncat-baseline.md#verify-reproducibility)
+describes.
+
 Dependabot monitors NuGet, Docker, and GitHub Actions dependencies on staggered
 weekly schedules. Its pull requests use the same required review, CI, dependency
 review, OWASP, CodeQL, and workflow-security checks as other changes to `main`.
