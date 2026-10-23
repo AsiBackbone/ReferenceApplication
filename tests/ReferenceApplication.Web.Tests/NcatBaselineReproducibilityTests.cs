@@ -25,7 +25,7 @@ public sealed class NcatBaselineReproducibilityTests
     [Fact]
     public void Manifest_RecordsExplicitGenerationInputs()
     {
-        using JsonDocument manifest = JsonDocument.Parse(RepositoryFiles.ReadAllText(_manifestPath));
+        using var manifest = JsonDocument.Parse(RepositoryFiles.ReadAllText(_manifestPath));
         JsonElement root = manifest.RootElement;
 
         Assert.Equal("NetCoreApplicationTemplate", root.GetProperty("templatePackage").GetString());
@@ -34,7 +34,7 @@ public sealed class NcatBaselineReproducibilityTests
         Assert.Equal("origin/ncat-baseline", root.GetProperty("baselineRef").GetString());
         Assert.Equal("ncat-v", root.GetProperty("tagPrefix").GetString());
 
-        Dictionary<string, string?> options = root.GetProperty("options")
+        var options = root.GetProperty("options")
             .EnumerateObject()
             .ToDictionary(
                 static option => option.Name,
@@ -51,7 +51,7 @@ public sealed class NcatBaselineReproducibilityTests
     [Fact]
     public void RefreshGuide_EvidenceSampleMatchesManifest()
     {
-        using JsonDocument manifest = JsonDocument.Parse(RepositoryFiles.ReadAllText(_manifestPath));
+        using var manifest = JsonDocument.Parse(RepositoryFiles.ReadAllText(_manifestPath));
         JsonElement root = manifest.RootElement;
         IEnumerable<string> options = root.GetProperty("options")
             .EnumerateObject()
