@@ -381,13 +381,13 @@ jobs:
           persist-credentials: false
 
       - name: Initialize CodeQL for GitHub Actions
-        uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           languages: actions
           build-mode: none
 
       - name: Perform CodeQL Actions analysis
-        uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
 
   codeql-csharp:
     name: CodeQL analysis (csharp, manual)
@@ -412,7 +412,7 @@ jobs:
           global-json-file: global.json
 
       - name: Initialize CodeQL for C#
-        uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           languages: csharp
           build-mode: manual
@@ -424,4 +424,4 @@ jobs:
         run: dotnet build ${{ env.SOLUTION_FILE }} --configuration ${{ env.CONFIGURATION }} --no-restore /p:ContinuousIntegrationBuild=true
 
       - name: Perform CodeQL C# analysis
-        uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
