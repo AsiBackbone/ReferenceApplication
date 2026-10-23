@@ -22,8 +22,9 @@ $propsPath = Join-Path $repositoryRootPath 'Directory.Build.props'
 $readmePath = Join-Path $repositoryRootPath 'README.md'
 $changelogPath = Join-Path $repositoryRootPath 'CHANGELOG.md'
 $policyPath = Join-Path $repositoryRootPath 'docs/stable-release-policy-v1.md'
+$securityPolicyPath = Join-Path $repositoryRootPath 'SECURITY.md'
 
-foreach ($path in @($propsPath, $readmePath, $changelogPath, $policyPath)) {
+foreach ($path in @($propsPath, $readmePath, $changelogPath, $policyPath, $securityPolicyPath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         Fail "Required file is missing: $path"
     }
@@ -57,6 +58,10 @@ if ($readme -notmatch [regex]::Escape('docs/stable-release-policy-v1.md')) {
     Fail 'README.md does not link to docs/stable-release-policy-v1.md.'
 }
 
+if ($readme -notmatch '\]\(SECURITY\.md\)') {
+    Fail 'README.md does not link to SECURITY.md.'
+}
+
 $changelog = Get-Content -LiteralPath $changelogPath -Raw
 if ($changelog -notmatch '(?m)^## Unreleased\s*$') {
     Fail 'CHANGELOG.md does not contain the Unreleased heading.'
@@ -82,6 +87,16 @@ $escapedVersion = [regex]::Escape($versionPrefix)
 $releaseHeadingPattern = "(?m)^## $escapedVersion - \d{4}-\d{2}-\d{2}\s*$"
 if ($changelog -notmatch $releaseHeadingPattern) {
     Fail "CHANGELOG.md must contain '## $versionPrefix - YYYY-MM-DD'."
+}
+
+$securityPolicy = Get-Content -LiteralPath $securityPolicyPath -Raw
+$supportedLineRows = @(
+    [regex]::Matches($securityPolicy, "(?m)^\| ``$majorVersion\.x``[^\r\n]*") |
+        ForEach-Object { $_.Value } |
+        Where-Object { $_ -notmatch '(?i)not yet released' }
+)
+if ($supportedLineRows.Count -eq 0) {
+    Fail "SECURITY.md must list the released '$majorVersion.x' line in its supported-versions table."
 }
 
 if ([string]::IsNullOrWhiteSpace($Tag) -and $env:GITHUB_REF_TYPE -eq 'tag') {

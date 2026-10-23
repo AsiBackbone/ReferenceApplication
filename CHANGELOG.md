@@ -11,6 +11,24 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
 
 ### Added
 
+* A repository-specific security policy, `SECURITY.md` (#98).
+  * It links the organization security policy for the general disclosure process instead of repeating it, and adds
+    only what is specific to this host: the private reporting route, the details a report about this host should
+    include, and which `0.x` prereleases receive fixes before the first stable release.
+  * It routes findings among this repository, AsiBackbone, NCAT, and third-party dependencies, using
+    `git diff ncat-baseline main` as the test for what this repository owns.
+  * It scopes the Development-only facilities: their permissive behavior inside `Development` is by design, and any of
+    them registering outside `Development` is a vulnerability. It lists the responsibilities that stay with the
+    deployment and states that the host demonstrates integration patterns without certification, penetration testing,
+    or an end-to-end security guarantee.
+  * The README and the stable release policy link to it. The policy's documentation gate now requires the
+    supported-versions table to name the stable line, and `scripts/Validate-StableRelease.ps1` checks that the README
+    links `SECURITY.md` and, with `-RequireStable`, that the table lists the released major line.
+  * The README's list of intentionally anonymous endpoints now includes `/health/audit-integrity`, which was already
+    anonymous.
+  * `SecurityPolicyDocumentationTests` check the reporting routes, that the policy's local links resolve, that the
+    README and release policy link to it, and that its table covers the current release line.
+
 * A complete host-owned acknowledgment workflow for the consequential operation (#79).
   * HTTP 428 challenges are persisted in the existing AsiBackbone acknowledgment tables with a five-minute validity
     window. `POST /api/v1/acknowledgments` accepts the same actor's response and returns the one-time acknowledgment
