@@ -1,5 +1,7 @@
 using System.Net;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
@@ -110,6 +112,33 @@ public sealed class HealthCheckTests
             [$"{GovernanceEvidenceServiceExtensions.AuditReconciliationSectionName}:Enabled"] = "false",
             [$"{GovernanceEvidenceServiceExtensions.AuditReconciliationSectionName}:RunWorker"] = "false"
         });
+    }
+
+    /// <summary>
+    /// Verifies that the audit health endpoint reports an explicit unavailable state when no audit checks are registered.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous test operation.</returns>
+    [Fact]
+    public async Task HealthAuditEndpoint_WithoutAuditChecks_ReturnsNotConfigured()
+    {
+        WebApplicationBuilder builder = WebApplication.CreateBuilder();
+        _ = builder.WebHost.UseTestServer();
+        _ = builder.Services.AddApplicationHealthChecks();
+
+        await using WebApplication app = builder.Build();
+        _ = app.MapApplicationHealthChecks();
+        await app.StartAsync(TestContext.Current.CancellationToken);
+
+        using HttpClient client = app.GetTestClient();
+        using HttpResponseMessage response = await client.GetAsync(
+            "/health/audit-integrity",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+
+        string body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("NotConfigured", body);
     }
 
     /// <summary>
