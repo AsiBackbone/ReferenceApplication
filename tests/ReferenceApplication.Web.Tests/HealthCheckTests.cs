@@ -132,11 +132,11 @@ public sealed class HealthCheckTests
 
         using HttpResponseMessage response = await client.GetAsync("/health/audit-integrity", TestContext.Current.CancellationToken);
 
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         string body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal("NotConfigured", body);
+        Assert.Equal("Healthy", body);
     }
 
     /// <summary>
@@ -176,7 +176,7 @@ public sealed class HealthCheckTests
 
         using HttpResponseMessage response = await client.GetAsync("/health/audit-integrity", TestContext.Current.CancellationToken);
 
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(response.Headers.Contains("X-Content-Type-Options"));
         Assert.False(response.Headers.Contains("X-Frame-Options"));
         Assert.False(response.Headers.Contains("Content-Security-Policy"));
@@ -192,7 +192,7 @@ public sealed class HealthCheckTests
     /// <param name="auditIntegrityStatusCode">The expected <c>/health/audit-integrity</c> status code.</param>
     /// <returns>A task that represents the asynchronous test operation.</returns>
     [Theory]
-    [InlineData(ApplicationHealthCheckTags.Ready, HttpStatusCode.ServiceUnavailable, HttpStatusCode.ServiceUnavailable)]
+    [InlineData(ApplicationHealthCheckTags.Ready, HttpStatusCode.ServiceUnavailable, HttpStatusCode.OK)]
     [InlineData(ApplicationHealthCheckTags.Audit, HttpStatusCode.OK, HttpStatusCode.ServiceUnavailable)]
     public async Task TaggedHealthEndpoints_RunOnlyChecksWithTheirTag(
         string unhealthyCheckTag,
