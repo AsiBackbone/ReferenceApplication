@@ -54,7 +54,7 @@ try
     Log.Information("Running ReferenceApplication.Web application");
     app.Run();
 }
-catch (Exception ex)
+catch (Exception ex) when (ex is not HostAbortedException)
 {
     Log.Fatal(ex, "ReferenceApplication.Web application terminated unexpectedly");
     throw;
