@@ -9,6 +9,8 @@ The release version is independent of the NCAT version, which the `ncat-v<versio
 
 ## Unreleased
 
+## 0.1.0-alpha.12 - 2026-10-24
+
 ### Added
 
 * An automated reproducibility check for the `ncat-baseline` branch (#99).
