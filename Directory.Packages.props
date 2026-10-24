@@ -4,20 +4,20 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AsiBackbone.Analyzers" Version="7.5.0" />
-    <PackageVersion Include="AsiBackbone.AspNetCore" Version="7.5.0" />
-    <PackageVersion Include="AsiBackbone.Core" Version="7.5.0" />
-    <PackageVersion Include="AsiBackbone.EntityFrameworkCore" Version="7.5.0" />
-    <PackageVersion Include="AsiBackbone.OpenTelemetry" Version="7.5.0" />
-    <PackageVersion Include="AsiBackbone.Signing.LocalDevelopment" Version="7.5.0" />
-    <PackageVersion Include="AsiBackbone.Signing.ManagedKey" Version="7.5.0" />
-    <PackageVersion Include="AsiBackbone.Storage.InMemory" Version="7.5.0" />
-    <PackageVersion Include="AsiBackbone.Testing" Version="7.5.0" />
+    <PackageVersion Include="AsiBackbone.Analyzers" Version="7.5.1" />
+    <PackageVersion Include="AsiBackbone.AspNetCore" Version="7.5.1" />
+    <PackageVersion Include="AsiBackbone.Core" Version="7.5.1" />
+    <PackageVersion Include="AsiBackbone.EntityFrameworkCore" Version="7.5.1" />
+    <PackageVersion Include="AsiBackbone.OpenTelemetry" Version="7.5.1" />
+    <PackageVersion Include="AsiBackbone.Signing.LocalDevelopment" Version="7.5.1" />
+    <PackageVersion Include="AsiBackbone.Signing.ManagedKey" Version="7.5.1" />
+    <PackageVersion Include="AsiBackbone.Storage.InMemory" Version="7.5.1" />
+    <PackageVersion Include="AsiBackbone.Testing" Version="7.5.1" />
     <PackageVersion Include="Asp.Versioning.Mvc" Version="10.2.1" />
     <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="10.0.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="coverlet.MTP" Version="10.1.0" />
-    <PackageVersion Include="FsCheck" Version="3.5.0" />
+    <PackageVersion Include="FsCheck" Version="3.6.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.13" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
@@ -32,8 +32,8 @@
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.402" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.1" />
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Enrichers.Environment" Version="3.0.1" />
     <PackageVersion Include="Serilog.Enrichers.Thread" Version="4.0.0" />

@@ -1,5 +1,7 @@
 using System.Net;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
@@ -113,6 +115,33 @@ public sealed class HealthCheckTests
     }
 
     /// <summary>
+    /// Verifies that the audit health endpoint reports an explicit unavailable state when no audit checks are registered.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous test operation.</returns>
+    [Fact]
+    public async Task HealthAuditEndpoint_WithoutAuditChecks_ReturnsNotConfigured()
+    {
+        WebApplicationBuilder builder = WebApplication.CreateBuilder();
+        _ = builder.WebHost.UseTestServer();
+        _ = builder.Services.AddApplicationHealthChecks();
+
+        await using WebApplication app = builder.Build();
+        _ = app.MapApplicationHealthChecks();
+        await app.StartAsync(TestContext.Current.CancellationToken);
+
+        using HttpClient client = app.GetTestClient();
+        using HttpResponseMessage response = await client.GetAsync(
+            "/health/audit-integrity",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+
+        string body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("NotConfigured", body);
+    }
+
+    /// <summary>
     /// Verifies that the host registers an audit-tagged reconciliation check and that the endpoint runs it.
     /// </summary>
     /// <returns>A task that represents the asynchronous test operation.</returns>
@@ -129,6 +158,32 @@ public sealed class HealthCheckTests
             static registration => registration.Tags.Contains(ApplicationHealthCheckTags.Audit));
 
         using HttpClient client = factory.CreateHttpsClient();
+
+        using HttpResponseMessage response = await client.GetAsync("/health/audit-integrity", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        string body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("Healthy", body);
+    }
+
+    /// <summary>
+    /// Verifies that a registered healthy audit-tagged check restores the normal health-check contract.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous test operation.</returns>
+    [Fact]
+    public async Task HealthAuditEndpoint_WithHealthyAuditCheck_ReturnsHealthy()
+    {
+        using ApplicationWebApplicationFactory factory = CreateFactory();
+        using WebApplicationFactory<Program> taggedFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services => services
+                .AddHealthChecks()
+                .AddCheck(
+                    "test-audit-healthy",
+                    () => HealthCheckResult.Healthy(),
+                    tags: [ApplicationHealthCheckTags.Audit])));
+        using HttpClient client = taggedFactory.CreateHttpsClient();
 
         using HttpResponseMessage response = await client.GetAsync("/health/audit-integrity", TestContext.Current.CancellationToken);
 
