@@ -28,15 +28,15 @@ Non-sensitive hardening suggestions and documentation corrections can go to a no
 
 ## Supported versions
 
-The repository has not yet published a stable release. Every release is a `0.x` prerelease, and the
-[Stable Release Policy v1](docs/stable-release-policy-v1.md) defines what a stable release must satisfy first.
+Version `1.0.0` establishes the repository's first stable release line. The
+[Stable Release Policy v1](docs/stable-release-policy-v1.md) defines the compatibility and release requirements for
+the supported `1.x` line.
 
 | Version line | Security support |
 | --- | --- |
 | `main` | Fixes land here first. Reports against the current `main` commit are welcome, but `main` is a development branch, not a supported release line. |
-| Latest `0.x` prerelease | Supported. Confirmed vulnerabilities are fixed on `main` and shipped in the next prerelease. |
-| Earlier `0.x` prereleases | Not supported. Nothing is backported; upgrade to the latest prerelease. Database upgrades are supported from `v0.1.0-alpha.11` onward ([Upgrade between releases](docs/walkthrough/upgrade-between-releases.md)). |
-| `1.x` stable | Not yet released. The first stable release updates this table to name the supported stable line and how prereleases are handled after it. |
+| `1.x` stable | Supported. Confirmed vulnerabilities are fixed on `main` and shipped on the current `1.x` stable line according to the repository's release policy. |
+| `0.x` prereleases | Not supported after `1.0.0`. Upgrade to the stable `1.x` line. Database upgrades remain supported from `v0.1.0-alpha.11` onward ([Upgrade between releases](docs/walkthrough/upgrade-between-releases.md)). |
 
 ## Where to report
 

@@ -2,12 +2,26 @@
 
 All notable changes to the AsiBackbone Reference Application are documented in this file.
 
-This project follows Semantic Versioning using the format `MAJOR.MINOR.PATCH`. Completing the
-[integration walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) does not by itself declare
-a stable public contract; releases remain `0.x` pre-releases until the repository's release-readiness criteria are met.
-The release version is independent of the NCAT version, which the `ncat-v<version>` tags record.
+This project follows Semantic Versioning using the format `MAJOR.MINOR.PATCH`. Version `1.0.0` establishes the first
+stable public compatibility contract defined by the
+[Stable Release Policy v1](docs/stable-release-policy-v1.md). The release version is independent of the NCAT version,
+which the `ncat-v<version>` tags record.
 
 ## Unreleased
+
+## 1.0.0 - 2026-11-03
+
+### Added
+
+* The first stable `1.x` compatibility contract for the Reference Application, covering the documented HTTP surface,
+  reason codes, configuration section names, persisted governance evidence, supported upgrade boundary, and documented
+  host integration extension points defined by the Stable Release Policy v1.
+
+### Changed
+
+* Release metadata now identifies the repository as stable `1.0.0`.
+* The supported security line is now `1.x`; the previous `0.x` prereleases are no longer supported after `1.0.0`.
+* The current integration baseline is NCAT `2.11.7` with AsiBackbone `7.5.2`.
 
 ## 0.1.0-alpha.12 - 2026-10-24
 
