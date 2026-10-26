@@ -4,31 +4,31 @@
     "net10.0": {
       "AsiBackbone.Analyzers": {
         "type": "Direct",
-        "requested": "[7.5.1, )",
-        "resolved": "7.5.1",
-        "contentHash": "Ezq8ALgwK39Si5CZBD9rEyhu//E73IYEmqqtgrNjVvW5GrUUIwroFYVoRm6542uQm1j9l0xLWdjhUv0ItApVlw=="
+        "requested": "[7.5.2, )",
+        "resolved": "7.5.2",
+        "contentHash": "C2B0vYDP1fhMk84FUslQdIKtAMEWyXGwAnX7Q/Upp2dqQInaGH2lYhu8ZBE/Kx8zkNdj95mAq9+S69tL5MTb3A=="
       },
       "AsiBackbone.Core": {
         "type": "Direct",
-        "requested": "[7.5.1, )",
-        "resolved": "7.5.1",
-        "contentHash": "/z92wti2ARYtCuWl4Yz+N1by2kayz9JvtEyO1Eopp1fZzmGhoN6kzuoRn+HXxqPfFLabrDlJZ/i410wasgVdkQ==",
+        "requested": "[7.5.2, )",
+        "resolved": "7.5.2",
+        "contentHash": "3V2OfnOPcxembImMZmR+mDoujxpybtYcpKgu7zvgvHCZfcHpKorhr4RhbkBfCfql55MHFAC0z/E0sWxSIJzeCQ==",
         "dependencies": {
-          "Microsoft.Extensions.Logging.Abstractions": "10.0.13",
-          "Microsoft.Extensions.Options": "10.0.13"
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.14",
+          "Microsoft.Extensions.Options": "10.0.14"
         }
       },
       "AsiBackbone.EntityFrameworkCore": {
         "type": "Direct",
-        "requested": "[7.5.1, )",
-        "resolved": "7.5.1",
-        "contentHash": "E2GqkVEwfpYm+z94PlPCjfjqOtS/UtJ4Up3HGLnsVZ5YldVgqxtIhxt1I3wIT6c0Dc6h96kk7b9iqTgE7ByhqQ==",
+        "requested": "[7.5.2, )",
+        "resolved": "7.5.2",
+        "contentHash": "O6J8SySLGs7DhIBM9kGBQT9gUaXKrSxMl/OAU0djp2wGzz4wJSxHvoa1YpwMr2ScSVGu+H72SvyI04JK7rkhmQ==",
         "dependencies": {
-          "AsiBackbone.Core": "7.5.1",
-          "AsiBackbone.DependencyInjection": "7.5.1",
-          "Microsoft.EntityFrameworkCore": "10.0.13",
-          "Microsoft.EntityFrameworkCore.Relational": "10.0.13",
-          "Microsoft.Extensions.Logging.Abstractions": "10.0.13"
+          "AsiBackbone.Core": "7.5.2",
+          "AsiBackbone.DependencyInjection": "7.5.2",
+          "Microsoft.EntityFrameworkCore": "10.0.14",
+          "Microsoft.EntityFrameworkCore.Relational": "10.0.14",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.14"
         }
       },
       "Microsoft.EntityFrameworkCore": {
@@ -56,19 +56,6 @@
           "Microsoft.Extensions.Logging": "10.0.14",
           "SQLitePCLRaw.bundle_e_sqlite3": "2.1.13",
           "SQLitePCLRaw.core": "2.1.13"
-        }
-      },
-      "Microsoft.EntityFrameworkCore.SqlServer": {
-        "type": "Direct",
-        "requested": "[10.0.14, )",
-        "resolved": "10.0.14",
-        "contentHash": "S3zuzJE5qcl4jjBwSI1x1WZp/GiwzBk1qlFjI77O1E/FZ0mtXNYRBDCfAY0x7nly2zZjM2U5XIkw7AD3DsSpEQ==",
-        "dependencies": {
-          "Microsoft.Data.SqlClient": "6.1.7",
-          "Microsoft.EntityFrameworkCore.Relational": "10.0.14",
-          "Microsoft.Extensions.Caching.Memory": "10.0.14",
-          "Microsoft.Extensions.Configuration.Abstractions": "10.0.14",
-          "Microsoft.Extensions.Logging": "10.0.14"
         }
       },
       "Microsoft.Extensions.Configuration.Abstractions": {
@@ -116,10 +103,10 @@
       },
       "AsiBackbone.DependencyInjection": {
         "type": "Transitive",
-        "resolved": "7.5.1",
-        "contentHash": "KLNx8RIkLyyKYAfirugSzGGeUNIbkBzpMTCxgMdhbA9qQ1sdw7W4m/kNyl6Fa/Mvt5crg3nM4qANkC84nmPBUg==",
+        "resolved": "7.5.2",
+        "contentHash": "U7bzh5/4SbQcCxiwfXu/rp4y7thDgLp+XbJ0UwWZ0sLPWKdveDDhlg3y9dEio8qM12Kss7phV8+STBZTA1bVFQ==",
         "dependencies": {
-          "Microsoft.Extensions.DependencyInjection": "10.0.13"
+          "Microsoft.Extensions.DependencyInjection": "10.0.14"
         }
       },
       "Microsoft.Build.Tasks.Git": {
@@ -296,22 +283,6 @@
         "type": "Transitive",
         "resolved": "10.0.14",
         "contentHash": "lVqovhCt3HlZe7ONG5ydaj6BYwYI004gldVfMMkJl/lR5ueeCtWNpW4nejOX75sPmzm8vXCxB69GqwHaYCnyUQ=="
-      },
-      "System.Memory.Data": {
-        "type": "Transitive",
-        "resolved": "8.0.1",
-        "contentHash": "BVYuec3jV23EMRDeR7Dr1/qhx7369dZzJ9IWy2xylvb4YfXsrUxspWc4UWYid/tj4zZK58uGZqn2WQiaDMhmAg=="
-      },
-      "System.Security.Cryptography.ProtectedData": {
-        "type": "Transitive",
-        "resolved": "9.0.11",
-        "contentHash": "s8yUYuYYu+PAwvBdhLG1KyrGrk9gkYeuPxfAsXsTqqWyepwSyEw8hAaflW4nO98NG52YpYI1am2+9o+79h2RtQ=="
-      },
-      "System.Security.Cryptography.Pkcs": {
-        "type": "CentralTransitive",
-        "requested": "[10.0.13, )",
-        "resolved": "10.0.13",
-        "contentHash": "a+EovgC1fBnwdlQ6cn3j4JFBfKqiFaFvoAhjisOoSvazLAcIznaBzPQP0oYnvccmeXfqUH1KebVZOxSeH6rMaw=="
       }
     }
   }

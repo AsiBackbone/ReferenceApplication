@@ -4,54 +4,54 @@
     "net10.0": {
       "AsiBackbone.Analyzers": {
         "type": "Direct",
-        "requested": "[7.5.1, )",
-        "resolved": "7.5.1",
-        "contentHash": "Ezq8ALgwK39Si5CZBD9rEyhu//E73IYEmqqtgrNjVvW5GrUUIwroFYVoRm6542uQm1j9l0xLWdjhUv0ItApVlw=="
+        "requested": "[7.5.2, )",
+        "resolved": "7.5.2",
+        "contentHash": "C2B0vYDP1fhMk84FUslQdIKtAMEWyXGwAnX7Q/Upp2dqQInaGH2lYhu8ZBE/Kx8zkNdj95mAq9+S69tL5MTb3A=="
       },
       "AsiBackbone.AspNetCore": {
         "type": "Direct",
-        "requested": "[7.5.1, )",
-        "resolved": "7.5.1",
-        "contentHash": "nnbOeW7ahhXnzDIr6Sj6HzhJkrbSVBJd57NjDBsfjY4CTO3VZcY3lqdVCxES1Ei8teJfxRoQg0TisFFRR3Rwrg==",
+        "requested": "[7.5.2, )",
+        "resolved": "7.5.2",
+        "contentHash": "K3tL0cF5nE90r3WpFqJIpq3ukvchZnsPHmJKHujDN09xdZ86ve8MbN0LHxmJnfWsxVdLgsYuKBGFSaNjyLTQsw==",
         "dependencies": {
-          "AsiBackbone.Core": "7.5.1",
-          "AsiBackbone.DependencyInjection": "7.5.1"
+          "AsiBackbone.Core": "7.5.2",
+          "AsiBackbone.DependencyInjection": "7.5.2"
         }
       },
       "AsiBackbone.Core": {
         "type": "Direct",
-        "requested": "[7.5.1, )",
-        "resolved": "7.5.1",
-        "contentHash": "/z92wti2ARYtCuWl4Yz+N1by2kayz9JvtEyO1Eopp1fZzmGhoN6kzuoRn+HXxqPfFLabrDlJZ/i410wasgVdkQ=="
+        "requested": "[7.5.2, )",
+        "resolved": "7.5.2",
+        "contentHash": "3V2OfnOPcxembImMZmR+mDoujxpybtYcpKgu7zvgvHCZfcHpKorhr4RhbkBfCfql55MHFAC0z/E0sWxSIJzeCQ=="
       },
       "AsiBackbone.OpenTelemetry": {
         "type": "Direct",
-        "requested": "[7.5.1, )",
-        "resolved": "7.5.1",
-        "contentHash": "gLB8GNDVQrojWHVDr+twDWMHMXjhoiczeZso9bBT09N1aXrCUKqu3LV0iA4+KnbQWmczJC4l5jmM+k1UsR/gNw==",
+        "requested": "[7.5.2, )",
+        "resolved": "7.5.2",
+        "contentHash": "PXPf3NrC0mAwNxvSTe+QyXOV+OZh8fV/Bg51kcCF359tyIkHCvEKzV7qa5gFo18VGKWr/1v9IeE+3esGXk3C2Q==",
         "dependencies": {
-          "AsiBackbone.Core": "7.5.1",
-          "AsiBackbone.DependencyInjection": "7.5.1"
+          "AsiBackbone.Core": "7.5.2",
+          "AsiBackbone.DependencyInjection": "7.5.2"
         }
       },
       "AsiBackbone.Signing.LocalDevelopment": {
         "type": "Direct",
-        "requested": "[7.5.1, )",
-        "resolved": "7.5.1",
-        "contentHash": "zN8IsR3IaSgKY2rQVQOy5gFzv/XU8LUX/Wg+SM+uyvLm7EHCgXZ6tV7gwzqXuzAFtn9xAR+lCQg5GISDcCf8rQ==",
+        "requested": "[7.5.2, )",
+        "resolved": "7.5.2",
+        "contentHash": "LulJXmeVGgK4S3BTenalCmzRak2Uqja5QOEmiw1kmd2x94FPVzw1h94uNe41eYQ7A5HVw6mwEmGo1SFnpTymhA==",
         "dependencies": {
-          "AsiBackbone.Core": "7.5.1",
-          "AsiBackbone.DependencyInjection": "7.5.1"
+          "AsiBackbone.Core": "7.5.2",
+          "AsiBackbone.DependencyInjection": "7.5.2"
         }
       },
       "AsiBackbone.Signing.ManagedKey": {
         "type": "Direct",
-        "requested": "[7.5.1, )",
-        "resolved": "7.5.1",
-        "contentHash": "ZWN/kcCyU98eVhy4ETZP/cNIHuOCYdHspFVbhuX1lKmiNuyPvyibKSPqgzGUbHC8stzhyHmgmNhsdiGhnGEOAQ==",
+        "requested": "[7.5.2, )",
+        "resolved": "7.5.2",
+        "contentHash": "PjBmaO31RaPtTXwkNiqJrSnwNw9lCiFI2hM4HgUBlzKP9NI9kQnWjBIV9DT+c9phaxc3H9uuZTl+1NyI6oCzkw==",
         "dependencies": {
-          "AsiBackbone.Core": "7.5.1",
-          "AsiBackbone.DependencyInjection": "7.5.1"
+          "AsiBackbone.Core": "7.5.2",
+          "AsiBackbone.DependencyInjection": "7.5.2"
         }
       },
       "Asp.Versioning.Mvc": {
@@ -245,8 +245,8 @@
       },
       "AsiBackbone.DependencyInjection": {
         "type": "Transitive",
-        "resolved": "7.5.1",
-        "contentHash": "KLNx8RIkLyyKYAfirugSzGGeUNIbkBzpMTCxgMdhbA9qQ1sdw7W4m/kNyl6Fa/Mvt5crg3nM4qANkC84nmPBUg=="
+        "resolved": "7.5.2",
+        "contentHash": "U7bzh5/4SbQcCxiwfXu/rp4y7thDgLp+XbJ0UwWZ0sLPWKdveDDhlg3y9dEio8qM12Kss7phV8+STBZTA1bVFQ=="
       },
       "Asp.Versioning.Abstractions": {
         "type": "Transitive",
@@ -659,24 +659,23 @@
       "referenceapplication.infrastructure": {
         "type": "Project",
         "dependencies": {
-          "AsiBackbone.Core": "[7.5.1, )",
-          "AsiBackbone.EntityFrameworkCore": "[7.5.1, )",
+          "AsiBackbone.Core": "[7.5.2, )",
+          "AsiBackbone.EntityFrameworkCore": "[7.5.2, )",
           "Microsoft.EntityFrameworkCore": "[10.0.14, )",
-          "Microsoft.EntityFrameworkCore.SqlServer": "[10.0.14, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[10.0.14, )",
           "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )"
         }
       },
       "AsiBackbone.EntityFrameworkCore": {
         "type": "CentralTransitive",
-        "requested": "[7.5.1, )",
-        "resolved": "7.5.1",
-        "contentHash": "E2GqkVEwfpYm+z94PlPCjfjqOtS/UtJ4Up3HGLnsVZ5YldVgqxtIhxt1I3wIT6c0Dc6h96kk7b9iqTgE7ByhqQ==",
+        "requested": "[7.5.2, )",
+        "resolved": "7.5.2",
+        "contentHash": "O6J8SySLGs7DhIBM9kGBQT9gUaXKrSxMl/OAU0djp2wGzz4wJSxHvoa1YpwMr2ScSVGu+H72SvyI04JK7rkhmQ==",
         "dependencies": {
-          "AsiBackbone.Core": "7.5.1",
-          "AsiBackbone.DependencyInjection": "7.5.1",
-          "Microsoft.EntityFrameworkCore": "10.0.13",
-          "Microsoft.EntityFrameworkCore.Relational": "10.0.13"
+          "AsiBackbone.Core": "7.5.2",
+          "AsiBackbone.DependencyInjection": "7.5.2",
+          "Microsoft.EntityFrameworkCore": "10.0.14",
+          "Microsoft.EntityFrameworkCore.Relational": "10.0.14"
         }
       },
       "Microsoft.EntityFrameworkCore": {
@@ -703,12 +702,11 @@
       },
       "System.Configuration.ConfigurationManager": {
         "type": "CentralTransitive",
-        "requested": "[10.0.14, )",
-        "resolved": "10.0.14",
-        "contentHash": "S3zuzJE5qcl4jjBwSI1x1WZp/GiwzBk1qlFjI77O1E/FZ0mtXNYRBDCfAY0x7nly2zZjM2U5XIkw7AD3DsSpEQ==",
+        "requested": "[9.0.11, )",
+        "resolved": "9.0.11",
+        "contentHash": "vPinosRgEk1CGjohbv0pDuz6gPprkWo5xvBTjOJjks5JOgOEWvPndq5NngGxiTcBcy1+k9GwzZ1c3Bp2fU5ezw==",
         "dependencies": {
-          "Microsoft.Data.SqlClient": "6.1.7",
-          "Microsoft.EntityFrameworkCore.Relational": "10.0.14"
+          "System.Security.Cryptography.ProtectedData": "9.0.11"
         }
       }
     }
