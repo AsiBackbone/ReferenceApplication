@@ -29,9 +29,9 @@ The original Step 2 package placement was:
 
 `AsiBackbone.AspNetCore`, `AsiBackbone.EntityFrameworkCore`, and `AsiBackbone.Testing` already depend on Core where required. The Web and Infrastructure projects nevertheless reference `AsiBackbone.Core` directly because later walkthrough steps use its public contracts directly; this avoids relying on transitive compile assets for code the host owns.
 
-## Current package set — AsiBackbone `7.5.1`
+## Current package set — AsiBackbone `7.5.2`
 
-The current repository pins nine AsiBackbone packages at `7.5.1`. Eight are direct project references. `AsiBackbone.Storage.InMemory` is centrally pinned because it remains in the test dependency graph transitively; no project references it directly.
+The current repository pins nine AsiBackbone packages at `7.5.2`. Eight are direct project references. `AsiBackbone.Storage.InMemory` is centrally pinned because it remains in the test dependency graph transitively; no project references it directly.
 
 | Package | Referenced by | Why it is present |
 |:---|:---|:---|
