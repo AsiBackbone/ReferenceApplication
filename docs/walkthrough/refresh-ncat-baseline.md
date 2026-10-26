@@ -16,7 +16,7 @@ difference onto that branch, and then carries the same delta into the integrated
 An automated [reproducibility check](#verify-reproducibility) proves, before and after each refresh, that
 `ncat-baseline` is exactly what its recorded NCAT release generates.
 
-The commands below use the `2.11.4` to `2.11.5` refresh as a concrete example. Every version
+The commands below use the `2.11.6` to `2.11.7` refresh as a concrete example. Every version
 number is held in two variables, so a later upgrade only changes those two lines. The application
 name and template options must stay identical to those recorded in
 [Step 1: Scaffold from NCAT](01-scaffold-from-ncat.md).
@@ -138,8 +138,8 @@ your task; this guide does not prescribe them. The remaining steps rely on these
 them in the same PowerShell session, or set them again after opening a new one.
 
 ```powershell
-$Old = '2.11.4'
-$New = '2.11.5'
+$Old = '2.11.6'
+$New = '2.11.7'
 $BaselineBranch = Read-Host 'Short-lived branch for the ncat-baseline pull request'
 $IntegrationBranch = Read-Host 'Short-lived branch for the main pull request'
 $Scratch = Join-Path (Get-Location) "ncat-refresh-$($New -replace '\.', '')"
