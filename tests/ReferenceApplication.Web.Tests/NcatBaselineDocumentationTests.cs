@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using ReferenceApplication.Web.Tests.Infrastructure;
 
@@ -8,24 +9,26 @@ namespace ReferenceApplication.Web.Tests;
 /// of them describing the previous release.
 /// </summary>
 /// <remarks>
-/// The refresh guide holds the target version in its <c>$New</c> variable, and its procedure ends with that version as
-/// the baseline, so it serves as the reference value.
+/// The generation manifest is the machine-readable record of the adopted baseline. Refresh-guide version variables
+/// belong to a historical worked example and must not be treated as the current baseline.
 /// </remarks>
 public sealed partial class NcatBaselineDocumentationTests
 {
+    private const string _manifestPath = "eng/ncat-baseline.json";
+
     /// <summary>
-    /// Verifies the README, documentation homepage, and Step 1 against the latest refresh target.
+    /// Verifies the README, documentation homepage, and Step 1 against the adopted baseline in the manifest.
     /// </summary>
     [Fact]
     public void CurrentBaselineVersion_IsConsistentAcrossDocumentation()
     {
-        string refreshTarget = ReadVersion(
-            "docs/walkthrough/refresh-ncat-baseline.md",
-            RefreshTargetRegex());
+        using var manifest = JsonDocument.Parse(RepositoryFiles.ReadAllText(_manifestPath));
+        string baselineVersion = manifest.RootElement.GetProperty("version").GetString() ?? string.Empty;
+        Assert.Matches(@"^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$", baselineVersion);
 
-        Assert.Equal(refreshTarget, ReadVersion("README.md", ReadmeBaselineRegex()));
-        Assert.Equal(refreshTarget, ReadVersion("docs/index.md", HomepageBaselineRegex()));
-        Assert.Equal(refreshTarget, ReadVersion("docs/walkthrough/01-scaffold-from-ncat.md", StepOneBaselineTagRegex()));
+        Assert.Equal(baselineVersion, ReadVersion("README.md", ReadmeBaselineRegex()));
+        Assert.Equal(baselineVersion, ReadVersion("docs/index.md", HomepageBaselineRegex()));
+        Assert.Equal(baselineVersion, ReadVersion("docs/walkthrough/01-scaffold-from-ncat.md", StepOneBaselineTagRegex()));
     }
 
     private static string ReadVersion(string relativePath, Regex pattern)
@@ -35,9 +38,6 @@ public sealed partial class NcatBaselineDocumentationTests
 
         return match.Groups["version"].Value;
     }
-
-    [GeneratedRegex(@"^\$New = '(?<version>\d+\.\d+\.\d+)'$", RegexOptions.Multiline)]
-    private static partial Regex RefreshTargetRegex();
 
     [GeneratedRegex(@"The current NCAT baseline is \*\*(?<version>\d+\.\d+\.\d+)\*\*")]
     private static partial Regex ReadmeBaselineRegex();

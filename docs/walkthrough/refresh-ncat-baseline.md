@@ -16,7 +16,7 @@ difference onto that branch, and then carries the same delta into the integrated
 An automated [reproducibility check](#verify-reproducibility) proves, before and after each refresh, that
 `ncat-baseline` is exactly what its recorded NCAT release generates.
 
-The commands below use the `2.11.6` to `2.11.7` refresh as a concrete example. Every version
+The commands below preserve the historical `2.11.4` to `2.11.5` refresh as a concrete example. Every version
 number is held in two variables, so a later upgrade only changes those two lines. The application
 name and template options must stay identical to those recorded in
 [Step 1: Scaffold from NCAT](01-scaffold-from-ncat.md).
@@ -58,16 +58,16 @@ are detected automatically, and no path-prefix (`-p`) handling is involved.
 The *NCAT baseline reproducibility* workflow runs it weekly, on pull requests into `main` that change the check, and
 on demand.
 
-The baseline records its inputs in two places, neither of which is a file on `ncat-baseline` itself:
+The baseline records its provenance in two places, neither of which is a file on `ncat-baseline` itself:
 
 - **The release.** The annotated `ncat-v<version>` tag on the baseline commit names the NCAT release that generated it.
-- **The generation inputs.** `eng/ncat-baseline.json` on `main` records the template package, its short name, the
-  application name, and every template option. The options are passed explicitly, with the values the default
-  scaffold selects, so a later change to a template default cannot silently change the inputs.
+- **The adopted version and generation inputs.** `eng/ncat-baseline.json` on `main` records the current NCAT version,
+  template package, short name, application name, and every template option. The version must agree with the tag,
+  while the options are passed explicitly so a later template-default change cannot silently change the inputs.
 
 The check then:
 
-1. resolves the baseline commit, `origin/ncat-baseline` by default, and reads the NCAT version from its tag;
+1. resolves the baseline commit, `origin/ncat-baseline` by default, and verifies its tag against the manifest version;
 2. installs exactly that `NetCoreApplicationTemplate` release from NuGet.org into an isolated, temporary template
    hive, leaving the templates installed on the machine untouched;
 3. generates the scaffold twice and fails if the two generations differ in any byte;
@@ -138,8 +138,8 @@ your task; this guide does not prescribe them. The remaining steps rely on these
 them in the same PowerShell session, or set them again after opening a new one.
 
 ```powershell
-$Old = '2.11.6'
-$New = '2.11.7'
+$Old = '2.11.4'
+$New = '2.11.5'
 $BaselineBranch = Read-Host 'Short-lived branch for the ncat-baseline pull request'
 $IntegrationBranch = Read-Host 'Short-lived branch for the main pull request'
 $Scratch = Join-Path (Get-Location) "ncat-refresh-$($New -replace '\.', '')"
@@ -185,9 +185,9 @@ If the new release adds an option or changes a default value, the default scaffo
 no longer generated with the same inputs as the one for `$Old`. Decide which value
 ReferenceApplication should use, then regenerate both `old` and `new` passing that option
 explicitly, so the delta contains only the release change. Add the option to Step 1 and to
-`options` in `eng/ncat-baseline.json` so later refreshes and the reproducibility check generate
-with the same inputs. Until that `main` change merges, pass the updated manifest to the check
-with `-ManifestPath`.
+`version` and `options` in `eng/ncat-baseline.json` so later refreshes, current-version documentation checks, and the
+reproducibility check use the same adopted baseline. Until that `main` change merges, pass the updated manifest to the
+check with `-ManifestPath`.
 
 ### Check that generation is deterministic
 
