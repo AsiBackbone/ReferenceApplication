@@ -4,11 +4,11 @@
 Verifies that the ncat-baseline branch is exactly what its declared NCAT release generates.
 
 .DESCRIPTION
-Reads the generation inputs from eng/ncat-baseline.json and the NCAT version from the annotated ncat-v<version> tag
-on the baseline commit. It installs that exact NetCoreApplicationTemplate release into an isolated, temporary
-template hive, generates the scaffold twice, and fails if the two generations differ. It then mirrors the scaffold
-onto a detached worktree of the baseline commit and stages it, so Git normalizes line endings through the baseline's
-own .gitattributes, and fails with a focused diff when any material change remains.
+Reads the adopted version and generation inputs from eng/ncat-baseline.json and verifies that version against the
+annotated ncat-v<version> tag on the baseline commit. It installs that exact NetCoreApplicationTemplate release into
+an isolated, temporary template hive, generates the scaffold twice, and fails if the two generations differ. It then
+mirrors the scaffold onto a detached worktree of the baseline commit and stages it, so Git normalizes line endings
+through the baseline's own .gitattributes, and fails with a focused diff when any material change remains.
 
 No generated value is normalized or ignored. Line-ending differences are reported separately because the baseline's
 .gitattributes, not this script, defines them as non-material; generated files excluded by the baseline's .gitignore
@@ -259,11 +259,15 @@ function Read-Manifest {
     }
 
     $manifest = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
-    foreach ($property in 'templatePackage', 'templateShortName', 'name', 'options', 'baselineRef', 'tagPrefix') {
+    foreach ($property in 'templatePackage', 'version', 'templateShortName', 'name', 'options', 'baselineRef', 'tagPrefix') {
         if ($null -eq $manifest.PSObject.Properties[$property] -or
             [string]::IsNullOrWhiteSpace([string] $manifest.$property)) {
             throw "Generation manifest $Path does not define '$property'."
         }
+    }
+
+    if ([string] $manifest.version -notmatch "^$versionPattern$") {
+        throw "Generation manifest version '$($manifest.version)' is not a semantic version."
     }
 
     $arguments = [System.Collections.Generic.List[string]]::new()
@@ -278,6 +282,7 @@ function Read-Manifest {
 
     return [pscustomobject]@{
         TemplatePackage   = [string] $manifest.templatePackage
+        Version           = [string] $manifest.version
         TemplateShortName = [string] $manifest.templateShortName
         BaselineRef       = [string] $manifest.baselineRef
         TagPrefix         = [string] $manifest.tagPrefix
@@ -498,6 +503,10 @@ if ($resolvedCommit.ExitCode -ne 0 -or $resolvedCommit.Lines.Count -ne 1) {
 
 $commit = $resolvedCommit.Lines[0]
 $release = Resolve-BaselineVersion $repositoryRootPath $commit $manifest.TagPrefix $TemplateVersion
+if ([string]::IsNullOrWhiteSpace($TemplateVersion) -and $release.Version -ne $manifest.Version) {
+    throw ("Generation manifest records NCAT $($manifest.Version), but $Ref is tagged for NCAT " +
+        "$($release.Version). Update the manifest only when the adopted baseline changes.")
+}
 $templateReference = "$($manifest.TemplatePackage)@$($release.Version)"
 
 $workDirectory = Join-Path ([System.IO.Path]::GetTempPath()) "ncat-baseline-$([guid]::NewGuid().ToString('N').Substring(0, 8))"

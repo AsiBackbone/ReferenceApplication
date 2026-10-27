@@ -29,6 +29,7 @@ public sealed class NcatBaselineReproducibilityTests
         JsonElement root = manifest.RootElement;
 
         Assert.Equal("NetCoreApplicationTemplate", root.GetProperty("templatePackage").GetString());
+        Assert.Equal("2.11.7", root.GetProperty("version").GetString());
         Assert.Equal("netcoreapp-template", root.GetProperty("templateShortName").GetString());
         Assert.Equal("ReferenceApplication", root.GetProperty("name").GetString());
         Assert.Equal("origin/ncat-baseline", root.GetProperty("baselineRef").GetString());

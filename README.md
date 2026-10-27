@@ -44,8 +44,9 @@ git diff ncat-baseline main
 
 That comparison is only meaningful while `ncat-baseline` is exactly what its NCAT release generates. The
 *NCAT baseline reproducibility* workflow checks this weekly: it regenerates the scaffold from the release named by the
-baseline's `ncat-v<version>` tag, with the inputs recorded in `eng/ncat-baseline.json`, and fails with a diff if the
-branch has drifted. Run the same check locally with `./scripts/Test-NcatBaselineReproducibility.ps1`; see
+baseline's `ncat-v<version>` tag, with the adopted version and inputs recorded in `eng/ncat-baseline.json`, and fails
+with a diff if the branch has drifted. Run the same check locally with
+`./scripts/Test-NcatBaselineReproducibility.ps1`; see
 [Verify reproducibility](https://asibackbone.github.io/ReferenceApplication/walkthrough/refresh-ncat-baseline.html#verify-reproducibility).
 
 The desired branch rulesets for `main` and `ncat-baseline` are versioned under `eng/repository-controls/`.
@@ -80,7 +81,7 @@ The `ncat-baseline` branch is updated separately through a pull request containi
 | `docs/` | DocFX documentation site source |
 | `scripts/` | Documentation, release, coverage, and baseline-reproducibility validation scripts |
 | `eng/repository-controls/` | Recorded GitHub branch rulesets |
-| `eng/ncat-baseline.json` | NCAT generation inputs that `ncat-baseline` must reproduce |
+| `eng/ncat-baseline.json` | Adopted NCAT version and generation inputs that `ncat-baseline` must reproduce |
 
 ## How it was generated
 
