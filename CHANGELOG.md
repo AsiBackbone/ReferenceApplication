@@ -9,6 +9,12 @@ which the `ncat-v<version>` tags record.
 
 ## Unreleased
 
+### Changed
+
+* Replaced the documentation logo, favicon, and social preview with the Reference Application glyph from the
+  AsiBackbone glyph family. The social card now names this site instead of reusing the Learning card. File names and
+  image dimensions are unchanged.
+
 ## 1.0.0 - 2026-11-03
 
 ### Added
