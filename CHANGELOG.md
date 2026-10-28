@@ -9,13 +9,7 @@ which the `ncat-v<version>` tags record.
 
 ## Unreleased
 
-### Changed
-
-* Replaced the documentation logo, favicon, and social preview with the Reference Application glyph from the
-  AsiBackbone glyph family. The social card now names this site instead of reusing the Learning card. File names and
-  image dimensions are unchanged.
-
-## 1.0.0 - 2026-11-03
+## 1.0.0 - 2026-11-04
 
 ### Added
 
@@ -27,7 +21,14 @@ which the `ncat-v<version>` tags record.
 
 * Release metadata now identifies the repository as stable `1.0.0`.
 * The supported security line is now `1.x`; the previous `0.x` prereleases are no longer supported after `1.0.0`.
-* The current integration baseline is NCAT `2.11.7` with AsiBackbone `7.5.2`.
+* The integration baseline was refreshed to NCAT `2.11.7` with AsiBackbone `7.5.2`, including the generated template
+  changes and regenerated package lock files (#108, #109).
+* The adopted NCAT version is now recorded in `eng/ncat-baseline.json`; reproducibility validation requires the
+  manifest and annotated baseline tag to agree, and documentation regression tests keep the README, documentation
+  home, and Step 1 current-baseline markers synchronized while preserving historical refresh examples (#112).
+* Replaced the documentation logo, favicon, and social preview with the Reference Application glyph from the
+  AsiBackbone glyph family. The social card now names this site instead of reusing the Learning card. File names and
+  image dimensions are unchanged (#113).
 
 ## 0.1.0-alpha.12 - 2026-10-24
 
