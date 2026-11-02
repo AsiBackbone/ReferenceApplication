@@ -37,7 +37,7 @@ RUN dotnet tool restore \
 
 # Opt-in, one-shot image that applies migrations to the configured ApplicationDatabase and exits. The application never
 # migrates at startup; Docker Compose runs this image before the web service. Build it with --target migrations.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:8af87eba5e7cdafb1514d7388be287365da97c132509e84dfe252ffd552398ca AS migrations
+FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:de0ee358cdd672f7017a003bed21e9ac9ed48a27c922a59b18175b6e82fa7fee AS migrations
 WORKDIR /app
 
 ENV DOTNET_RUNNING_IN_CONTAINER=true
@@ -54,7 +54,7 @@ USER $APP_UID
 ENTRYPOINT ["./efbundle"]
 
 # The runtime image stays last so a plain `docker build .` produces it.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:8af87eba5e7cdafb1514d7388be287365da97c132509e84dfe252ffd552398ca AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:de0ee358cdd672f7017a003bed21e9ac9ed48a27c922a59b18175b6e82fa7fee AS final
 WORKDIR /app
 
 ENV ASPNETCORE_URLS=http://+:8080 \
