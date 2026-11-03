@@ -1,0 +1,134 @@
+name: Bug report
+description: Report reproducible Reference Application host behavior that is not working as documented.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve the Reference Application.
+
+        **Security-sensitive reports do not belong in public Issues.** If the report includes exploit details,
+        secrets, private data, or a practical vulnerability, use
+        [private vulnerability reporting](https://github.com/AsiBackbone/ReferenceApplication/security/advisories/new)
+        instead.
+
+        This repository owns what it adds on top of the NCAT scaffold (`git diff ncat-baseline main`). A problem that
+        reproduces in an AsiBackbone package without this host, or in a fresh NCAT scaffold, belongs to
+        [AsiBackbone](https://github.com/AsiBackbone/AsiBackbone/issues/new/choose) or
+        [NetCoreApplicationTemplate](https://github.com/AsiBackbone/NetCoreApplicationTemplate/issues/new/choose).
+
+  - type: input
+    id: version
+    attributes:
+      label: Release or commit
+      description: Which release tag or `main` commit did you run?
+      placeholder: v1.0.0 or a commit SHA
+    validations:
+      required: true
+
+  - type: dropdown
+    id: run-mode
+    attributes:
+      label: Run mode
+      description: How was the host running when the problem occurred?
+      options:
+        - dotnet run (Development)
+        - Docker Compose (Development, default)
+        - Docker Compose (production-shaped configuration)
+        - Automated tests
+        - Documentation build
+        - Other (describe below)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Governance explorer or its evidence timeline
+        - Governed endpoints or decision outcomes
+        - Evidence persistence, verification, or audit completion
+        - Development sandbox (simulator, replay, inspector, failure scenarios, load demonstration)
+        - Authentication, demo identity, or endpoint access
+        - Database migrations or upgrades
+        - Docker, Compose, or container image
+        - Documentation site or walkthrough
+        - CI or repository tooling
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, `dotnet --version`, and, for Compose, `docker version`.
+      placeholder: |
+        OS: Windows 11 / Ubuntu 24.04 / macOS 15
+        .NET SDK: 10.0.403
+        Docker: 28.x (Compose only)
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the problem clearly.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Steps to reproduce
+      description: Start from a clean clone or a reset demonstration database where possible.
+      placeholder: |
+        1. Run ...
+        2. Open /governance-explorer and ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: What did you expect, and which documentation says so, if any?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual behavior
+      description: What happened instead? Include HTTP status codes and reason codes when relevant.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and evidence
+      description: |
+        Paste the relevant log lines or evidence-timeline entries. Before pasting, remove cookies, antiforgery
+        tokens, connection strings, Data Protection keys, signing material, OpenID Connect secrets, and personal data.
+        Correlation identifiers, reason codes, and record identifiers are fine to include.
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: submission-checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I searched existing Issues to avoid creating a duplicate.
+          required: true
+        - label: This is not a suspected vulnerability.
+          required: true
+        - label: I removed secrets, tokens, keys, credentials, and personal data from everything above.
+          required: true

@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a vulnerability privately
+    url: https://github.com/AsiBackbone/ReferenceApplication/security/advisories/new
+    about: Suspected vulnerabilities go here, never in a public Issue. The Security Policy explains which repository owns a finding.
+  - name: Ask a question (Q&A)
+    url: https://github.com/orgs/AsiBackbone/discussions/categories/q-a
+    about: Which setup step or explorer result was unclear? Name AsiBackbone/ReferenceApplication in the post.
+  - name: Propose an idea
+    url: https://github.com/orgs/AsiBackbone/discussions/categories/ideas
+    about: Which integration scenario should this reference host demonstrate next? Discuss it before it becomes a request.
+  - name: Discuss architecture and integration
+    url: https://github.com/orgs/AsiBackbone/discussions/categories/architecture-integration
+    about: Where would this NCAT + AsiBackbone integration approach not fit your application?
