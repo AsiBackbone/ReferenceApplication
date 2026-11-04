@@ -1,6 +1,8 @@
 # AsiBackbone Reference Application
 
-The AsiBackbone Reference Application is an ASP.NET Core host built from the [.NET Core Application Template (NCAT)](https://github.com/AsiBackbone/NetCoreApplicationTemplate). It integrates [AsiBackbone](https://github.com/AsiBackbone/AsiBackbone) step by step: the application provides runnable sample governance rules that can be read, tested, and adapted, persists the resulting decision evidence alongside NCAT's mutation audit, and makes that evidence observable and its host-owned overhead measurable.
+The AsiBackbone Reference Application is an ASP.NET Core reference application built from the [.NET Core Application Template (NCAT)](https://github.com/AsiBackbone/NetCoreApplicationTemplate). It integrates [AsiBackbone](https://github.com/AsiBackbone/AsiBackbone) step by step: the application provides runnable sample governance rules that can be read, tested, and adapted, persists the resulting decision evidence alongside NCAT's mutation audit, and makes that evidence observable and its host-owned overhead measurable.
+
+It is for .NET developers and architects evaluating how governance and policy enforcement fit into a real ASP.NET Core host: where the decision happens, what audit evidence it leaves behind, and what the host still owns. To see that in about five minutes, take the [five-minute tour](#five-minute-tour).
 
 - **Documentation:** <https://asibackbone.github.io/ReferenceApplication/> (API reference and integration walkthrough)
 - **Training:** [AsiBackbone Learning](https://asibackbone.github.io/Learning/) is the authoritative training site.
@@ -26,6 +28,32 @@ including an operational evidence explorer, a Development-only governance sandbo
 | 6. Persist and verify audit evidence | Complete |
 | 7. Observe governance in action | Complete |
 | 8. Benchmark governance overhead | Complete |
+
+## Five-minute tour
+
+This tour runs the Development host and follows one governed request from decision to delivered audit completion. It needs the .NET 10 SDK; Docker isn't required.
+
+```powershell
+git clone https://github.com/AsiBackbone/ReferenceApplication.git
+cd ReferenceApplication
+dotnet run --project src/ReferenceApplication.Web --launch-profile http
+```
+
+On Windows, clone into a short path such as `C:\src`. Some migration file names are long enough to fail with `Filename too long` under a deep folder; `git config --global core.longpaths true` also avoids it.
+
+The first run restores packages and builds the host. With a warm NuGet cache it was ready in under a minute; a cold cache takes longer. Then, in a browser:
+
+1. **Sign in with the demo identity.** Open `http://localhost:5195/Account/Login`, tick **Administrator role** only, and select **Use demo identity**. This Development-only control is not an authentication provider; see [Development-only demo identity controls](https://asibackbone.github.io/ReferenceApplication/walkthrough/development-demo-identity.html).
+2. **Open the explorer.** Go to `http://localhost:5195/governance-explorer`. Its buttons call the real governed endpoints.
+3. **Run one governed operation.** On the **Actions** tab, enter a title and select **Create audited record**. The request returns HTTP 201.
+4. **Read the evidence timeline.** For that one correlation identifier, the right-hand panel shows a **Decision** (`Allowed`, with its policy version and hash), the **Application Record**, the NCAT **Mutation Audit**, a **Lifecycle Event**, and, about a second later, an **Audit Completion** marked `Delivered` by the background outbox. Every entry carries the same decision record identifier.
+5. **Check it, then see a denial.** Select **Verify hashes**; the decision is reported `verified`. Then select **Run capability action**. Without the capability claim it returns HTTP 403 with reason `referenceapplication.capability.grant_required`, and its timeline holds only the Decision: the governed operation never ran, so there is no record or mutation audit.
+
+**What this shows:** AsiBackbone decides before the host executes, the decision and NCAT's mutation audit are tied to one evidence chain, and a denied request leaves decision evidence without side effects.
+
+**What it doesn't show:** the demo identity, the disposable demonstration database, and the explorer's sandbox tabs exist only in Development. The sample rules are illustrations, not recommendations, and nothing here certifies a deployment as secure or compliant. [Step 7: Observe governance in action](https://asibackbone.github.io/ReferenceApplication/walkthrough/07-observe-governance.html) explains the explorer's boundaries, and the [production deployment checklist](https://asibackbone.github.io/ReferenceApplication/walkthrough/run-in-production.html) lists what a real deployment must decide.
+
+To discard the demonstration evidence while the host is still running, select **Reset demonstration database** on the explorer's **Demo identity** tab. When you're done, stop the host with `Ctrl+C`; deleting the clone also removes everything the tour created. For more, follow the full [Integration Walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/), or continue with [Restore, build, and test](#restore-build-and-test) and [Run with Docker Compose](#run-with-docker-compose) below.
 
 ## Branches
 
@@ -303,6 +331,20 @@ dotnet tool run docfx -- docs/docfx.json --warningsAsErrors
 ./scripts/Validate-LandingPage.ps1 -SiteDirectory ./docs/_site
 dotnet tool run docfx -- serve docs/_site
 ```
+
+## Feedback and community
+
+The Reference Application is a stable example, not a product. The most useful feedback now is a reproducible setup failure, evidence that appears in a confusing order, confusion about which project owns an integration boundary, a missing deployment caveat, and any case where the example invites an unsafe inference.
+
+| Route | Use it for |
+|:---|:---|
+| [Q&A](https://github.com/orgs/AsiBackbone/discussions/categories/q-a) | Which setup step or explorer result was unclear? |
+| [Ideas](https://github.com/orgs/AsiBackbone/discussions/categories/ideas) | Which integration scenario should this reference host demonstrate next? |
+| [Architecture & Integration](https://github.com/orgs/AsiBackbone/discussions/categories/architecture-integration) | Where would this NCAT + AsiBackbone integration approach not fit your application? |
+| [Issue forms](https://github.com/AsiBackbone/ReferenceApplication/issues/new/choose) | Reproducible host bugs, documentation defects, and bounded demonstration or feature requests |
+| [Private vulnerability reporting](https://github.com/AsiBackbone/ReferenceApplication/security/advisories/new) | Suspected vulnerabilities, as the [Security Policy](SECURITY.md) describes |
+
+Discussions are shared across the AsiBackbone organization, so name `AsiBackbone/ReferenceApplication` in the post. If a problem reproduces without this host's own code, it belongs to [AsiBackbone](https://github.com/AsiBackbone/AsiBackbone) or [NCAT](https://github.com/AsiBackbone/NetCoreApplicationTemplate) instead; the [Security Policy](SECURITY.md#where-to-report) explains how to tell.
 
 ## Related projects
 

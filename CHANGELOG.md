@@ -9,6 +9,19 @@ which the `ncat-v<version>` tags record.
 
 ## Unreleased
 
+### Added
+
+* A README five-minute tour that runs the Development host, signs in with the demo identity, creates one audited
+  record in the governance explorer, and reads its decision, mutation-audit, lifecycle, and delivered audit-completion
+  evidence, then contrasts it with a denied capability action. It states what the tour shows and what it doesn't, and
+  notes the Windows long-path clone workaround (#119).
+* A README "Feedback and community" section that links the Q&A, Ideas, and Architecture & Integration discussion
+  categories with repository-specific questions, the issue forms, and private vulnerability reporting (#119).
+* Issue forms for bug reports, demonstration or feature requests, and documentation defects, with a chooser that
+  disables blank issues and routes questions, ideas, and vulnerabilities away from public Issues.
+  `FeedbackRoutingDocumentationTests` pins the forms, the chooser, the README routes, and the README's opening
+  discovery terms (#119).
+
 ## 1.0.0 - 2026-11-04
 
 ### Added

@@ -1,0 +1,60 @@
+name: Documentation defect
+description: Report an error, gap, or misleading statement in the README, walkthrough, or documentation site.
+title: "[Docs]: "
+labels:
+  - documentation
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This repository documents how NCAT and AsiBackbone were combined in this host. Package behavior is documented
+        by [AsiBackbone](https://asibackbone.github.io/AsiBackbone/), template defaults by
+        [NCAT](https://asibackbone.github.io/NetCoreApplicationTemplate/), and general concepts by
+        [Learning](https://asibackbone.github.io/Learning/).
+
+  - type: input
+    id: location
+    attributes:
+      label: Page or file
+      description: The URL of the published page, or the repository path.
+      placeholder: https://asibackbone.github.io/ReferenceApplication/walkthrough/... or README.md
+    validations:
+      required: true
+
+  - type: dropdown
+    id: defect-type
+    attributes:
+      label: Type of problem
+      options:
+        - Incorrect or outdated
+        - Missing step or prerequisite
+        - Command or example fails
+        - Misleading claim or unsafe inference
+        - Broken link
+        - Unclear wording
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What is wrong
+      description: Quote the text and describe what a reader would get wrong.
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested correction
+      description: Optional wording or the source that supports the correction.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: submission-checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I searched existing Issues to avoid creating a duplicate.
+          required: true

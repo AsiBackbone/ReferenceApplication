@@ -1,0 +1,82 @@
+name: Demonstration or feature request
+description: Propose a bounded integration scenario or host change for the Reference Application to demonstrate.
+title: "[Request]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The Reference Application is an example, not a product. It demonstrates how NCAT and AsiBackbone fit together;
+        it does not add production capabilities for their own sake.
+
+        For an open-ended idea, start in
+        [Ideas](https://github.com/orgs/AsiBackbone/discussions/categories/ideas). Use this form when the request is
+        bounded enough to plan.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to understand, evaluate, or build? Describe the problem, not the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scenario
+    attributes:
+      label: Proposed scenario
+      description: What should the reference host demonstrate, and what would a reader observe when it works?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ownership
+    attributes:
+      label: Where it belongs
+      description: Each project owns a different part of the story.
+      options:
+        - This reference host (how NCAT and AsiBackbone are integrated)
+        - AsiBackbone (package behavior or APIs)
+        - NetCoreApplicationTemplate (template defaults or options)
+        - Learning (concepts, tradeoffs, or framework-neutral teaching)
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: ownership-reason
+    attributes:
+      label: Why it belongs here
+      description: |
+        Why does this need the integrated host, rather than an AsiBackbone package change, an NCAT template change,
+        or a Learning lesson?
+    validations:
+      required: true
+
+  - type: textarea
+    id: non-goals
+    attributes:
+      label: Non-goals
+      description: What should this request explicitly not do or claim?
+      placeholder: For example, it should not become a supported production feature or imply compliance.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing walkthrough steps, explorer tabs, or documentation you checked first.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: submission-checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I searched existing Issues and Discussions to avoid creating a duplicate.
+          required: true
+        - label: The request is not a suspected vulnerability.
+          required: true
