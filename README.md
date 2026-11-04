@@ -53,7 +53,7 @@ The first run restores packages and builds the host. With a warm NuGet cache it 
 
 **What it doesn't show:** the demo identity, the disposable demonstration database, and the explorer's sandbox tabs exist only in Development. The sample rules are illustrations, not recommendations, and nothing here certifies a deployment as secure or compliant. [Step 7: Observe governance in action](https://asibackbone.github.io/ReferenceApplication/walkthrough/07-observe-governance.html) explains the explorer's boundaries, and the [production deployment checklist](https://asibackbone.github.io/ReferenceApplication/walkthrough/run-in-production.html) lists what a real deployment must decide.
 
-Stop the host with `Ctrl+C`. Delete the clone, or select **Reset demonstration database** on the explorer's **Demo identity** tab, to discard the demonstration evidence. For more, follow the full [Integration Walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/), or continue with [Restore, build, and test](#restore-build-and-test) and [Run with Docker Compose](#run-with-docker-compose) below.
+To discard the demonstration evidence while the host is still running, select **Reset demonstration database** on the explorer's **Demo identity** tab. When you're done, stop the host with `Ctrl+C`; deleting the clone also removes everything the tour created. For more, follow the full [Integration Walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/), or continue with [Restore, build, and test](#restore-build-and-test) and [Run with Docker Compose](#run-with-docker-compose) below.
 
 ## Branches
 
