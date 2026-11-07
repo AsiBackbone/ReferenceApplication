@@ -1,4 +1,5 @@
 using System.Net;
+using System.Reflection;
 using AsiBackbone.Core.Emissions;
 using AsiBackbone.OpenTelemetry;
 using Microsoft.Extensions.Configuration;
@@ -20,6 +21,25 @@ namespace ReferenceApplication.Web.Tests;
 public sealed class OpenTelemetryTests
 {
     private const string _releaseVersion = "0.4.0";
+
+    /// <summary>
+    /// Verifies that the default service version follows the application assembly while an explicit configuration
+    /// value remains authoritative.
+    /// </summary>
+    [Fact]
+    public void ResolveServiceVersion_UsesAssemblyMetadataByDefaultAndPreservesExplicitOverride()
+    {
+        ApplicationOpenTelemetryOptions defaults = new();
+        string assemblyVersion = typeof(Program).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()!
+            .InformationalVersion;
+
+        Assert.Null(defaults.ServiceVersion);
+        Assert.Equal(assemblyVersion, OpenTelemetryServiceExtensions.ResolveServiceVersion(defaults));
+
+        ApplicationOpenTelemetryOptions configured = new() { ServiceVersion = " 2026.11.7-custom " };
+        Assert.Equal("2026.11.7-custom", OpenTelemetryServiceExtensions.ResolveServiceVersion(configured));
+    }
 
     /// <summary>
     /// Verifies that application OpenTelemetry options are bound from configuration.

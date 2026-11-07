@@ -1,4 +1,16 @@
+![Reference Application social image](https://raw.githubusercontent.com/AsiBackbone/ReferenceApplication/main/docs/images/asibackbone-social.png)
+
 # AsiBackbone Reference Application
+
+[![CI](https://github.com/AsiBackbone/ReferenceApplication/actions/workflows/ci.yml/badge.svg)](https://github.com/AsiBackbone/ReferenceApplication/actions/workflows/ci.yml)
+[![Coverage Gate](https://img.shields.io/badge/coverage%20gate-line%2095.5%25%20%7C%20branch%2077.7%25-brightgreen)](eng/code-coverage-floors.json)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/AsiBackbone/ReferenceApplication/badge)](https://scorecard.dev/viewer/?uri=github.com/AsiBackbone/ReferenceApplication)
+[![Documentation](https://github.com/AsiBackbone/ReferenceApplication/actions/workflows/publish-docs.yml/badge.svg)](https://github.com/AsiBackbone/ReferenceApplication/actions/workflows/publish-docs.yml)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://asibackbone.github.io/ReferenceApplication/)
+[![.NET](https://img.shields.io/badge/.NET-10.0-purple)](https://dotnet.microsoft.com/)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE.txt)
+[![Security Policy](https://img.shields.io/badge/security-policy-blue)](SECURITY.md)
+[![GitHub Release](https://img.shields.io/github/v/release/AsiBackbone/ReferenceApplication?sort=semver&display_name=tag&label=release)](https://github.com/AsiBackbone/ReferenceApplication/releases)
 
 The AsiBackbone Reference Application is an ASP.NET Core reference application built from the [.NET Core Application Template (NCAT)](https://github.com/AsiBackbone/NetCoreApplicationTemplate). It integrates [AsiBackbone](https://github.com/AsiBackbone/AsiBackbone) step by step: the application provides runnable sample governance rules that can be read, tested, and adapted, persists the resulting decision evidence alongside NCAT's mutation audit, and makes that evidence observable and its host-owned overhead measurable.
 
@@ -12,7 +24,7 @@ It is for .NET developers and architects evaluating how governance and policy en
 
 ## Status
 
-**Stable release: `1.0.0`.** Version `1.0.0` establishes the Reference Application's first stable `1.x`
+**Stable release: `1.0.1`.** Version `1.0.0` establishes the Reference Application's first stable `1.x`
 compatibility contract under the [Stable Release Policy v1](docs/stable-release-policy-v1.md).
 
 The eight-step [Integration Walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) is complete,

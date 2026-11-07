@@ -83,7 +83,7 @@ _disableToc: true
 
 | Area | Current reference |
 |:---|:---|
-| Release line | Stable `1.0.0` (`1.x` compatibility contract) |
+| Release line | Stable `1.0.1` (`1.x` compatibility contract) |
 | Supported platform | .NET 10.0 |
 | Host baseline | [NCAT](https://asibackbone.github.io/NetCoreApplicationTemplate/) `2.11.7`, generated with `dotnet new netcoreapp-template` (default cookie authentication, SQLite) |
 | Governance framework | [AsiBackbone](https://asibackbone.github.io/AsiBackbone/) `7.5.3`, integrated through walkthrough Step 8 |

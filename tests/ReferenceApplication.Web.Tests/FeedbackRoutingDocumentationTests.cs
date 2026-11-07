@@ -12,6 +12,33 @@ public sealed partial class FeedbackRoutingDocumentationTests
     private const string _privateReportingUrl =
         "https://github.com/AsiBackbone/ReferenceApplication/security/advisories/new";
 
+    /// <summary>
+    /// Verifies that the repository front door uses its organization social image and links the core status badges to
+    /// the owning workflows, documentation, security policy, and release surface.
+    /// </summary>
+    [Fact]
+    public void Readme_UsesOrganizationSocialImageAndCoreBadges()
+    {
+        string readme = RepositoryFiles.ReadAllText("README.md");
+
+        foreach (string expected in new[]
+                 {
+                     "![Reference Application social image](https://raw.githubusercontent.com/AsiBackbone/ReferenceApplication/main/docs/images/asibackbone-social.png)",
+                     "[![CI](https://github.com/AsiBackbone/ReferenceApplication/actions/workflows/ci.yml/badge.svg)](https://github.com/AsiBackbone/ReferenceApplication/actions/workflows/ci.yml)",
+                     "[![Coverage Gate](https://img.shields.io/badge/coverage%20gate-line%2095.5%25%20%7C%20branch%2077.7%25-brightgreen)](eng/code-coverage-floors.json)",
+                     "[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/AsiBackbone/ReferenceApplication/badge)](https://scorecard.dev/viewer/?uri=github.com/AsiBackbone/ReferenceApplication)",
+                     "[![Documentation](https://github.com/AsiBackbone/ReferenceApplication/actions/workflows/publish-docs.yml/badge.svg)](https://github.com/AsiBackbone/ReferenceApplication/actions/workflows/publish-docs.yml)",
+                     "[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://asibackbone.github.io/ReferenceApplication/)",
+                     "[![.NET](https://img.shields.io/badge/.NET-10.0-purple)](https://dotnet.microsoft.com/)",
+                     "[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE.txt)",
+                     "[![Security Policy](https://img.shields.io/badge/security-policy-blue)](SECURITY.md)",
+                     "[![GitHub Release](https://img.shields.io/github/v/release/AsiBackbone/ReferenceApplication?sort=semver&display_name=tag&label=release)](https://github.com/AsiBackbone/ReferenceApplication/releases)"
+                 })
+        {
+            Assert.Contains(expected, readme, StringComparison.Ordinal);
+        }
+    }
+
     private static readonly string[] _discussionCategoryUrls =
     [
         "https://github.com/orgs/AsiBackbone/discussions/categories/q-a",

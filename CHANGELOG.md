@@ -9,8 +9,12 @@ which the `ncat-v<version>` tags record.
 
 ## Unreleased
 
+## 1.0.1 - 2026-11-07
+
 ### Added
 
+* The README now opens with the Reference Application social image and organization-consistent CI, coverage, OpenSSF
+  Scorecard, documentation, platform, license, security-policy, and release badges.
 * A README five-minute tour that runs the Development host, signs in with the demo identity, creates one audited
   record in the governance explorer, and reads its decision, mutation-audit, lifecycle, and delivered audit-completion
   evidence, then contrasts it with a denied capability action. It states what the tour shows and what it doesn't, and
@@ -27,6 +31,11 @@ which the `ncat-v<version>` tags record.
 * Updated the AsiBackbone packages from `7.5.2` to `7.5.3` and regenerated the package lock files. `7.5.3` is a
   backward-compatible maintenance patch; the documentation home and walkthrough Step 2 now name `7.5.3` as the current
   package baseline.
+
+### Fixed
+
+* OpenTelemetry now derives its default `service.version` from the application assembly, so patch releases are
+  distinguishable without an explicit configuration override.
 
 ## 1.0.0 - 2026-11-04
 
