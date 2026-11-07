@@ -21,9 +21,10 @@ public sealed class ApplicationOpenTelemetryOptions
     public string ServiceName { get; set; } = "ReferenceApplication.Web";
 
     /// <summary>
-    /// Gets or sets the logical OpenTelemetry service version.
+    /// Gets or sets the logical OpenTelemetry service version. When unset, the application assembly informational
+    /// version is used.
     /// </summary>
-    public string? ServiceVersion { get; set; } = "1.0.0";
+    public string? ServiceVersion { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether tracing is enabled.

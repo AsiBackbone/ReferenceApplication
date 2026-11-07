@@ -23,15 +23,16 @@ public sealed partial class FeedbackRoutingDocumentationTests
 
         foreach (string expected in new[]
                  {
-                     "https://raw.githubusercontent.com/AsiBackbone/ReferenceApplication/main/docs/images/asibackbone-social.png",
-                     "actions/workflows/ci.yml/badge.svg",
-                     "eng/code-coverage-floors.json",
-                     "api.scorecard.dev/projects/github.com/AsiBackbone/ReferenceApplication/badge",
-                     "actions/workflows/publish-docs.yml/badge.svg",
-                     "https://asibackbone.github.io/ReferenceApplication/",
-                     "](LICENSE.txt)",
-                     "](SECURITY.md)",
-                     "img.shields.io/github/v/release/AsiBackbone/ReferenceApplication"
+                     "![Reference Application social image](https://raw.githubusercontent.com/AsiBackbone/ReferenceApplication/main/docs/images/asibackbone-social.png)",
+                     "[![CI](https://github.com/AsiBackbone/ReferenceApplication/actions/workflows/ci.yml/badge.svg)](https://github.com/AsiBackbone/ReferenceApplication/actions/workflows/ci.yml)",
+                     "[![Coverage Gate](https://img.shields.io/badge/coverage%20gate-line%2095.5%25%20%7C%20branch%2077.7%25-brightgreen)](eng/code-coverage-floors.json)",
+                     "[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/AsiBackbone/ReferenceApplication/badge)](https://scorecard.dev/viewer/?uri=github.com/AsiBackbone/ReferenceApplication)",
+                     "[![Documentation](https://github.com/AsiBackbone/ReferenceApplication/actions/workflows/publish-docs.yml/badge.svg)](https://github.com/AsiBackbone/ReferenceApplication/actions/workflows/publish-docs.yml)",
+                     "[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://asibackbone.github.io/ReferenceApplication/)",
+                     "[![.NET](https://img.shields.io/badge/.NET-10.0-purple)](https://dotnet.microsoft.com/)",
+                     "[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE.txt)",
+                     "[![Security Policy](https://img.shields.io/badge/security-policy-blue)](SECURITY.md)",
+                     "[![GitHub Release](https://img.shields.io/github/v/release/AsiBackbone/ReferenceApplication?sort=semver&display_name=tag&label=release)](https://github.com/AsiBackbone/ReferenceApplication/releases)"
                  })
         {
             Assert.Contains(expected, readme, StringComparison.Ordinal);

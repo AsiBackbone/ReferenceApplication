@@ -144,7 +144,7 @@ public static class OpenTelemetryServiceExtensions
             : OtlpExportProtocol.Grpc;
     }
 
-    private static string ResolveServiceVersion(ApplicationOpenTelemetryOptions options)
+    internal static string ResolveServiceVersion(ApplicationOpenTelemetryOptions options)
     {
         if (!string.IsNullOrWhiteSpace(options.ServiceVersion))
         {

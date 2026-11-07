@@ -32,6 +32,11 @@ which the `ncat-v<version>` tags record.
   backward-compatible maintenance patch; the documentation home and walkthrough Step 2 now name `7.5.3` as the current
   package baseline.
 
+### Fixed
+
+* OpenTelemetry now derives its default `service.version` from the application assembly, so patch releases are
+  distinguishable without an explicit configuration override.
+
 ## 1.0.0 - 2026-11-04
 
 ### Added
