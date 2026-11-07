@@ -22,6 +22,12 @@ which the `ncat-v<version>` tags record.
   `FeedbackRoutingDocumentationTests` pins the forms, the chooser, the README routes, and the README's opening
   discovery terms (#119).
 
+### Changed
+
+* Updated the AsiBackbone packages from `7.5.2` to `7.5.3` and regenerated the package lock files. `7.5.3` is a
+  backward-compatible maintenance patch; the documentation home and walkthrough Step 2 now name `7.5.3` as the current
+  package baseline.
+
 ## 1.0.0 - 2026-11-04
 
 ### Added
