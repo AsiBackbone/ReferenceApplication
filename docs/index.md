@@ -86,7 +86,7 @@ _disableToc: true
 | Release line | Stable `1.0.0` (`1.x` compatibility contract) |
 | Supported platform | .NET 10.0 |
 | Host baseline | [NCAT](https://asibackbone.github.io/NetCoreApplicationTemplate/) `2.11.7`, generated with `dotnet new netcoreapp-template` (default cookie authentication, SQLite) |
-| Governance framework | [AsiBackbone](https://asibackbone.github.io/AsiBackbone/) `7.5.2`, integrated through walkthrough Step 8 |
+| Governance framework | [AsiBackbone](https://asibackbone.github.io/AsiBackbone/) `7.5.3`, integrated through walkthrough Step 8 |
 | Governance sandbox | Development-only explorer tools for experimenting with the pipeline; never registered in Staging or Production |
 | Untouched scaffold | [`ncat-baseline` branch](https://github.com/AsiBackbone/ReferenceApplication/tree/ncat-baseline) |
 | Source | [AsiBackbone/ReferenceApplication](https://github.com/AsiBackbone/ReferenceApplication) |
