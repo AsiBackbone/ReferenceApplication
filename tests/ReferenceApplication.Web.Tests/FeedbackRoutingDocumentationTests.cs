@@ -12,6 +12,32 @@ public sealed partial class FeedbackRoutingDocumentationTests
     private const string _privateReportingUrl =
         "https://github.com/AsiBackbone/ReferenceApplication/security/advisories/new";
 
+    /// <summary>
+    /// Verifies that the repository front door uses its organization social image and links the core status badges to
+    /// the owning workflows, documentation, security policy, and release surface.
+    /// </summary>
+    [Fact]
+    public void Readme_UsesOrganizationSocialImageAndCoreBadges()
+    {
+        string readme = RepositoryFiles.ReadAllText("README.md");
+
+        foreach (string expected in new[]
+                 {
+                     "https://raw.githubusercontent.com/AsiBackbone/ReferenceApplication/main/docs/images/asibackbone-social.png",
+                     "actions/workflows/ci.yml/badge.svg",
+                     "eng/code-coverage-floors.json",
+                     "api.scorecard.dev/projects/github.com/AsiBackbone/ReferenceApplication/badge",
+                     "actions/workflows/publish-docs.yml/badge.svg",
+                     "https://asibackbone.github.io/ReferenceApplication/",
+                     "](LICENSE.txt)",
+                     "](SECURITY.md)",
+                     "img.shields.io/github/v/release/AsiBackbone/ReferenceApplication"
+                 })
+        {
+            Assert.Contains(expected, readme, StringComparison.Ordinal);
+        }
+    }
+
     private static readonly string[] _discussionCategoryUrls =
     [
         "https://github.com/orgs/AsiBackbone/discussions/categories/q-a",

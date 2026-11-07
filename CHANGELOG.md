@@ -9,8 +9,12 @@ which the `ncat-v<version>` tags record.
 
 ## Unreleased
 
+## 1.0.1 - 2026-11-07
+
 ### Added
 
+* The README now opens with the Reference Application social image and organization-consistent CI, coverage, OpenSSF
+  Scorecard, documentation, platform, license, security-policy, and release badges.
 * A README five-minute tour that runs the Development host, signs in with the demo identity, creates one audited
   record in the governance explorer, and reads its decision, mutation-audit, lifecycle, and delivered audit-completion
   evidence, then contrasts it with a denied capability action. It states what the tour shows and what it doesn't, and

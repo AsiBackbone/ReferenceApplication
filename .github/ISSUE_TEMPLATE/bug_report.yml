@@ -24,7 +24,7 @@ body:
     attributes:
       label: Release or commit
       description: Which release tag or `main` commit did you run?
-      placeholder: v1.0.0 or a commit SHA
+      placeholder: v1.0.1 or a commit SHA
     validations:
       required: true
 
