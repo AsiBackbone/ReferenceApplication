@@ -1,6 +1,6 @@
 {
   "templatePackage": "NetCoreApplicationTemplate",
-  "version": "2.11.7",
+  "version": "2.11.9",
   "templateShortName": "netcoreapp-template",
   "name": "ReferenceApplication",
   "options": {
