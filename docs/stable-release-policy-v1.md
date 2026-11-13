@@ -262,6 +262,15 @@ waived ad hoc for the first stable release.
 9. Publish the GitHub release from that tag with **pre-release disabled** and notes matching the changelog.
 10. Verify the published tag, release assets/notes, documentation, container startup, `/health/ready`, and supported
     database upgrade path.
+11. Run the release-artifact signing guard against the published release:
+
+    ```powershell
+    ./scripts/Test-ReleaseArtifactSigning.ps1 -Tag v1.0.0
+    ```
+
+    Releases distribute no attached assets, so Sigstore signing is deferred under the
+    [Release Artifact Signing Assessment](release-artifact-signing.md). The guard fails if the release has any attached
+    asset while that decision stands; attaching release assets requires implementing signing first.
 
 ## Rollback, withdrawal, and post-release handling
 

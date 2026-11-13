@@ -9,6 +9,13 @@ which the `ncat-v<version>` tags record.
 
 ## Unreleased
 
+### Added
+
+* A [Release Artifact Signing Assessment](docs/release-artifact-signing.md) that inventories what releases distribute,
+  threat-models release provenance, and records the decision to defer Sigstore signing because no release has attached
+  assets, with revisit triggers. `scripts/Test-ReleaseArtifactSigning.ps1` fails a published release that attaches
+  assets while signing is deferred; the stable release procedure runs it, and CI runs its offline self-test (#129).
+
 ### Changed
 
 * The integration baseline was refreshed to NCAT `2.11.9`, including the generated template
