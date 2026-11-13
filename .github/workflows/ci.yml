@@ -79,6 +79,11 @@ jobs:
         shell: pwsh
         run: ./scripts/Write-CoverageSummary.ps1 -SelfTest
 
+      # Exercises the fail-closed guard for the deferred release-artifact signing decision (#129) offline.
+      - name: Self-test release artifact signing guard
+        shell: pwsh
+        run: ./scripts/Test-ReleaseArtifactSigning.ps1 -SelfTest
+
       # Coverage is gated against the line and branch floors in eng/code-coverage-floors.json, in total and per
       # production assembly. Generated EF Core migrations are excluded; coverlet's defaults exclude the test assembly
       # and compiler-generated code.
