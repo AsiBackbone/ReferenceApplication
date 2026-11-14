@@ -60,6 +60,14 @@ updates:
       dotnet-base-images:
         patterns:
           - "mcr.microsoft.com/dotnet/*"
+    ignore:
+      - dependency-name: "dotnet/aspnet"
+        update-types:
+          - "version-update:semver-major"
+
+      - dependency-name: "dotnet/sdk"
+        update-types:
+          - "version-update:semver-major"
 
   # GitHub Actions remain SHA-pinned; Dependabot updates the pins as a grouped,
   # reviewable change without adding a cooldown beyond the weekly schedule.
