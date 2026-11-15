@@ -43,7 +43,7 @@ operation uses the production dependency-injection registrations and a fresh app
 
 ## Historical reference snapshot
 
-The following snapshot was recorded on October 19, 2026. It predates the current AsiBackbone `7.5.0` integration and
+The following snapshot was recorded on October 19, 2026. It predates the later AsiBackbone `7.5.0` integration and
 the host's signed-capability-token work, so it is retained only as a historical reproducibility record. It must not be
 presented as the stable-release benchmark snapshot or as evidence for the current host behavior.
 
@@ -91,8 +91,8 @@ documented, repeatable environment.
 
 ### Current refresh status
 
-A refresh against the AsiBackbone `7.5.0` integration was attempted before the
-stable release. BenchmarkDotNet 0.15.8 discovers all five scenarios, but its
+The pre-release refresh was attempted against the AsiBackbone `7.5.0`
+integration. BenchmarkDotNet 0.15.8 discovers all five scenarios, but its
 default generated-project toolchain fails while rebuilding the Reference
 Application project graph because the generated build redirects referenced
 project outputs into its temporary artifact tree.

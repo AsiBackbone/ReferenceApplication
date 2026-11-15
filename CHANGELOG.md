@@ -9,6 +9,11 @@ which the `ncat-v<version>` tags record.
 
 ## Unreleased
 
+### Fixed
+
+* Walkthrough Step 2's `Directory.Packages.props` sample now pins the AsiBackbone packages at `7.5.4`, matching the
+  surrounding text and the repository's central package versions; it still showed `7.5.0` (#140).
+
 ## 1.0.2 - 2026-11-15
 
 ### Added
