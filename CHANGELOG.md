@@ -9,6 +9,11 @@ which the `ncat-v<version>` tags record.
 
 ## Unreleased
 
+### Security
+
+* `nuget.config` now uses package source mapping to route every package ID to nuget.org, matching AsiBackbone and
+  the configuration NCAT adopts for its scaffold (AsiBackbone/NetCoreApplicationTemplate#706). Restore can no longer
+  resolve a package from a machine-level or user-level feed (#143).
 ### Added
 
 * A [Contributing guide](CONTRIBUTING.md) that explains what belongs in this repository rather than in AsiBackbone,
