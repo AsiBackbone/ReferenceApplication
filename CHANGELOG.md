@@ -18,6 +18,8 @@ which the `ncat-v<version>` tags record.
 
 ### Changed
 
+* The integration baseline was refreshed to NCAT `2.11.10`, including the generated template
+  changes and regenerated package lock files (#135).
 * The integration baseline was refreshed to NCAT `2.11.9`, including the generated template
   changes and regenerated package lock files (#127).
 
