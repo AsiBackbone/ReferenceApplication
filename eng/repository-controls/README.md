@@ -9,8 +9,8 @@ IDs, timestamps, source metadata, and links are intentionally omitted.
 
 - `main-branch-ruleset.json` protects the ongoing development and integration
   branch. It requires the repository's build, test, container smoke test,
-  documentation, workflow security, dependency-review, OWASP Dependency-Check,
-  and CodeQL checks. The container smoke test builds the runtime and migration
+  documentation, version-consistency, workflow security, dependency-review,
+  OWASP Dependency-Check, and CodeQL checks. The container smoke test builds the runtime and migration
   images, so a change that breaks the Dockerfile, Compose file, project files,
   or lock files cannot merge. The release upgrade test upgrades a database
   created by the oldest supported release, so a migration that loses or
@@ -26,8 +26,9 @@ Requiring a check before GitHub can produce it would block every pull request.
 
 After the workflows land on `main`:
 
-1. Allow the `CI`, `Publish Documentation`, `GitHub Actions security analysis`,
-   and `OWASP Dependency-Check software composition analysis` workflows to
+1. Allow the `CI`, `Publish Documentation`, `Version Consistency`,
+   `GitHub Actions security analysis`, and
+   `OWASP Dependency-Check software composition analysis` workflows to
    complete successfully on `main`. Confirm the scheduled/manual `OpenSSF
    Scorecard supply-chain security` workflow can publish its results.
 2. Apply `main-branch-ruleset.json` through the GitHub repository rulesets API.
@@ -56,7 +57,8 @@ describes.
 
 Dependabot monitors NuGet, Docker, and GitHub Actions dependencies on staggered
 weekly schedules. Its pull requests use the same required review, CI, dependency
-review, OWASP, CodeQL, and workflow-security checks as other changes to `main`.
+review, version-consistency, OWASP, CodeQL, and workflow-security checks as other
+changes to `main`.
 
 ## OpenSSF Scorecard exceptions
 

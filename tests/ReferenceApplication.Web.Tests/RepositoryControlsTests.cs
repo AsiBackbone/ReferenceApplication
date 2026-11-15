@@ -13,6 +13,8 @@ public sealed partial class RepositoryControlsTests
     private const string _ciWorkflowPath = ".github/workflows/ci.yml";
     private const string _mainRulesetPath = "eng/repository-controls/main-branch-ruleset.json";
     private const string _coverageFloorsPath = "eng/code-coverage-floors.json";
+    private const string _linkWorkflowPath = ".github/workflows/link-validation.yml";
+    private const string _versionWorkflowPath = ".github/workflows/version-consistency.yml";
     private const int _gitHubActionsIntegrationId = 15368;
 
     /// <summary>
@@ -44,6 +46,45 @@ public sealed partial class RepositoryControlsTests
         Assert.NotEmpty(checks);
         Assert.Equal(checks.Count, checks.Select(check => check.Context).Distinct(StringComparer.Ordinal).Count());
         Assert.All(checks, check => Assert.Equal(_gitHubActionsIntegrationId, check.IntegrationId));
+    }
+
+    /// <summary>
+    /// Verifies that the cross-repository alignment controls remain wired to pull requests and scheduled link review,
+    /// that the deterministic version validator self-tests before checking the repository, and that ownership routes
+    /// every path to the active maintainer without claiming independent approval.
+    /// </summary>
+    [Fact]
+    public void AlignmentControls_AreWiredOwnedAndRequiredWhereApplicable()
+    {
+        string linkWorkflow = RepositoryFiles.ReadAllText(_linkWorkflowPath);
+        string versionWorkflow = RepositoryFiles.ReadAllText(_versionWorkflowPath);
+        string codeOwners = RepositoryFiles.ReadAllText(".github/CODEOWNERS");
+        string lychee = RepositoryFiles.ReadAllText("lychee.toml");
+        HashSet<string> requiredChecks = [.. ReadRequiredChecks().Select(check => check.Context)];
+
+        Assert.Contains("pull_request:\n", linkWorkflow, StringComparison.Ordinal);
+        Assert.Contains("schedule:\n", linkWorkflow, StringComparison.Ordinal);
+        Assert.Contains("lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8", linkWorkflow, StringComparison.Ordinal);
+        Assert.Contains("--offline", linkWorkflow, StringComparison.Ordinal);
+        Assert.Contains("./docs/_site/**/*.html", linkWorkflow, StringComparison.Ordinal);
+        Assert.Contains("security/advisories/new", lychee, StringComparison.Ordinal);
+
+        int selfTest = versionWorkflow.IndexOf(
+            "./scripts/Validate-VersionConsistency.ps1 -SelfTest",
+            StringComparison.Ordinal);
+        int validation = versionWorkflow.LastIndexOf(
+            "./scripts/Validate-VersionConsistency.ps1",
+            StringComparison.Ordinal);
+        Assert.True(selfTest >= 0, "The version-consistency workflow does not self-test its validator.");
+        Assert.True(validation > selfTest, "Repository version validation must run after the validator self-test.");
+        Assert.Contains("Validate version consistency", requiredChecks);
+
+        Assert.Contains("* @cdcavell", codeOwners, StringComparison.Ordinal);
+        Assert.Contains("/src/ @cdcavell", codeOwners, StringComparison.Ordinal);
+        Assert.Contains("/tests/ @cdcavell", codeOwners, StringComparison.Ordinal);
+        Assert.Contains("/docs/ @cdcavell", codeOwners, StringComparison.Ordinal);
+        Assert.Contains("/.github/ @cdcavell", codeOwners, StringComparison.Ordinal);
+        Assert.Contains("/eng/repository-controls/ @cdcavell", codeOwners, StringComparison.Ordinal);
     }
 
     /// <summary>

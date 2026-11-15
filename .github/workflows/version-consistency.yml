@@ -1,0 +1,41 @@
+name: Version Consistency
+
+on:
+  pull_request:
+    branches:
+      - main
+
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-version-consistency:
+    name: Validate version consistency
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Test version consistency validator
+        shell: pwsh
+        run: ./scripts/Validate-VersionConsistency.ps1 -SelfTest
+
+      - name: Validate version consistency
+        shell: pwsh
+        run: ./scripts/Validate-VersionConsistency.ps1

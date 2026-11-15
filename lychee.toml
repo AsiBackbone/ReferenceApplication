@@ -1,0 +1,26 @@
+verbose = "info"
+no_progress = true
+
+max_retries = 2
+timeout = 20
+retry_wait_time = 2
+
+max_concurrency = 8
+host_concurrency = 2
+
+# Treat rate limiting as inconclusive rather than a broken link. Pull request
+# runs are offline; scheduled and manual runs exercise external links.
+accept = ["200..=399", "429"]
+
+# Local-development documentation intentionally uses localhost and private
+# addresses that are not meaningful link-check targets.
+exclude_all_private = true
+
+# Email-address validation is outside the scope of documentation links.
+include_mail = false
+
+exclude = [
+  # Private vulnerability reporting may intentionally return 404 to an
+  # unauthenticated link checker.
+  '^https://github\.com/AsiBackbone/ReferenceApplication/security/advisories/new$'
+]

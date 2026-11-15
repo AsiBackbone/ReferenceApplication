@@ -1,0 +1,45 @@
+# Repository ownership
+#
+# ReferenceApplication currently operates with one active maintainer. CODEOWNERS
+# records ownership and review routing without treating self-review as independent
+# approval. The versioned branch rulesets therefore require pull requests, dismiss
+# stale reviews, require resolved review threads and required CI, but do not require
+# Code Owner approval while the solo-maintainer posture applies.
+#
+# Revisit the approval and Code Owner settings when a second active maintainer is
+# appointed.
+
+* @cdcavell
+
+# Application source, migrations, and tests
+/src/ @cdcavell
+/tests/ @cdcavell
+
+# Documentation and integration walkthrough
+/docs/ @cdcavell
+README.md @cdcavell
+CHANGELOG.md @cdcavell
+CONTRIBUTING.md @cdcavell
+
+# GitHub workflows, issue templates, and repository automation
+/.github/ @cdcavell
+/scripts/ @cdcavell
+/eng/repository-controls/ @cdcavell
+
+# Build, dependency, container, and baseline configuration
+Directory.Build.props @cdcavell
+Directory.Packages.props @cdcavell
+global.json @cdcavell
+nuget.config @cdcavell
+Dockerfile @cdcavell
+docker-compose*.yml @cdcavell
+/eng/ncat-baseline.json @cdcavell
+
+# Governance, security, release, and legal metadata
+CODE_OF_CONDUCT.md @cdcavell
+GOVERNANCE.md @cdcavell
+MAINTAINERS.md @cdcavell
+RELEASE.md @cdcavell
+SECURITY.md @cdcavell
+SUPPORT.md @cdcavell
+LICENSE.txt @cdcavell

@@ -26,6 +26,9 @@ which the `ncat-v<version>` tags record.
 * A [Contributing guide](CONTRIBUTING.md) that explains what belongs in this repository rather than in AsiBackbone,
   NCAT, or Learning, how the `ncat-baseline` branch constrains changes, and how to build, test, and validate the
   documentation. The README links to it, and the organization profile and landing-page links to it now resolve (#139).
+* Repository controls for documentation links, current application/NCAT/AsiBackbone version consistency, and
+  CODEOWNERS review routing. The version validator includes negative contract tests, and its check is part of the
+  versioned `main` branch ruleset (#145).
 
 ### Changed
 
