@@ -11,6 +11,12 @@
     <Version Condition="'$(VersionSuffix)' != ''">$(VersionPrefix)-$(VersionSuffix)</Version>
     <AssemblyVersion>1.0.2.0</AssemblyVersion>
     <FileVersion>1.0.2.0</FileVersion>
+    <!--
+      InformationalVersion is intentionally not set. The NCAT scaffold sets it to $(Version)+$(RepositoryUrl) before
+      RepositoryUrl is defined, so the URL evaluates empty and the value becomes "<version>+.<commit>". The SDK default,
+      "<version>+<commit>", is what OpenTelemetry reports as service.version. Restore the property only after the
+      template places it below RepositoryUrl (AsiBackbone/NetCoreApplicationTemplate#710).
+    -->
 
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
     <EnableSourceLink Condition="'$(EnableSourceLink)' == '' and '$(GITHUB_ACTIONS)' == 'true'">true</EnableSourceLink>
