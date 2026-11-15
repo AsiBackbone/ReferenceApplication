@@ -15,6 +15,11 @@ which the `ncat-v<version>` tags record.
   NCAT, or Learning, how the `ncat-baseline` branch constrains changes, and how to build, test, and validate the
   documentation. The README links to it, and the organization profile and landing-page links to it now resolve (#139).
 
+### Fixed
+
+* Walkthrough Step 2's `Directory.Packages.props` sample now pins the AsiBackbone packages at `7.5.4`, matching the
+  surrounding text and the repository's central package versions; it still showed `7.5.0` (#140).
+
 ## 1.0.2 - 2026-11-15
 
 ### Added

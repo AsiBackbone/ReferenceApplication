@@ -57,15 +57,15 @@ The current section is intentionally separate from the historical status line. O
 
      ```xml
      <ItemGroup>
-       <PackageVersion Include="AsiBackbone.Analyzers" Version="7.5.0" />
-       <PackageVersion Include="AsiBackbone.AspNetCore" Version="7.5.0" />
-       <PackageVersion Include="AsiBackbone.Core" Version="7.5.0" />
-       <PackageVersion Include="AsiBackbone.EntityFrameworkCore" Version="7.5.0" />
-       <PackageVersion Include="AsiBackbone.OpenTelemetry" Version="7.5.0" />
-       <PackageVersion Include="AsiBackbone.Signing.LocalDevelopment" Version="7.5.0" />
-       <PackageVersion Include="AsiBackbone.Signing.ManagedKey" Version="7.5.0" />
-       <PackageVersion Include="AsiBackbone.Storage.InMemory" Version="7.5.0" />
-       <PackageVersion Include="AsiBackbone.Testing" Version="7.5.0" />
+       <PackageVersion Include="AsiBackbone.Analyzers" Version="7.5.4" />
+       <PackageVersion Include="AsiBackbone.AspNetCore" Version="7.5.4" />
+       <PackageVersion Include="AsiBackbone.Core" Version="7.5.4" />
+       <PackageVersion Include="AsiBackbone.EntityFrameworkCore" Version="7.5.4" />
+       <PackageVersion Include="AsiBackbone.OpenTelemetry" Version="7.5.4" />
+       <PackageVersion Include="AsiBackbone.Signing.LocalDevelopment" Version="7.5.4" />
+       <PackageVersion Include="AsiBackbone.Signing.ManagedKey" Version="7.5.4" />
+       <PackageVersion Include="AsiBackbone.Storage.InMemory" Version="7.5.4" />
+       <PackageVersion Include="AsiBackbone.Testing" Version="7.5.4" />
      </ItemGroup>
      ```
 
