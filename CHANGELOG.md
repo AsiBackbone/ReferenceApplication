@@ -15,6 +15,11 @@ which the `ncat-v<version>` tags record.
   NCAT, or Learning, how the `ncat-baseline` branch constrains changes, and how to build, test, and validate the
   documentation. The README links to it, and the organization profile and landing-page links to it now resolve (#139).
 
+### Changed
+
+* Updated the central transitive `System.Security.Cryptography.Pkcs` pin from 10.0.13 to 10.0.14 and regenerated the
+  affected package lock file, matching AsiBackbone and the corresponding NCAT servicing change.
+
 ### Fixed
 
 * Walkthrough Step 2's `Directory.Packages.props` sample now pins the AsiBackbone packages at `7.5.4`, matching the
