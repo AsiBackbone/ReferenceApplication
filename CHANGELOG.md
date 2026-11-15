@@ -9,6 +9,8 @@ which the `ncat-v<version>` tags record.
 
 ## Unreleased
 
+## 1.0.2 - 2026-11-15
+
 ### Added
 
 * A [Release Artifact Signing Assessment](docs/release-artifact-signing.md) that inventories what releases distribute,
