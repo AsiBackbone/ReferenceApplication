@@ -89,7 +89,9 @@ with a diff if the branch has drifted. Run the same check locally with
 `./scripts/Test-NcatBaselineReproducibility.ps1`; see
 [Verify reproducibility](https://asibackbone.github.io/ReferenceApplication/walkthrough/refresh-ncat-baseline.html#verify-reproducibility).
 
-The desired branch rulesets for `main` and `ncat-baseline` are versioned under `eng/repository-controls/`.
+The desired branch rulesets for `main` and `ncat-baseline` are versioned under `eng/repository-controls/`. CODEOWNERS
+records the solo-maintainer review routing, while link validation and version-consistency workflows guard the published
+documentation and the current application, NCAT baseline, and AsiBackbone package markers.
 
 ## Development and releases
 
@@ -119,7 +121,7 @@ The `ncat-baseline` branch is updated separately through a pull request containi
 | `tests/ReferenceApplication.Web.Tests` | Automated tests |
 | `tests/ReferenceApplication.Benchmarks` | On-demand host governance overhead benchmarks |
 | `docs/` | DocFX documentation site source |
-| `scripts/` | Documentation, release, coverage, and baseline-reproducibility validation scripts |
+| `scripts/` | Documentation, release, coverage, version-consistency, and baseline-reproducibility validation scripts |
 | `eng/repository-controls/` | Recorded GitHub branch rulesets |
 | `eng/ncat-baseline.json` | Adopted NCAT version and generation inputs that `ncat-baseline` must reproduce |
 

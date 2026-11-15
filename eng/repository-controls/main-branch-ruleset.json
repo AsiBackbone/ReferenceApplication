@@ -76,6 +76,10 @@
             "integration_id": 15368
           },
           {
+            "context": "Validate version consistency",
+            "integration_id": 15368
+          },
+          {
             "context": "Validate workflows with actionlint",
             "integration_id": 15368
           },
