@@ -356,6 +356,8 @@ The Reference Application is a stable example, not a product. The most useful fe
 | [Issue forms](https://github.com/AsiBackbone/ReferenceApplication/issues/new/choose) | Reproducible host bugs, documentation defects, and bounded demonstration or feature requests |
 | [Private vulnerability reporting](https://github.com/AsiBackbone/ReferenceApplication/security/advisories/new) | Suspected vulnerabilities, as the [Security Policy](SECURITY.md) describes |
 
+To propose a change yourself, read the [Contributing guide](CONTRIBUTING.md) first. It explains what belongs here rather than in AsiBackbone or NCAT, how the `ncat-baseline` branch constrains changes, and how to build, test, and validate the documentation.
+
 Discussions are shared across the AsiBackbone organization, so name `AsiBackbone/ReferenceApplication` in the post. If a problem reproduces without this host's own code, it belongs to [AsiBackbone](https://github.com/AsiBackbone/AsiBackbone) or [NCAT](https://github.com/AsiBackbone/NetCoreApplicationTemplate) instead; the [Security Policy](SECURITY.md#where-to-report) explains how to tell.
 
 ## Related projects

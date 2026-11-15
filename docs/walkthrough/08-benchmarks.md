@@ -45,7 +45,7 @@ This snapshot was recorded on October 19, 2026, at repository commit
 with AsiBackbone `7.2.1`, using an AMD Ryzen 5 7430U, Windows 11 25H2, .NET SDK 10.0.402, .NET 10.0.13,
 BenchmarkDotNet 0.15.8, and the SQLite configuration described above.
 
-The snapshot predates the current AsiBackbone `7.5.0` integration and signed-capability-token path. It is historical
+The snapshot predates the later AsiBackbone `7.5.0` integration and signed-capability-token path. It is historical
 evidence only and must be refreshed on the exact stable release candidate before benchmark results are used as
 stable-release qualification evidence.
 
