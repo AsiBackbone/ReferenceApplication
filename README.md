@@ -181,6 +181,7 @@ itself, run `./scripts/Write-CoverageSummary.ps1 -SelfTest`; CI runs it before t
 
 Each project has a checked-in `packages.lock.json`. Locked mode restores the exact recorded dependency graph and fails if the projects and lock files disagree. After an intentional dependency change, run `dotnet restore --force-evaluate`, review the lock-file changes, and commit them with the change.
 
+`nuget.config` restores only from nuget.org and uses package source mapping to route every package ID to it, so a feed configured elsewhere on the machine is never consulted. This matches the configuration NCAT ships in its scaffold; see NCAT's [Package Source Mapping](https://asibackbone.github.io/NetCoreApplicationTemplate/articles/build-quality.html#package-source-mapping) for how to add a private feed safely.
 ## Run locally
 
 ```powershell

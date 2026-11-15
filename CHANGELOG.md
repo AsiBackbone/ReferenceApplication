@@ -15,11 +15,22 @@ which the `ncat-v<version>` tags record.
   value is evaluated before `RepositoryUrl` and produces `<version>+.<commit>`. The upstream bug is tracked in
   AsiBackbone/NetCoreApplicationTemplate#710; no build output changes (#144).
 
+### Security
+
+* `nuget.config` now uses package source mapping to route every package ID to nuget.org, matching AsiBackbone and
+  the configuration NCAT adopts for its scaffold (AsiBackbone/NetCoreApplicationTemplate#706). Restore can no longer
+  resolve a package from a machine-level or user-level feed (#143).
+  
 ### Added
 
 * A [Contributing guide](CONTRIBUTING.md) that explains what belongs in this repository rather than in AsiBackbone,
   NCAT, or Learning, how the `ncat-baseline` branch constrains changes, and how to build, test, and validate the
   documentation. The README links to it, and the organization profile and landing-page links to it now resolve (#139).
+
+### Changed
+
+* Updated the central transitive `System.Security.Cryptography.Pkcs` pin from 10.0.13 to 10.0.14 and regenerated the
+  affected package lock file, matching AsiBackbone and the corresponding NCAT servicing change.
 
 ### Fixed
 
