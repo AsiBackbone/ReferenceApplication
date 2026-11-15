@@ -9,6 +9,12 @@ which the `ncat-v<version>` tags record.
 
 ## Unreleased
 
+### Added
+
+* A [Contributing guide](CONTRIBUTING.md) that explains what belongs in this repository rather than in AsiBackbone,
+  NCAT, or Learning, how the `ncat-baseline` branch constrains changes, and how to build, test, and validate the
+  documentation. The README links to it, and the organization profile and landing-page links to it now resolve (#139).
+
 ### Fixed
 
 * Walkthrough Step 2's `Directory.Packages.props` sample now pins the AsiBackbone packages at `7.5.4`, matching the
