@@ -76,6 +76,25 @@ public sealed class ReleaseUpgradeTests : IDisposable
     }
 
     /// <summary>
+    /// Keeps the published upgrade guidance and stable compatibility policy tied to the
+    /// same oldest tested database fixture as the implementation and release CI.
+    /// </summary>
+    [Fact]
+    public void PublishedUpgradeGuidance_RetainsTheTestedStableBoundary()
+    {
+        string guide = RepositoryFiles.ReadAllText("docs/walkthrough/upgrade-between-releases.md");
+        string policy = RepositoryFiles.ReadAllText("docs/stable-release-policy-v1.md");
+        string boundary = ReleaseUpgradeEvidence.BoundaryRelease;
+
+        Assert.Contains($"`{boundary}`", guide, StringComparison.Ordinal);
+        Assert.Contains("oldest supported SQLite", guide, StringComparison.Ordinal);
+        Assert.Contains("../stable-release-policy-v1.md", guide, StringComparison.Ordinal);
+        Assert.Contains("../index.md#at-a-glance", guide, StringComparison.Ordinal);
+        Assert.Contains($"| Database upgrade boundary | `{boundary}`", policy, StringComparison.Ordinal);
+        Assert.Contains("do not separately exercise every possible pair", guide, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// Verifies that upgrading a boundary database keeps every row unchanged, that a second upgrade changes nothing, that
     /// the upgraded schema matches a clean install, and that the upgraded application becomes ready and still verifies
     /// and links its evidence.
