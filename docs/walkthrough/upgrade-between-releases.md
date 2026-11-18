@@ -5,8 +5,14 @@ description: The supported database upgrade boundary, how upgrades are tested, a
 
 # Supplemental: Upgrade Between Releases
 
-**Status:** Available from `v0.1.0-alpha.11`. Every pull request upgrades a database created by that release, and
-checks that no evidence was lost or changed ([#73](https://github.com/AsiBackbone/ReferenceApplication/issues/73)).
+**Current contract:** ReferenceApplication has published a [stable `1.x` release](../stable-release-policy-v1.md)
+([current release and adopted dependencies](../index.md#at-a-glance)). The **oldest supported SQLite
+database upgrade starting point** remains `v0.1.0-alpha.11`, the retained preview fixture established by
+[#73](https://github.com/AsiBackbone/ReferenceApplication/issues/73). This does **not** mean the application
+is still in preview: stable compatibility and the age of the upgrade fixture describe different boundaries.
+
+`ReleaseUpgradeTests` and the CI **Release upgrade test** exercise that earlier database against the current
+migrations and evidence-verification paths. They do not separately exercise every possible pair of intermediate releases.
 
 The application database holds governance evidence: decision receipts and their hashed ledger records, NCAT mutation
 audit and manifests, audit completions and lifecycle events, reconciliation findings, and capability-grant use
@@ -17,12 +23,16 @@ none of that, so upgrades are tested from a real earlier release.
 
 | From | To | Supported |
 | --- | --- | --- |
-| `v0.1.0-alpha.11` or later | Any later release | Yes. Tested on every pull request. |
-| Earlier than `v0.1.0-alpha.11` | Any release | No. Those pre-releases predate the tested boundary; start from a new database. |
+| `v0.1.0-alpha.11` | Current stable `1.x` release | Yes. The oldest-boundary fixture is exercised by repository tests and the CI release-upgrade job. |
+| Later releases within the supported upgrade range | Later releases | Supported under the stable `1.x` migration contract; not every intermediate release pair has an independent fixture. |
+| Earlier than `v0.1.0-alpha.11` | Current release | Not a supported upgrade starting point. These earlier previews predate the tested boundary; migrate data separately or initialize a new database. |
 
-Upgrades are supported and tested on SQLite, the only supported provider (see
+SQLite is the only supported database provider (see
 [Supported database provider](local-database-setup.md#supported-database-provider)).
-The boundary may move forward when a release is declared stable; it never moves silently.
+The [stable release policy](../stable-release-policy-v1.md#stable-persisted-evidence-and-schema-contract)
+retains this boundary for stable `1.x`; graduation to stable did not advance it.
+Changing the oldest supported starting point requires a deliberate compatibility-policy decision,
+an updated release fixture, and matching tests and CI configuration. It must never move silently.
 
 ## How upgrades are tested
 
