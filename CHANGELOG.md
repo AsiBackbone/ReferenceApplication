@@ -11,6 +11,10 @@ which the `ncat-v<version>` tags record.
 
 ### Changed
 
+* Link validation no longer sends Zenodo archive DOIs through Lychee. Zenodo intermittently times out or returns 
+  HTTP 500 to automated requests on DOI links it did not change. A dedicated step 
+  resolves every Zenodo DOI in the Markdown with bounded retries: it fails scheduled and manual runs, so an archive 
+  that stops resolving is still reported, and only warns on pull request and push runs.
 * `Directory.Build.props` now records why `InformationalVersion` is intentionally not set: the NCAT scaffold's
   value is evaluated before `RepositoryUrl` and produces `<version>+.<commit>`. The upstream bug is tracked in
   AsiBackbone/NetCoreApplicationTemplate#710; no build output changes (#144).
