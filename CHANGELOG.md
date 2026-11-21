@@ -9,6 +9,17 @@ which the `ncat-v<version>` tags record.
 
 ## Unreleased
 
+## 1.0.3 - 2026-11-21
+
+### Added
+
+* A [Contributing guide](CONTRIBUTING.md) that explains what belongs in this repository rather than in AsiBackbone,
+  NCAT, or Learning, how the `ncat-baseline` branch constrains changes, and how to build, test, and validate the
+  documentation. The README links to it, and the organization profile and landing-page links to it now resolve (#139).
+* Repository controls for documentation links, current application/NCAT/AsiBackbone version consistency, and
+  CODEOWNERS review routing. The version validator includes negative contract tests, and its check is part of the
+  versioned `main` branch ruleset (#145).
+
 ### Changed
 
 * Walkthrough Step 2's `Directory.Packages.props` sample now pins the AsiBackbone packages at `7.5.5`, matching the
@@ -25,31 +36,14 @@ which the `ncat-v<version>` tags record.
 * `Directory.Build.props` now records why `InformationalVersion` is intentionally not set: the NCAT scaffold's
   value is evaluated before `RepositoryUrl` and produces `<version>+.<commit>`. The upstream bug is tracked in
   AsiBackbone/NetCoreApplicationTemplate#710; no build output changes (#144).
+* Updated the central transitive `System.Security.Cryptography.Pkcs` pin from 10.0.13 to 10.0.14 and regenerated the
+  affected package lock file, matching AsiBackbone and the corresponding NCAT servicing change.
 
 ### Security
 
 * `nuget.config` now uses package source mapping to route every package ID to nuget.org, matching AsiBackbone and
   the configuration NCAT adopts for its scaffold (AsiBackbone/NetCoreApplicationTemplate#706). Restore can no longer
   resolve a package from a machine-level or user-level feed (#143).
-  
-### Added
-
-* A [Contributing guide](CONTRIBUTING.md) that explains what belongs in this repository rather than in AsiBackbone,
-  NCAT, or Learning, how the `ncat-baseline` branch constrains changes, and how to build, test, and validate the
-  documentation. The README links to it, and the organization profile and landing-page links to it now resolve (#139).
-* Repository controls for documentation links, current application/NCAT/AsiBackbone version consistency, and
-  CODEOWNERS review routing. The version validator includes negative contract tests, and its check is part of the
-  versioned `main` branch ruleset (#145).
-
-### Changed
-
-* Updated the central transitive `System.Security.Cryptography.Pkcs` pin from 10.0.13 to 10.0.14 and regenerated the
-  affected package lock file, matching AsiBackbone and the corresponding NCAT servicing change.
-
-### Fixed
-
-* Walkthrough Step 2's `Directory.Packages.props` sample now pins the AsiBackbone packages at `7.5.4`, matching the
-  surrounding text and the repository's central package versions; it still showed `7.5.0` (#140).
 
 ## 1.0.2 - 2026-11-15
 
