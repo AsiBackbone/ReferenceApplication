@@ -4,31 +4,31 @@
     "net10.0": {
       "AsiBackbone.Analyzers": {
         "type": "Direct",
-        "requested": "[7.5.4, )",
-        "resolved": "7.5.4",
-        "contentHash": "MESeF7f/bbO1eaFgR3kFAZYFQ1O1uTkKprbLMJFB4SaYZEmbKpd8j397PmNyEz1Q1XdSHkut4/PYlzSTgVEk3w=="
+        "requested": "[7.5.5, )",
+        "resolved": "7.5.5",
+        "contentHash": "ilFhiYDWa64FZ8/txKmdywa2RTvza7gt6WIuPyIAvsfEevOSRd8S6KkOWiDaW2b7imfH8UkQV7x/inxjYHjBKA=="
       },
       "AsiBackbone.Core": {
         "type": "Direct",
-        "requested": "[7.5.4, )",
-        "resolved": "7.5.4",
-        "contentHash": "7N/LBZx0qX97E6Y3nAP4J2GBRr9GqfINq96T658idByH2BqiQJDo6XQvB1E69ODtV6RTV3VxotvongNm8b4D4Q==",
+        "requested": "[7.5.5, )",
+        "resolved": "7.5.5",
+        "contentHash": "pFlpAie99BFBnfBRPP2FQY4GryNyTTUF2Kpsh51rmw0duULjii5fCu+flHJ8Ol1vQTqBBduH8+nQpkjrvxLGnA==",
         "dependencies": {
-          "Microsoft.Extensions.Logging.Abstractions": "10.0.14",
-          "Microsoft.Extensions.Options": "10.0.14"
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.15",
+          "Microsoft.Extensions.Options": "10.0.15"
         }
       },
       "AsiBackbone.EntityFrameworkCore": {
         "type": "Direct",
-        "requested": "[7.5.4, )",
-        "resolved": "7.5.4",
-        "contentHash": "PZYMQnKXOAuvrT5nwr8OGL9WNt4m0+I9W9zRefNnh6wc3joeHBwJEvoGx8JIq+fqphE7O6HkWzfv+Fvud4/Tyw==",
+        "requested": "[7.5.5, )",
+        "resolved": "7.5.5",
+        "contentHash": "YjOBEQRrzBtFMfYFpvsnMVcL2H5sGk5sO16osIhfxRY++ZAB+mOBH0xWdsewt+XpdJZ7vD6nsocr0Hkfao1UZQ==",
         "dependencies": {
-          "AsiBackbone.Core": "7.5.4",
-          "AsiBackbone.DependencyInjection": "7.5.4",
-          "Microsoft.EntityFrameworkCore": "10.0.14",
-          "Microsoft.EntityFrameworkCore.Relational": "10.0.14",
-          "Microsoft.Extensions.Logging.Abstractions": "10.0.14"
+          "AsiBackbone.Core": "7.5.5",
+          "AsiBackbone.DependencyInjection": "7.5.5",
+          "Microsoft.EntityFrameworkCore": "10.0.15",
+          "Microsoft.EntityFrameworkCore.Relational": "10.0.15",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.15"
         }
       },
       "Microsoft.EntityFrameworkCore": {
@@ -103,10 +103,10 @@
       },
       "AsiBackbone.DependencyInjection": {
         "type": "Transitive",
-        "resolved": "7.5.4",
-        "contentHash": "navikJEF/gFlCoaealoFGK021XE8P3ziWqPF/ZNjcik9xyoKrlHHtwfBP303HeRXh2h/NztSJ4ZjJaurW0idvA==",
+        "resolved": "7.5.5",
+        "contentHash": "k1LTQg0ITvmNFYYuovcT3Fu/R2Qq2YVezmDGTbFl3Fp97RSOg3keOHWE99rrOZlm5w7C0ddLc9SOdXLYGtcSpg==",
         "dependencies": {
-          "Microsoft.Extensions.DependencyInjection": "10.0.14"
+          "Microsoft.Extensions.DependencyInjection": "10.0.15"
         }
       },
       "Microsoft.Build.Tasks.Git": {

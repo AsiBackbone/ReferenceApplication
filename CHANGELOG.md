@@ -11,6 +11,11 @@ which the `ncat-v<version>` tags record.
 
 ### Changed
 
+* Walkthrough Step 2's `Directory.Packages.props` sample now pins the AsiBackbone packages at `7.5.5`, matching the
+  surrounding text and the repository's central package versions; it still showed `7.5.0` (#140).
+* Updated the AsiBackbone packages from `7.5.4` to `7.5.5` and regenerated the package lock files. `7.5.5` is a
+  backward-compatible maintenance patch; the documentation home and walkthrough Step 2 now name `7.5.5` as the current
+  package baseline.
 * The integration baseline was refreshed to NCAT `2.11.11`, including the generated template
   changes and regenerated package lock files (#171).
 * Link validation no longer sends Zenodo archive DOIs through Lychee. Zenodo intermittently times out or returns 
