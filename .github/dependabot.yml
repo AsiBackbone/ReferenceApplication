@@ -19,6 +19,9 @@ updates:
     # Keep framework-coupled packages on .NET 10 until a deliberate .NET 11
     # migration is scheduled and validated. Servicing updates remain enabled.
     ignore:
+      - dependency-name: "dotnet-ef"
+        update-types:
+          - "version-update:semver-major"
       - dependency-name: "Microsoft.AspNetCore.*"
         update-types:
           - "version-update:semver-major"
