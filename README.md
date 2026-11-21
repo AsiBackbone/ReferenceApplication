@@ -24,7 +24,7 @@ It is for .NET developers and architects evaluating how governance and policy en
 
 ## Status
 
-**Stable release: `1.0.2`.** Version `1.0.0` establishes the Reference Application's first stable `1.x`
+**Stable release: `1.0.3`.** Version `1.0.0` establishes the Reference Application's first stable `1.x`
 compatibility contract under the [Stable Release Policy v1](docs/stable-release-policy-v1.md).
 
 The eight-step [Integration Walkthrough](https://asibackbone.github.io/ReferenceApplication/walkthrough/) is complete,
