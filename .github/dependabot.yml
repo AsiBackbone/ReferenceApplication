@@ -31,6 +31,11 @@ updates:
       - dependency-name: "Microsoft.SourceLink.*"
         update-types:
           - "version-update:semver-major"
+      # OpenTelemetry 1.21+ requires .NET 11 framework package versions,
+      # including System.Diagnostics.DiagnosticSource 11.0.0.
+      - dependency-name: "OpenTelemetry*"
+        versions:
+          - ">= 1.21.0"
       - dependency-name: "System.Drawing.Common"
         update-types:
           - "version-update:semver-major"
