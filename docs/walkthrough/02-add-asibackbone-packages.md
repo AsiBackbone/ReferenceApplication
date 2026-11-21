@@ -29,9 +29,9 @@ The original Step 2 package placement was:
 
 `AsiBackbone.AspNetCore`, `AsiBackbone.EntityFrameworkCore`, and `AsiBackbone.Testing` already depend on Core where required. The Web and Infrastructure projects nevertheless reference `AsiBackbone.Core` directly because later walkthrough steps use its public contracts directly; this avoids relying on transitive compile assets for code the host owns.
 
-## Current package set — AsiBackbone `7.5.4`
+## Current package set — AsiBackbone `7.5.5`
 
-The current repository pins nine AsiBackbone packages at `7.5.4`. Eight are direct project references. `AsiBackbone.Storage.InMemory` is centrally pinned because it remains in the test dependency graph transitively; no project references it directly.
+The current repository pins nine AsiBackbone packages at `7.5.5`. Eight are direct project references. `AsiBackbone.Storage.InMemory` is centrally pinned because it remains in the test dependency graph transitively; no project references it directly.
 
 | Package | Referenced by | Why it is present |
 |:---|:---|:---|
@@ -49,7 +49,7 @@ The current section is intentionally separate from the historical status line. O
 
 ## Procedure
 
-1. Confirm the current version in `Directory.Packages.props` and the matching [AsiBackbone `7.5.4` release](https://github.com/AsiBackbone/AsiBackbone/releases/tag/v7.5.4). Treat the `7.2.0` and `7.2.1` versions above as Step 2 history, not as the current repository baseline.
+1. Confirm the current version in `Directory.Packages.props` and the matching [AsiBackbone `7.5.5` release](https://github.com/AsiBackbone/AsiBackbone/releases/tag/v7.5.5). Treat the `7.2.0` and `7.2.1` versions above as Step 2 history, not as the current repository baseline.
 
 2. Keep each AsiBackbone version in `Directory.Packages.props`, then use version-less `PackageReference` items in the projects that consume the package directly:
 
@@ -57,15 +57,15 @@ The current section is intentionally separate from the historical status line. O
 
      ```xml
      <ItemGroup>
-       <PackageVersion Include="AsiBackbone.Analyzers" Version="7.5.4" />
-       <PackageVersion Include="AsiBackbone.AspNetCore" Version="7.5.4" />
-       <PackageVersion Include="AsiBackbone.Core" Version="7.5.4" />
-       <PackageVersion Include="AsiBackbone.EntityFrameworkCore" Version="7.5.4" />
-       <PackageVersion Include="AsiBackbone.OpenTelemetry" Version="7.5.4" />
-       <PackageVersion Include="AsiBackbone.Signing.LocalDevelopment" Version="7.5.4" />
-       <PackageVersion Include="AsiBackbone.Signing.ManagedKey" Version="7.5.4" />
-       <PackageVersion Include="AsiBackbone.Storage.InMemory" Version="7.5.4" />
-       <PackageVersion Include="AsiBackbone.Testing" Version="7.5.4" />
+       <PackageVersion Include="AsiBackbone.Analyzers" Version="7.5.5" />
+       <PackageVersion Include="AsiBackbone.AspNetCore" Version="7.5.5" />
+       <PackageVersion Include="AsiBackbone.Core" Version="7.5.5" />
+       <PackageVersion Include="AsiBackbone.EntityFrameworkCore" Version="7.5.5" />
+       <PackageVersion Include="AsiBackbone.OpenTelemetry" Version="7.5.5" />
+       <PackageVersion Include="AsiBackbone.Signing.LocalDevelopment" Version="7.5.5" />
+       <PackageVersion Include="AsiBackbone.Signing.ManagedKey" Version="7.5.5" />
+       <PackageVersion Include="AsiBackbone.Storage.InMemory" Version="7.5.5" />
+       <PackageVersion Include="AsiBackbone.Testing" Version="7.5.5" />
      </ItemGroup>
      ```
 
