@@ -11,6 +11,8 @@ which the `ncat-v<version>` tags record.
 
 ### Changed
 
+* The integration baseline was refreshed to NCAT `2.11.11`, including the generated template
+  changes and regenerated package lock files (#171).
 * Link validation no longer sends Zenodo archive DOIs through Lychee. Zenodo intermittently times out or returns 
   HTTP 500 to automated requests on DOI links it did not change. A dedicated step 
   resolves every Zenodo DOI in the Markdown with bounded retries: it fails scheduled and manual runs, so an archive 
