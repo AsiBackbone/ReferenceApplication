@@ -20,6 +20,7 @@
           "**/toc.yml",
           "stable-release-policy-v1.md",
           "release-artifact-signing.md",
+          "repository-agent-assurance.md",
           "benchmarks/**/*.md",
           "walkthrough/**/*.md",
           "api/index.md",

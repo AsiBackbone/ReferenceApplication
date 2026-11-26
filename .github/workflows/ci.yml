@@ -66,6 +66,12 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Validate repository agent governance
+        shell: pwsh
+        run: |
+          ./scripts/Validate-AgentGovernance.ps1 -SelfTest
+          ./scripts/Validate-AgentGovernance.ps1
+
       - name: Restore
         run: dotnet restore ${{ env.SOLUTION_FILE }} --locked-mode
 

@@ -6,6 +6,8 @@
       href: stable-release-policy-v1.md
     - name: Release Artifact Signing
       href: release-artifact-signing.md
+    - name: Repository Assurance Agents
+      href: repository-agent-assurance.md
     - name: Governance Benchmarks
       href: benchmarks/governance-overhead.md
     - name: API Reference
