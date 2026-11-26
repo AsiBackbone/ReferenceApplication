@@ -56,13 +56,16 @@ without requesting broader permissions.
 Run the structural validation from the repository root:
 
 ```powershell
+./scripts/Validate-AgentGovernance.ps1 -SelfTest
 ./scripts/Validate-AgentGovernance.ps1
 ```
 
-The validator verifies profile discovery metadata, narrow tools, evidence and
-handoff language, exact repository commands, baseline authority, representative
-safe prompts, prohibited-action handling, and preservation of the NCAT refresh
-boundary.
+The fixture-based self-test proves the validator rejects missing profiles,
+malformed frontmatter, expanded tools, MCP configuration, missing repository
+guidance, and weakened NCAT refresh invariants. The live validation verifies
+profile discovery metadata, narrow tools, evidence and handoff language, exact
+repository commands, baseline authority, representative safe prompts,
+prohibited-action handling, and preservation of the NCAT refresh boundary.
 
 This is configuration validation, not a live Copilot permission test. Tool
 availability and enforcement can vary by host and session. Confirm the actual

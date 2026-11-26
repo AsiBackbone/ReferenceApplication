@@ -81,9 +81,12 @@ dotnet tool run docfx -- docs/docfx.json --warningsAsErrors
 ./scripts/Validate-LandingPage.ps1 -SiteDirectory ./docs/_site
 ```
 
-Run `./scripts/Validate-AgentGovernance.ps1` when repository guidance or custom
-agents change. Run the NCAT reproducibility workflow described in the refresh
-procedure when the baseline, manifest, or refresh tooling changes.
+Run `./scripts/Validate-AgentGovernance.ps1 -SelfTest` and then
+`./scripts/Validate-AgentGovernance.ps1` when repository guidance, the validator,
+or custom agents change. The first command proves weakened fixture configurations
+fail closed; the second validates the live repository. Run the NCAT reproducibility
+workflow described in the refresh procedure when the baseline, manifest, or refresh
+tooling changes.
 
 Report commands actually run, results, expected skips, and blockers. Never
 fabricate validation evidence.
