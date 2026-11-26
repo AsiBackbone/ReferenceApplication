@@ -1,6 +1,6 @@
 ---
 name: Documentation and Adoption Assurance
-description: Read-only review that walkthroughs, examples and prerequisites match implementation without overstating production guarantees.
+description: Read-only review ensuring that walkthroughs, examples and prerequisites match implementation without overstating production guarantees.
 target: github-copilot
 tools: ["read", "search"]
 disable-model-invocation: true
