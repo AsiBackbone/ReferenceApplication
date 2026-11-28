@@ -11,6 +11,9 @@ which the `ncat-v<version>` tags record.
 
 ### Changed
 
+* Updated the AsiBackbone packages from `7.5.5` to `7.5.6` and regenerated the package lock files. `7.5.6` is a
+  backward-compatible maintenance patch; the documentation home and walkthrough Step 2 now name `7.5.6` as the current
+  package baseline.
 * The integration baseline was refreshed to NCAT `2.11.12`, including the generated template
   changes and regenerated package lock files (#190).
 
