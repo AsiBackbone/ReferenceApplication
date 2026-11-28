@@ -94,7 +94,7 @@
       "AsiBackbone.DependencyInjection": {
         "type": "Transitive",
         "resolved": "7.5.6",
-        "contentHash": "+hj8eOnHnczbQe/X3sD3Lqba+XGFyBA+vjHj3w8zod5e3CtM19WkJEj32fzRlLuGKTlGQnBA2TIiKmAJZPHDIw==",
+        "contentHash": "kf6vmfSesM1dqodD/oZMj4LbXvDTIJmraxi6cWLgc15a0hDg/gZ9mvJ8QpopUGSRXT+eQAVITH1WpxAqewEPbQ==",
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection": "10.0.15"
         }
@@ -879,7 +879,7 @@
         "type": "CentralTransitive",
         "requested": "[7.5.6, )",
         "resolved": "7.5.6",
-        "contentHash": "raFVJ20XP/EIHxow9QWHpq6OsHWmPkDEcu8wty4tmer/iE6ndM2txTr+XRwqKPDQuVus21gVTYgeXrre4ekGqA==",
+        "contentHash": "RTIRtNRzxi1swq7igLDgCCcSI6tAcFWZzOoHU5kvYMvkrMdwtxIrV+Rsroaw2XGtT0Hb5O8SOUs4qvH4p124CA==",
         "dependencies": {
           "AsiBackbone.Core": "7.5.6",
           "AsiBackbone.DependencyInjection": "7.5.6"
@@ -889,7 +889,7 @@
         "type": "CentralTransitive",
         "requested": "[7.5.6, )",
         "resolved": "7.5.6",
-        "contentHash": "SW8rIGbB248csSs+/YGCbLRoMUoaMMHjXFCBSn1m8YWereG3JzzxkKAPTZZ4IR+wcSe742Gcv1389+9fr3HNog==",
+        "contentHash": "vqZiZjHtbQnj5wLt1ZSnsnTXFNfzSMSDBx24kicccM4OyCDZa9T0HsAP827NssddllJ0edPI0AwhHcVwPfUyWw==",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "10.0.15",
           "Microsoft.Extensions.Options": "10.0.15"
@@ -943,7 +943,7 @@
         "type": "CentralTransitive",
         "requested": "[7.5.6, )",
         "resolved": "7.5.6",
-        "contentHash": "YROrIyysCOIVdBbtL7T3u/cW2s0h66yO8pJ5iCBVRjGOJ0LwtdjHMpDho8yN5tC/u3U5cf5DuXz+1eG4/rTF2g==",
+        "contentHash": "cYENHZI3KQMdZdrvgMORmX/Y2s2khVudaFUprKJxcijgsEjK4ajGCGbFdAGZA4SoUYvVQVHw8T1ulQdVdGtWCw==",
         "dependencies": {
           "AsiBackbone.Core": "7.5.6",
           "AsiBackbone.DependencyInjection": "7.5.6",
