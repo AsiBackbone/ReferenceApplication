@@ -140,9 +140,9 @@ Those defaults select:
 
 For other template options, see [NCAT Template Packaging](https://asibackbone.github.io/NetCoreApplicationTemplate/articles/template-packaging.html).
 
-The current NCAT baseline is **2.11.11**. The initial 2.11.4 scaffold has been refreshed through later NCAT releases
-using the same name and template options. The `ncat-baseline` branch holds the unmodified 2.11.11 scaffold, tagged
-`ncat-v2.11.11`; earlier `ncat-v<version>` tags preserve the historical baseline points, including `ncat-v2.11.4`.
+The current NCAT baseline is **2.11.12**. The initial 2.11.4 scaffold has been refreshed through later NCAT releases
+using the same name and template options. The `ncat-baseline` branch holds the unmodified 2.11.12 scaffold, tagged
+`ncat-v2.11.12`; earlier `ncat-v<version>` tags preserve the historical baseline points, including `ncat-v2.11.4`.
 To adopt a later NCAT release, follow
 [Refresh the NCAT Baseline](https://asibackbone.github.io/ReferenceApplication/walkthrough/refresh-ncat-baseline.html).
 
