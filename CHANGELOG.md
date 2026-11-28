@@ -9,13 +9,33 @@ which the `ncat-v<version>` tags record.
 
 ## Unreleased
 
+## 1.0.4 - 2026-11-28
+
+### Added
+
+* Three optional read-only assurance-agent profiles for architecture and integration, quality, and documentation review,
+  together with repository guidance, an adoption guide, and a fail-closed validator. CI runs the validator's negative
+  fixture self-test before validating the live profiles and their authority boundaries (#177).
+* Open organization-proposal guidance and landing-page language that allow anyone to submit proposals, require visible
+  responsibility and AI-assistance disclosure, and reserve organizational decisions and downstream authorization to
+  human maintainers (#178, #179, #180, #181, #182, #183).
+
 ### Changed
 
+* The contribution guide now documents the controlled pull-request approval workflow and the boundary between
+  maintainer review, hosted evidence, merge, publication, and deployment (#175).
 * Updated the AsiBackbone packages from `7.5.5` to `7.5.6` and regenerated the package lock files. `7.5.6` is a
   backward-compatible maintenance patch; the documentation home and walkthrough Step 2 now name `7.5.6` as the current
   package baseline.
 * The integration baseline was refreshed to NCAT `2.11.12`, including the generated template
   changes and regenerated package lock files (#190).
+* Updated `coverlet.MTP` to 10.1.1, refreshed the pinned .NET 10 SDK and ASP.NET Core runtime container-image digests,
+  and serviced pinned GitHub Actions including CodeQL and zizmor (#185, #187, #188, #189).
+
+### Security
+
+* Updated `Sustainsys.Saml2.AspNetCore2` from 2.11.0 to the upstream 2.11.1 security release, regenerated the affected
+  lock files, and aligned the exact package and source-tag license inventory (#186, #190).
 
 ## 1.0.3 - 2026-11-21
 
