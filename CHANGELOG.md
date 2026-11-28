@@ -9,6 +9,11 @@ which the `ncat-v<version>` tags record.
 
 ## Unreleased
 
+### Changed
+
+* The integration baseline was refreshed to NCAT `2.11.12`, including the generated template
+  changes and regenerated package lock files (#190).
+
 ## 1.0.3 - 2026-11-21
 
 ### Added
